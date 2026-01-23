@@ -1,0 +1,11 @@
+stages:
+  - trigger
+
+trigger-plugin-test:
+  stage: trigger
+  trigger:
+    project: merixstudio/tufts/plugin-test-project
+    branch: main
+    strategy: depend
+  variables:
+    COLDFRONT_BILLING_BRANCH: $CI_COMMIT_REF_NAME
