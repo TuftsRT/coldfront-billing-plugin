@@ -21,6 +21,3 @@ trigger-plugin-test:
     strategy: depend
   variables:
     COLDFRONT_BILLING_BRANCH: $CI_COMMIT_REF_NAME
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: never
