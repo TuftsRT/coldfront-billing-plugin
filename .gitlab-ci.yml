@@ -1,5 +1,17 @@
+include:
+  - project: "merixstudio/pts/pipelines"
+    ref: "master"
+    file: "/Mirror.gitlab-ci.yml"
+
 stages:
   - trigger
+  - mirror
+
+mirror:
+  needs: []
+  rules:
+    - if: $MIRROR_ENABLED == "1" && $CI_PIPELINE_SOURCE == "schedule"
+      when: always
 
 trigger-plugin-test:
   stage: trigger
@@ -9,3 +21,6 @@ trigger-plugin-test:
     strategy: depend
   variables:
     COLDFRONT_BILLING_BRANCH: $CI_COMMIT_REF_NAME
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
