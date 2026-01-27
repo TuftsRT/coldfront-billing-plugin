@@ -12,7 +12,7 @@ def billing_role(request: HttpRequest):
         return {'has_billing_role': True}
 
     has_billing = ProjectUser.objects.filter(
-        user=user, project__status__name__in=('New', 'Active', 'Archived'), role__name='Billing', status__name='Active'
+        user=user, project__status__name__in=('Active', 'Archived'), role__name='Billing', status__name='Active'
     ).exists()
 
     return {'has_billing_role': has_billing}
