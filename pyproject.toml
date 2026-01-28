@@ -25,6 +25,8 @@ dependencies = [
 dev = [
     "pre-commit",
     "ruff",
+    "pytest",
+    "pytest-django",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -45,3 +47,17 @@ inline-quotes = "single"
 indent-style = "space"
 docstring-code-format = true
 quote-style = "single"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "coldfront.config.settings"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "django_db: marks tests as requiring database access",
+]
+testpaths = ["coldfront_billing/tests"]

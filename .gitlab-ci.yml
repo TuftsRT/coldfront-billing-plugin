@@ -4,8 +4,28 @@ include:
     file: "/Mirror.gitlab-ci.yml"
 
 stages:
+  - test
   - trigger
   - mirror
+
+test:
+  stage: test
+  image: python:3.11
+  before_script:
+    - pip install uv
+    - uv pip install --system -e ".[dev]"
+    - uv pip install --system "coldfront>=1.1.7,<2"
+    - uv pip install --system pytest pytest-django
+  script:
+    - |
+      export DJANGO_SETTINGS_MODULE=coldfront.config.settings
+      export DB_ENGINE=django.db.backends.sqlite3
+      export DB_NAME=:memory:
+      export SECRET_KEY=test-secret-key-for-ci
+      export DEBUG=False
+      pytest coldfront_billing/tests/ -v --tb=short
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
 
 mirror:
   needs: []
