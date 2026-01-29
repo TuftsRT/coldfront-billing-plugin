@@ -44,7 +44,7 @@ class BillingView(LoginRequiredMixin, ListView):
         order_by = self.request.GET.get('order_by', 'id')
         direction = self.request.GET.get('direction', 'asc')
 
-        if direction == 'desc':
+        if direction == 'des':
             order_by = '-' + order_by
 
         projects = Project.objects.all()

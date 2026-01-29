@@ -56,6 +56,8 @@ python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
     "--tb=short",
+    "-W",
+    "ignore::django.utils.deprecation.RemovedInDjango50Warning",
 ]
 markers = [
     "django_db: marks tests as requiring database access",

@@ -19,25 +19,27 @@ def _parse_float(value, default):
 class BillingAllocation:
     allocation_id: int
     project_id: int
-    quota_tb: int
-    cost_per_tb: int
+    quota_tb: int | float
+    cost_per_tb: int | float
 
     @property
     def total_cost(self):
-        return int(math.ceil(self.quota_tb)) * int(self.cost_per_tb)
+        return int(math.ceil(self.quota_tb)) * int(round(self.cost_per_tb))
 
     @classmethod
     def parse(cls, allocation, default_quota: int, default_cost: int):
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
-            quota_tb = _parse_float(quota_raw, default_quota)
+            float_quota = _parse_float(quota_raw, default_quota)
+            quota_tb = float_quota if float_quota >= 0 else default_quota
         else:
             quota_tb = default_quota
 
         storage_resource = _first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
 
         if storage_resource and (cost_attrs := getattr(storage_resource, COST_ATTRIBUTE_NAME, None)):
-            cost_per_tb = _parse_float(cost_attrs[0].value, default_cost)
+            float_cost = _parse_float(cost_attrs[0].value, default_cost)
+            cost_per_tb = float_cost if float_cost >= 0 else default_cost
         else:
             cost_per_tb = default_cost
 

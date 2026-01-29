@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth.models import AnonymousUser
 
-from coldfront_billing.context_processor import billing_role
+from coldfront_billing.context_processor import billing_role as billing_role_func
 
 from .conftest import create_billing_request, create_pi_user, create_project_with_billing_user
 
@@ -13,25 +13,25 @@ class TestBillingRoleContextProcessor:
     def test_unauthenticated_user_returns_empty_dict(self):
         """Test that unauthenticated users return empty dict."""
         request = create_billing_request(AnonymousUser())
-        result = billing_role(request)
+        result = billing_role_func(request)
         assert result == {}
 
     def test_superuser_returns_has_billing_role_true(self, superuser):
         """Test that superusers return has_billing_role=True."""
         request = create_billing_request(superuser)
-        result = billing_role(request)
+        result = billing_role_func(request)
         assert result == {'has_billing_role': True}
 
     def test_regular_user_without_billing_role_returns_false(self, user, project):
         """Test that regular users without Billing role return False."""
         request = create_billing_request(user)
-        result = billing_role(request)
+        result = billing_role_func(request)
         assert result == {'has_billing_role': False}
 
     def test_user_with_active_billing_role_returns_true(self, user, project_with_billing_user):
         """Test that users with active Billing role return True."""
         request = create_billing_request(user)
-        result = billing_role(request)
+        result = billing_role_func(request)
         assert result == {'has_billing_role': True}
 
     def test_only_active_and_archived_projects_considered(
@@ -42,7 +42,6 @@ class TestBillingRoleContextProcessor:
         project_status_new,
         billing_role,
         project_user_status_active,
-        db,
     ):
         """Test that only Active/Archived projects are considered, not New ones."""
         pi_user1 = create_pi_user('1')
@@ -61,7 +60,7 @@ class TestBillingRoleContextProcessor:
         )
 
         request = create_billing_request(user)
-        result = billing_role(request)
+        result = billing_role_func(request)
         # Should return True because of active/archived projects
         assert result == {'has_billing_role': True}
 
@@ -86,7 +85,7 @@ class TestBillingRoleContextProcessor:
         )
 
         request = create_billing_request(user)
-        result = billing_role(request)
+        result = billing_role_func(request)
         # Should return True because of the active project user
         assert result == {'has_billing_role': True}
 
@@ -110,5 +109,5 @@ class TestBillingRoleContextProcessor:
         )
 
         request = create_billing_request(user)
-        result = billing_role(request)
+        result = billing_role_func(request)
         assert result == {'has_billing_role': False}
