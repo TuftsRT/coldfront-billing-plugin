@@ -1,6 +1,6 @@
 from django.db import migrations
 
-from coldfront_billing.constants import cost_attr_name, quota_attr_name
+from coldfront_billing.constants import COST_ATTR_NAME, QUOTA_ATTR_NAME
 
 
 def create_billing_attributes(apps, schema_editor):
@@ -10,7 +10,7 @@ def create_billing_attributes(apps, schema_editor):
     float_attr_type, _ = AttributeType.objects.get_or_create(name='Float')
 
     AllocationAttributeType.objects.get_or_create(
-        name=quota_attr_name,
+        name=QUOTA_ATTR_NAME,
         defaults={
             'attribute_type': float_attr_type,
             'has_usage': True,
@@ -24,7 +24,7 @@ def create_billing_attributes(apps, schema_editor):
     text_attr_type, _ = AttributeType.objects.get_or_create(name='Text')
 
     ResourceAttributeType.objects.get_or_create(
-        name=cost_attr_name,
+        name=COST_ATTR_NAME,
         defaults={
             'attribute_type': text_attr_type,
         },

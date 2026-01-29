@@ -1,16 +1,23 @@
 import logging
-import math
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.models import Project
-from coldfront.core.resource.models import ResourceType
+from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.views.generic import ListView
 
-from coldfront_billing.constants import quota_attr_name
+from coldfront_billing.constants import (
+    BILLING_ATTRIBUTE_NAME,
+    COST_ATTR_NAME,
+    COST_ATTRIBUTE_NAME,
+    QUOTA_ATTR_NAME,
+    QUOTA_ATTRIBUTE_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME,
+)
+from coldfront_billing.data import BillingAllocation
 
 logger = logging.getLogger('BillingView')
 
@@ -26,17 +33,6 @@ default_cost = getattr(
     'COLDFRONT_BILLING_DEFAULT_COST',
     10,
 )
-
-
-def _first_or_none(sequence):
-    return sequence[0] if sequence else None
-
-
-def _parse_float(value, default):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
 
 
 class BillingView(LoginRequiredMixin, ListView):
@@ -69,13 +65,32 @@ class BillingView(LoginRequiredMixin, ListView):
             allocation__resources__requires_payment=True,
         ).distinct()
 
+        # Prefetch only what we need for cost calculation
+        cost_attr_prefetch = Prefetch(
+            'resourceattribute_set',
+            queryset=ResourceAttribute.objects.filter(resource_attribute_type__name=COST_ATTR_NAME).only(
+                'resource_id', 'value', 'resource_attribute_type_id'
+            ),
+            to_attr=COST_ATTRIBUTE_NAME,
+        )
+
+        # Prefetch only paid Storage resources + their cost attr
+        paid_storage_resources_prefetch = Prefetch(
+            'resources',
+            queryset=Resource.objects.filter(
+                resource_type_id=storage_type.id,
+                requires_payment=True,
+            ).prefetch_related(cost_attr_prefetch),
+            to_attr=STORAGE_RESOURCE_ATTRIBUTE_NAME,
+        )
+
         # Prefetch only the allocation attribute holding quota_attr_name
         quota_attr_prefetch = Prefetch(
             'allocationattribute_set',
-            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=quota_attr_name).only(
+            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
                 'allocation_id', 'value'
             ),
-            to_attr='quota_attrs',
+            to_attr=QUOTA_ATTRIBUTE_NAME,
         )
 
         allocations_prefetch = Prefetch(
@@ -83,10 +98,11 @@ class BillingView(LoginRequiredMixin, ListView):
             queryset=Allocation.objects.filter(
                 resources__resource_type_id=storage_type.id,
                 resources__requires_payment=True,
+                status__name='Active',
             )
             .distinct()
-            .prefetch_related(quota_attr_prefetch),
-            to_attr='billing_allocations',
+            .prefetch_related(quota_attr_prefetch, paid_storage_resources_prefetch),
+            to_attr=BILLING_ATTRIBUTE_NAME,
         )
 
         # Fetch only projects that have such allocations
@@ -101,14 +117,11 @@ class BillingView(LoginRequiredMixin, ListView):
 
         project_list = context.get('project_list', [])
         for project in project_list:
-            project_cost = 0
-            for alloc in getattr(project, 'billing_allocations', []):
-                quota_value = alloc.quota_attrs[0].value if alloc.quota_attrs else None
-                logger.info(f'Project: {project.id} Quota attr: {quota_value}')
-                quota_tb = math.ceil(_parse_float(quota_value, default_quota))
-
-                project_cost += quota_tb * default_cost
-
+            billing_allocations = [
+                BillingAllocation.parse(a, default_quota, default_cost)
+                for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])
+            ]
+            project_cost = sum(b.total_cost for b in billing_allocations)
             project.cost = f'${project_cost}'
             # Cost centers currently set to '-'
             project.cost_centers = '-'
