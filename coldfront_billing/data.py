@@ -23,11 +23,11 @@ class BillingAllocation:
     cost_per_tb: int | float
 
     @property
-    def total_cost(self):
+    def total_cost(self) -> int:
         return int(math.ceil(self.quota_tb)) * int(round(self.cost_per_tb))
 
     @classmethod
-    def parse(cls, allocation, default_quota: int, default_cost: int):
+    def parse(cls, allocation, default_quota: int, default_cost: int) -> 'BillingAllocation':
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
             float_quota = _parse_float(quota_raw, default_quota)
