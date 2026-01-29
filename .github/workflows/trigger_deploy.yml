@@ -1,0 +1,21 @@
+name: Trigger Deploy in Test Project
+
+on:
+  push:
+    # Trigger on any branch push so we can build feature branches
+
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger coldfront-test-project
+        run: |
+          # Uses clean curl command to trigger repository dispatch
+          # Requires PAT_TO_TRIGGER_OTHER_REPO secret with 'repo' scope
+          
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.PAT_TO_TRIGGER_OTHER_REPO }}" \
+            https://api.github.com/repos/TuftsRT/coldfront-test-project/dispatches \
+            -d '{"event_type": "trigger-deploy", "client_payload": {"plugin_branch": "'"${{ github.ref_name }}"'"}}'
