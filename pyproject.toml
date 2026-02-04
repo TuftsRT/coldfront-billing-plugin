@@ -55,7 +55,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
-    "--tb=short",
+    "--tb=short"
 ]
 markers = [
     "django_db: marks tests as requiring database access",

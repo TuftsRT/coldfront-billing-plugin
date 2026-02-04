@@ -1,12 +1,38 @@
 import logging
-import random
 
+from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.models import Project
+from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.views.generic import ListView
 
-logger = logging.getLogger(__name__)
+from coldfront_billing.constants import (
+    BILLING_ATTRIBUTE_NAME,
+    COST_ATTR_NAME,
+    COST_ATTRIBUTE_NAME,
+    QUOTA_ATTR_NAME,
+    QUOTA_ATTRIBUTE_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME,
+)
+from coldfront_billing.data import BillingAllocation
+
+logger = logging.getLogger('BillingView')
+
+
+default_quota = getattr(
+    settings,
+    'COLDFRONT_BILLING_DEFAULT_QUOTA',
+    0,
+)
+
+default_cost = getattr(
+    settings,
+    'COLDFRONT_BILLING_DEFAULT_COST',
+    10,
+)
 
 
 class BillingView(LoginRequiredMixin, ListView):
@@ -21,19 +47,68 @@ class BillingView(LoginRequiredMixin, ListView):
         if direction == 'des':
             order_by = '-' + order_by
 
-        projects = Project.objects.prefetch_related(
-            'pi',
-            'status',
-        )
+        projects = Project.objects.all()
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
                 projectuser__user=self.request.user,
                 projectuser__role__name='Billing',
                 projectuser__status__name='Active',
-            )
+            ).distinct()
 
-        return projects.order_by(order_by).distinct()
+        if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
+            return projects.select_related('pi', 'status').order_by(order_by)
+
+        # Restrict to only projects that actually have paid Storage allocations
+        projects = projects.filter(
+            allocation__resources__resource_type_id=storage_type.id,
+            allocation__resources__requires_payment=True,
+        ).distinct()
+
+        # Prefetch only what we need for cost calculation
+        cost_attr_prefetch = Prefetch(
+            'resourceattribute_set',
+            queryset=ResourceAttribute.objects.filter(resource_attribute_type__name=COST_ATTR_NAME).only(
+                'resource_id', 'value', 'resource_attribute_type_id'
+            ),
+            to_attr=COST_ATTRIBUTE_NAME,
+        )
+
+        # Prefetch only paid Storage resources + their cost attr
+        paid_storage_resources_prefetch = Prefetch(
+            'resources',
+            queryset=Resource.objects.filter(
+                resource_type_id=storage_type.id,
+                requires_payment=True,
+            ).prefetch_related(cost_attr_prefetch),
+            to_attr=STORAGE_RESOURCE_ATTRIBUTE_NAME,
+        )
+
+        # Prefetch only the allocation attribute holding quota_attr_name
+        quota_attr_prefetch = Prefetch(
+            'allocationattribute_set',
+            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
+                'allocation_id', 'value'
+            ),
+            to_attr=QUOTA_ATTRIBUTE_NAME,
+        )
+
+        allocations_prefetch = Prefetch(
+            'allocation_set',
+            queryset=Allocation.objects.filter(
+                resources__resource_type_id=storage_type.id,
+                resources__requires_payment=True,
+                status__name='Active',
+            )
+            .distinct()
+            .prefetch_related(quota_attr_prefetch, paid_storage_resources_prefetch),
+            to_attr=BILLING_ATTRIBUTE_NAME,
+        )
+
+        # Fetch only projects that have such allocations
+        projects = projects.select_related('pi', 'status').prefetch_related(allocations_prefetch)
+
+        return projects.order_by(order_by)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -42,8 +117,12 @@ class BillingView(LoginRequiredMixin, ListView):
 
         project_list = context.get('project_list', [])
         for project in project_list:
-            # Generate random cost between 100-1000
-            project.cost = f'${random.randint(100, 1000)}'
+            billing_allocations = [
+                BillingAllocation.parse(a, default_quota, default_cost)
+                for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])
+            ]
+            project_cost = sum(b.total_cost for b in billing_allocations)
+            project.cost = f'${project_cost}'
             # Cost centers currently set to '-'
             project.cost_centers = '-'
 
