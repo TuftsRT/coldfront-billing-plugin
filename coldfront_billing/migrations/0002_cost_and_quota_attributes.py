@@ -21,12 +21,12 @@ def create_billing_attributes(apps, schema_editor):
     ResourceAttributeType = apps.get_model('resource', 'ResourceAttributeType')
     AttributeType = apps.get_model('resource', 'AttributeType')
 
-    int_attr_type, _ = AttributeType.objects.get_or_create(name='Int')
+    float_attr_type, _ = AttributeType.objects.get_or_create(name='Float')
 
     ResourceAttributeType.objects.get_or_create(
         name=COST_ATTR_NAME,
         defaults={
-            'attribute_type': int_attr_type,
+            'attribute_type': float_attr_type,
         },
     )
 
