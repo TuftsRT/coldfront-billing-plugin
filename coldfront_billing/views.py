@@ -8,10 +8,9 @@ from coldfront.core.resource.models import Resource, ResourceAttribute, Resource
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import ListView
-from django.db.models import Q
 
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,
@@ -57,12 +56,10 @@ class BillingView(LoginRequiredMixin, ListView):
 
         billing_search_form = BillingSearchForm(self.request.GET)
         if billing_search_form.is_valid():
-
             if username := billing_search_form.cleaned_data.get('username'):
                 projects = projects.filter(
                     Q(pi__username__icontains=username)
-                    | Q(projectuser__user__username__icontains=username)
-                    & Q(projectuser__status__name="Active")
+                    | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
                 )
 
         if not self.request.user.is_superuser:
