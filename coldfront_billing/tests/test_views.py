@@ -145,17 +145,11 @@ class TestBillingView:
         assert active_project.id in project_ids
         assert inactive_project.id not in project_ids
 
-    def test_ordering(
+    def test_ordering_success(
         self,
         client,
-        superuser,
-        multiple_projects,
-        storage_resource_type,
-        allocation_status_active,
-        cost_attribute_type,
-        quota_attribute_type,
+        superuser
     ):
-        """Test that ordering by different fields works."""
         # Test ascending order
         response = self._get_billing_response(client, superuser, '?order_by=id&direction=asc')
         assert response.status_code == 200
@@ -214,3 +208,466 @@ class TestBillingView:
             assert cost_value == 500
             assert hasattr(project_obj, 'cost_centers')
             assert project_obj.cost_centers == '-'
+
+
+@pytest.mark.django_db
+class TestBillingViewSearchFilters:
+
+    @staticmethod
+    def _get_billing_response(client, user, query_params=''):
+        client.force_login(user)
+        url = reverse('billing_index') + query_params
+        return client.get(url)
+
+    def test_search_by_pi_user_success(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+    ):
+        pi_user1 = create_pi_user('_searchable')
+        pi_user2 = create_pi_user('_other')
+        user = create_pi_user('_billing')
+        project1 = create_project_with_billing_user(
+            user,
+            pi_user1,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project 1',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        project2 = create_project_with_billing_user(
+            user,
+            pi_user2,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project 2',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        response = self._get_billing_response(client, superuser, '?username=searchable')
+
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        assert 'Project 1' in project_titles
+        assert 'Project 2' not in project_titles
+
+    def test_search_by_project_user_success(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science
+    ):
+        from django.contrib.auth.models import User
+        from coldfront.core.project.models import ProjectUser
+
+        pi_user = create_pi_user('_pi')
+        billing_user1 = User.objects.create_user(username='searchable_billing', email='billing1@example.com', password='pass')
+        billing_user2 = User.objects.create_user(username='other_billing', email='billing2@example.com', password='pass')
+        project1 = create_project_with_billing_user(
+            billing_user1,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project with searchable user',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        project2 = create_project_with_billing_user(
+            billing_user2,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project with other user',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        response = self._get_billing_response(client, superuser, '?username=searchable')
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        assert 'Project with searchable user' in project_titles
+        assert 'Project with other user' not in project_titles
+
+    def test_search_case_insensitive(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science
+    ):
+        pi_user = create_pi_user('_CamelCase')
+        user = create_pi_user('_billing')
+        project = create_project_with_billing_user(
+            user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'CamelCase Project',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        # Test lowercase search
+        response = self._get_billing_response(client, superuser, '?username=camelcase')
+        assert response.status_code == 200
+        assert len(response.context['project_list']) == 1
+        assert response.context['project_list'][0].title == 'CamelCase Project'
+
+    def test_search_with_empty_username_returns_all_projects(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        response = self._get_billing_response(client, superuser, '?username=')
+
+        assert response.status_code == 200
+        assert len(response.context['project_list']) == 5
+
+    def test_search_by_user_name_no_matches(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        response = self._get_billing_response(client, superuser, '?username=nonexistent')
+
+        assert response.status_code == 200
+        assert len(response.context['project_list']) == 0
+
+    def test_search_form_included_in_context(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        response = self._get_billing_response(client, superuser, '?username=test')
+
+        assert response.status_code == 200
+        assert 'billing_search_form' in response.context
+        form = response.context['billing_search_form']
+        assert form.initial.get('username') == 'test' or form.data.get('username') == 'test'
+
+    def test_search_filters_only_active_project_users(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        project_user_status_inactive,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science
+    ):
+        from django.contrib.auth.models import User
+        from coldfront.core.project.models import ProjectUser
+
+        pi_user = create_pi_user('_pi')
+        billing_user = User.objects.create_user(username='searchable_user', email='billing@example.com', password='pass')
+        active_project = create_project_with_billing_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Active User Project',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        inactive_project = create_project_with_billing_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_inactive,
+            'Inactive User Project',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        response = self._get_billing_response(client, superuser, '?username=searchable')
+
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        # Should only include project where user has Active status
+        assert 'Active User Project' in project_titles
+        assert 'Inactive User Project' not in project_titles
+
+    def test_search_multiple_fields_combined(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science
+    ):
+        """Test search using both username and last_name filters."""
+        from django.contrib.auth.models import User
+        pi_user = User.objects.create_user(
+            username='specific_username',
+            email='pi@example.com',
+            password='pass',
+            first_name='John',
+            last_name='Specific'
+        )
+        billing_user = create_pi_user('_billing')
+        project = create_project_with_billing_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Specific Project',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        response = self._get_billing_response(client, superuser, '?username=specific&last_name=Specific')
+
+        assert response.status_code == 200
+        assert len(response.context['project_list']) == 1
+        assert response.context['project_list'][0].title == 'Specific Project'
+
+
+@pytest.mark.django_db
+class TestBillingViewOrdering:
+    """Test suite for BillingView ordering functionality."""
+
+    @staticmethod
+    def _get_billing_response(client, user, query_params=''):
+        """Helper method to get billing view response."""
+        client.force_login(user)
+        url = reverse('billing_index') + query_params
+        return client.get(url)
+
+    def test_default_ordering(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        response = self._get_billing_response(client, superuser)
+
+        assert response.status_code == 200
+        project_ids = [p.id for p in response.context['project_list']]
+        assert project_ids == sorted(project_ids)
+
+    def test_ascending_ordering_success(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        response = self._get_billing_response(client, superuser, '?order_by=id&direction=asc')
+
+        assert response.status_code == 200
+        project_ids = [p.id for p in response.context['project_list']]
+        assert project_ids == sorted(project_ids)
+
+    def test_descending_ordering_success(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        response = self._get_billing_response(client, superuser, '?order_by=id&direction=des')
+
+        assert response.status_code == 200
+        project_ids = [p.id for p in response.context['project_list']]
+        assert project_ids == sorted(project_ids, reverse=True)
+
+    def test_ordering_by_title_ascending(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        """Test ordering by title ascending."""
+        response = self._get_billing_response(client, superuser, '?order_by=title&direction=asc')
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        assert project_titles == sorted(project_titles)
+
+    def test_ordering_by_title_descending(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        """Test ordering by title descending."""
+        response = self._get_billing_response(client, superuser, '?order_by=title&direction=des')
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        assert project_titles == sorted(project_titles, reverse=True)
+
+    def test_ordering_by_pi_username_ascending(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+        db,
+    ):
+        """Test ordering by PI username ascending."""
+        # Create projects with different PI usernames
+        pi_users = [
+            create_pi_user('_zebra'),  # Should be last
+            create_pi_user('_alpha'),  # Should be first
+            create_pi_user('_beta'),   # Should be middle
+        ]
+
+        billing_user = create_pi_user('_billing')
+
+        projects = []
+        for i, pi_user in enumerate(pi_users):
+            project = create_project_with_billing_user(
+                billing_user,
+                pi_user,
+                project_status_active,
+                billing_role,
+                project_user_status_active,
+                f'Project {i}',
+                with_allocation=True,
+                storage_resource_type=storage_resource_type,
+                allocation_status_active=allocation_status_active,
+                cost_attribute_type=cost_attribute_type,
+                quota_attribute_type=quota_attribute_type,
+                field_of_science=field_of_science,
+            )
+            projects.append(project)
+
+        response = self._get_billing_response(client, superuser, '?order_by=pi__username&direction=asc')
+        assert response.status_code == 200
+        pi_usernames = [p.pi.username for p in response.context['project_list']]
+        assert pi_usernames == sorted(pi_usernames)
+
+    def test_ordering_by_pi_username_descending(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+    ):
+        """Test ordering by PI username descending."""
+        # Create projects with different PI usernames
+        pi_users = [
+            create_pi_user('_alpha'),
+            create_pi_user('_beta'),
+            create_pi_user('_zebra'),
+        ]
+
+        billing_user = create_pi_user('_billing')
+
+        for i, pi_user in enumerate(pi_users):
+            create_project_with_billing_user(
+                billing_user,
+                pi_user,
+                project_status_active,
+                billing_role,
+                project_user_status_active,
+                f'Project {i}',
+                with_allocation=True,
+                storage_resource_type=storage_resource_type,
+                allocation_status_active=allocation_status_active,
+                cost_attribute_type=cost_attribute_type,
+                quota_attribute_type=quota_attribute_type,
+                field_of_science=field_of_science,
+            )
+
+        response = self._get_billing_response(client, superuser, '?order_by=pi__username&direction=des')
+        assert response.status_code == 200
+        pi_usernames = [p.pi.username for p in response.context['project_list']]
+        assert pi_usernames == sorted(pi_usernames, reverse=True)
+
+    def test_ordering_with_invalid_direction_defaults_to_asc(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        """Test that invalid direction parameter defaults to ascending."""
+        response = self._get_billing_response(client, superuser, '?order_by=id&direction=invalid')
+        assert response.status_code == 200
+        project_ids = [p.id for p in response.context['project_list']]
+        assert project_ids == sorted(project_ids)  # Should default to ascending
+
