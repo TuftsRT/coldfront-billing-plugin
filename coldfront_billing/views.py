@@ -22,6 +22,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data import BillingAllocation
 from coldfront_billing.forms import BillingSearchForm
+from coldfront_billing.filters import filter_by_search_params
 
 logger = logging.getLogger('BillingView')
 
@@ -53,14 +54,7 @@ class BillingView(LoginRequiredMixin, ListView):
             order_by = '-' + order_by
 
         projects = Project.objects.all()
-
-        billing_search_form = BillingSearchForm(self.request.GET)
-        if billing_search_form.is_valid():
-            if username := billing_search_form.cleaned_data.get('username'):
-                projects = projects.filter(
-                    Q(pi__username__icontains=username)
-                    | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
-                )
+        projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
