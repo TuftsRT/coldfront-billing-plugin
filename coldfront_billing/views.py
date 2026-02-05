@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, Optional
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.forms import ProjectSearchForm
@@ -7,8 +8,8 @@ from coldfront.core.resource.models import Resource, ResourceAttribute, Resource
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.db.models import Prefetch
-from django.http import HttpResponse
+from django.db.models import Prefetch, QuerySet
+from django.http import HttpRequest, HttpResponse
 from django.views.generic import ListView
 from django.db.models import Q
 
@@ -45,7 +46,7 @@ class BillingView(LoginRequiredMixin, ListView):
     context_object_name = 'project_list'
     paginate_by = 25
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Project]:
         order_by = self.request.GET.get('order_by', 'id')
         direction = self.request.GET.get('direction', 'asc')
 
@@ -124,7 +125,7 @@ class BillingView(LoginRequiredMixin, ListView):
 
         return projects.order_by(order_by)
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         # Count projects from the list to avoid duplicate query
         context['projects_count'] = len(context['project_list'])
@@ -155,5 +156,5 @@ class BillingView(LoginRequiredMixin, ListView):
         return context
 
 
-def b_link(request):
+def b_link(request: HttpRequest) -> HttpResponse:
     return HttpResponse('<h1>This is the B-Link Page</h1>')
