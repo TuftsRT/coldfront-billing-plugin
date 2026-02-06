@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 import pytest
 from coldfront.core.allocation.models import (
     Allocation,
@@ -26,6 +28,7 @@ from coldfront.core.resource.models import (
     ResourceType,
 )
 from django.contrib.auth.models import User
+from django.http import HttpRequest
 
 from coldfront_billing.constants import COST_ATTR_NAME, QUOTA_ATTR_NAME
 
@@ -35,19 +38,19 @@ from coldfront_billing.constants import COST_ATTR_NAME, QUOTA_ATTR_NAME
 
 
 @pytest.fixture
-def user(db):
+def user(db) -> User:
     """Create a regular user."""
     return User.objects.create_user(username='testuser', email='test@example.com', password='testpass123')
 
 
 @pytest.fixture
-def superuser(db):
+def superuser(db) -> User:
     """Create a superuser."""
     return User.objects.create_superuser(username='admin', email='admin@example.com', password='adminpass123')
 
 
 @pytest.fixture
-def pi_user(db):
+def pi_user(db) -> User:
     """Create a PI user."""
     return User.objects.create_user(username='pi_user', email='pi@example.com', password='pipass123')
 
@@ -58,43 +61,43 @@ def pi_user(db):
 
 
 @pytest.fixture
-def project_status_active(db):
+def project_status_active(db) -> ProjectStatusChoice:
     """Create an Active project status."""
     return ProjectStatusChoice.objects.get_or_create(name='Active')[0]
 
 
 @pytest.fixture
-def project_status_archived(db):
+def project_status_archived(db) -> ProjectStatusChoice:
     """Create an Archived project status."""
     return ProjectStatusChoice.objects.get_or_create(name='Archived')[0]
 
 
 @pytest.fixture
-def project_status_new(db):
+def project_status_new(db) -> ProjectStatusChoice:
     """Create a New project status."""
     return ProjectStatusChoice.objects.get_or_create(name='New')[0]
 
 
 @pytest.fixture
-def billing_role_choice(db):
+def billing_role_choice(db) -> ProjectUserRoleChoice:
     """Create the Billing role."""
     return ProjectUserRoleChoice.objects.get_or_create(name='Billing')[0]
 
 
 @pytest.fixture
-def billing_role(billing_role_choice):
+def billing_role(billing_role_choice: ProjectUserRoleChoice) -> ProjectUserRoleChoice:
     """Alias for billing_role_choice for backward compatibility."""
     return billing_role_choice
 
 
 @pytest.fixture
-def project_user_status_active(db):
+def project_user_status_active(db) -> ProjectUserStatusChoice:
     """Create an Active project user status."""
     return ProjectUserStatusChoice.objects.get_or_create(name='Active')[0]
 
 
 @pytest.fixture
-def project_user_status_inactive(db):
+def project_user_status_inactive(db) -> ProjectUserStatusChoice:
     """Create an Inactive project user status."""
     return ProjectUserStatusChoice.objects.get_or_create(name='Inactive')[0]
 
@@ -105,7 +108,7 @@ def project_user_status_inactive(db):
 
 
 @pytest.fixture
-def field_of_science(db):
+def field_of_science(db) -> FieldOfScience:
     """Create a FieldOfScience for projects."""
     return FieldOfScience.objects.get_or_create(description='Test Field of Science', defaults={'is_selectable': True})[
         0
@@ -113,7 +116,12 @@ def field_of_science(db):
 
 
 @pytest.fixture
-def project(pi_user, project_status_active, field_of_science, db):
+def project(
+        pi_user: User,
+        project_status_active: ProjectStatusChoice,
+        field_of_science: FieldOfScience,
+        db
+) -> Project:
     """Create a test project."""
     return Project.objects.create(
         title='Test Project',
@@ -125,16 +133,16 @@ def project(pi_user, project_status_active, field_of_science, db):
 
 @pytest.fixture
 def project_with_billing_user(
-    user,
-    project,
-    billing_role,
-    project_user_status_active,
-    storage_resource_type,
-    allocation_status_active,
-    cost_attribute_type,
-    quota_attribute_type,
+    user: User,
+    project: Project,
+    billing_role: ProjectUserRoleChoice,
+    project_user_status_active: ProjectUserStatusChoice,
+    storage_resource_type: ResourceType,
+    allocation_status_active: AllocationStatusChoice,
+    cost_attribute_type: ResourceAttributeType,
+    quota_attribute_type: AllocationAttributeType,
     db,
-):
+) -> Project:
     """Create a project with a user having Billing role and Storage allocation."""
     ProjectUser.objects.create(
         project=project,
@@ -175,19 +183,19 @@ def project_with_billing_user(
 
 
 @pytest.fixture
-def storage_resource_type(db):
+def storage_resource_type(db) -> ResourceType:
     """Create a Storage ResourceType."""
     return ResourceType.objects.get_or_create(name='Storage')[0]
 
 
 @pytest.fixture
-def allocation_status_active(db):
+def allocation_status_active(db) -> AllocationStatusChoice:
     """Create an Active allocation status."""
     return AllocationStatusChoice.objects.get_or_create(name='Active')[0]
 
 
 @pytest.fixture
-def cost_attribute_type(db):
+def cost_attribute_type(db) -> ResourceAttributeType:
     """Create a cost attribute type for resources."""
     # First create the base AttributeType
     text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name='Text')
@@ -199,7 +207,7 @@ def cost_attribute_type(db):
 
 
 @pytest.fixture
-def quota_attribute_type(db):
+def quota_attribute_type(db) -> AllocationAttributeType:
     """Create a quota attribute type for allocations."""
     # First create the base AttributeType
     float_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Float')
@@ -222,15 +230,15 @@ def quota_attribute_type(db):
 
 @pytest.fixture
 def multiple_projects(
-    pi_user,
-    project_status_active,
-    field_of_science,
-    storage_resource_type,
-    allocation_status_active,
-    cost_attribute_type,
-    quota_attribute_type,
+    pi_user: User,
+    project_status_active: ProjectStatusChoice,
+    field_of_science: FieldOfScience,
+    storage_resource_type: ResourceType,
+    allocation_status_active: AllocationStatusChoice,
+    cost_attribute_type: ResourceAttributeType,
+    quota_attribute_type: AllocationAttributeType,
     db,
-):
+) -> List[Project]:
     """Create multiple test projects with Storage allocations."""
     projects = []
     for i in range(5):
@@ -274,7 +282,7 @@ def multiple_projects(
     return projects
 
 
-def create_pi_user(username_suffix=''):
+def create_pi_user(username_suffix: str = '') -> User:
     """Helper function to create a PI user."""
     username = f'pi{username_suffix}' if username_suffix else 'pi'
     email = f'{username}@example.com'
@@ -282,19 +290,19 @@ def create_pi_user(username_suffix=''):
 
 
 def create_project_with_billing_user(
-    user,
-    pi_user,
-    project_status,
-    billing_role,
-    project_user_status,
-    title='Test Project',
-    with_allocation=False,
-    storage_resource_type=None,
-    allocation_status_active=None,
-    cost_attribute_type=None,
-    quota_attribute_type=None,
-    field_of_science=None,
-):
+    user: User,
+    pi_user: User,
+    project_status: ProjectStatusChoice,
+    billing_role: ProjectUserRoleChoice,
+    project_user_status: ProjectUserStatusChoice,
+    title: str = 'Test Project',
+    with_allocation: bool = False,
+    storage_resource_type: Optional[ResourceType] = None,
+    allocation_status_active: Optional[AllocationStatusChoice] = None,
+    cost_attribute_type: Optional[ResourceAttributeType] = None,
+    quota_attribute_type: Optional[AllocationAttributeType] = None,
+    field_of_science: Optional[FieldOfScience] = None,
+) -> Project:
     """Helper function to create a project with a user having Billing role."""
     # Get or create field_of_science if not provided
     if field_of_science is None:
@@ -347,9 +355,8 @@ def create_project_with_billing_user(
     return project
 
 
-def create_billing_request(user):
+def create_billing_request(user: User) -> HttpRequest:
     """Helper function to create an HttpRequest with a user for context processor tests."""
-    from django.http import HttpRequest
 
     request = HttpRequest()
     request.user = user

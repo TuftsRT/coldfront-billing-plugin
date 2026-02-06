@@ -18,3 +18,12 @@ def filter_by_search_params(
                 & Q(projectuser__status__name='Active')
             )
     return projects
+
+def get_ordering(get_params: QueryDict) -> str:
+    order_by = get_params.get('order_by', 'id')
+    direction = get_params.get('direction', 'asc')
+
+    if direction == 'des':
+        order_by = '-' + order_by
+
+    return order_by

@@ -22,7 +22,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data import BillingAllocation
 from coldfront_billing.forms import BillingSearchForm
-from coldfront_billing.filters import filter_by_search_params
+from coldfront_billing.filters import filter_by_search_params, get_ordering
 
 logger = logging.getLogger('BillingView')
 
@@ -47,13 +47,8 @@ class BillingView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self) -> QuerySet[Project]:
-        order_by = self.request.GET.get('order_by', 'id')
-        direction = self.request.GET.get('direction', 'asc')
-
-        if direction == 'des':
-            order_by = '-' + order_by
-
         projects = Project.objects.all()
+        ordering = get_ordering(get_params=self.request.GET)
         projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
 
         if not self.request.user.is_superuser:
@@ -64,7 +59,7 @@ class BillingView(LoginRequiredMixin, ListView):
             ).distinct()
 
         if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
-            return projects.select_related('pi', 'status').order_by(order_by)
+            return projects.select_related('pi', 'status').order_by(ordering)
 
         # Restrict to only projects that actually have paid Storage allocations
         projects = projects.filter(
@@ -114,7 +109,7 @@ class BillingView(LoginRequiredMixin, ListView):
         # Fetch only projects that have such allocations
         projects = projects.select_related('pi', 'status').prefetch_related(allocations_prefetch)
 
-        return projects.order_by(order_by)
+        return projects.order_by(ordering)
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
