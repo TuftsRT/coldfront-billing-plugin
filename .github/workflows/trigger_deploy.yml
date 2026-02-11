@@ -17,5 +17,5 @@ jobs:
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ secrets.PAT_TO_TRIGGER_OTHER_REPO }}" \
-            https://api.github.com/repos/TuftsRT/coldfront-test-project/dispatches \
+            https://api.github.com/repos/Tufts-Technology-Services/coldfront-test-project/dispatches \
             -d '{"event_type": "trigger-deploy", "client_payload": {"plugin_branch": "'"${{ github.ref_name }}"'"}}'
