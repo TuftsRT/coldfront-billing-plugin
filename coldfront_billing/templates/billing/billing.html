@@ -3,11 +3,9 @@
 {% load crispy_forms_tags %}
 {% load static %}
 
-
 {% block title %}
 Billing
 {% endblock %}
-
 
 {% block content %}
 <h2>Billing</h2>
@@ -68,11 +66,43 @@ Billing
             <td style="text-align: justify; text-justify: inter-word;">{{ project.title }}</td>
             <td>{{ project.status.name }}</td>
             <td>{{ project.cost }}</td>
-            <td>{{ project.cost_centers }}</td>
-          </tr>
+            <td>
+            <button type="button"
+              class="btn btn-link p-0 text-left"
+              data-toggle="modal"
+              data-target="#costCentersModal"
+              data-project-id="{{ project.id }}"
+              data-project-name="{{ project.title|escape }}"
+              data-project-cost="{{ project.cost }}"
+              {# Safe access to the JSON field. If assignment exists, dump it. Else [] #}
+              data-assignments='{% if project.cost_center_assignment %}{{ project.cost_center_assignment.assignments|safe }}{% else %}[]{% endif %}'>
+
+              {% if project.cost_center_assignment %}
+                  View Assignments
+              {% else %}
+                  Assign Cost Centers
+              {% endif %}
+            </button>
+        </td>
+    </tr>
+
         {% endfor %}
       </tbody>
     </table>
+      {% if is_paginated %} Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      <ul class="pagination float-end me-3">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{filter_parameters_with_order_by}}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{filter_parameters_with_order_by}}">Next</a></li>
+        {% else %}
+          <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+        {% endif %}
+      </ul>
+    {% endif %}
   </div>
 {% elif expand_accordion == "show" %}
   <div class="alert alert-info">
@@ -84,9 +114,254 @@ Billing
   </div>
 {% endif %}
 
+
+<div class="modal fade" id="costCentersModal" tabindex="-1" role="dialog" aria-labelledby="costCentersModalLabel" aria-hidden="true" data-update-url="{% url 'update_cost_center_assignment' project_id=0 %}">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+
+        {% csrf_token %}
+        <input type="hidden" id="id_project_id" name="project_id">
+        <input type="hidden" id="id_total_project_cost">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="costCentersModalLabel">Assign Cost Centers</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <table class="table table-bordered text-center">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col" style="width: 40%">Dept ID</th>
+                <th scope="col" style="width: 25%">Percentage (%)</th>
+                <th scope="col" style="width: 25%">Cost Assigned</th>
+                <th scope="col" style="width: 10%">Action</th>
+              </tr>
+            </thead>
+            <tbody id="cost-center-body">
+               </tbody>
+          </table>
+
+          <button type="button" class="btn btn-sm btn-primary" id="add-row-btn">
+            <i class="fas fa-plus"></i> Add Row
+          </button>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="save-changes-btn">Save changes</button>
+        </div>
+
+      <table style="display: none;">
+        <tr id="sample-row">
+            <td>
+                <select name="dept_id[]" class="form-control custom-select dept-select">
+                    <option value="">Select Dept...</option>
+                    {% for department in departments %}
+                        <option value="{{ department.dept_id }}">{{ department.dept_id }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <input type="number" name="percentage[]" class="form-control percent-input" min="0" max="100" step="1" placeholder="0">
+            </td>
+            <td>
+                <input type="text" class="form-control cost-input" readonly>
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm remove-row-btn">&times;</button>
+
+            </td>
+        </tr>
+      </table>
+
+    </div>
+  </div>
+</div>
+
+
 <script>
-  $("#navbar-main > ul > li.active").removeClass("active");
-  $("#navbar-project-menu").addClass("active");
-  $("#navbar-project").addClass("active");
+
+  document.addEventListener('DOMContentLoaded', function() {
+
+      $("#navbar-main > ul > li.active").removeClass("active");
+      $("#navbar-project-menu").addClass("active");
+      $("#navbar-project").addClass("active");
+
+      // Helper: Add a row and optionally fill it with data
+      function addRow(data = null) {
+          var rowHtml = $('#sample-row').html();
+          var newRow = $('<tr>').html(rowHtml);
+
+          // Append to table
+          $('#cost-center-body').append(newRow);
+
+          // If data exists (from JSON), fill the fields
+          if (data) {
+              newRow.find('.dept-select').val(data.dept_id);
+              newRow.find('.percent-input').val(data.percentage);
+              // Trigger calculation for this row
+              calculateRowCost(newRow);
+          }
+      }
+      // Helper: Calculate Cost for a specific row
+      function calculateRowCost(row) {
+          var percentage = parseFloat(row.find('.percent-input').val()) || 0;
+          var totalProjectCost = parseFloat($('#id_total_project_cost').val()) || 0;
+
+          var assignedCost = (totalProjectCost * percentage) / 100;
+          row.find('.cost-input').val(assignedCost.toFixed(2));
+      }
+
+      // Handle modal data population
+      $('#costCentersModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+
+        // Extract info from data-* attributes
+        var projectId = button.data('project-id');
+        var projectName = button.attr('data-project-name');
+        var projectCost = button.data('project-cost');
+
+        var assignments = button.data('assignments');
+
+        // Safety check: ensure assignments is an array
+        if (typeof assignments === 'string') {
+            // Handle edge case where it comes in as a string
+             try { assignments = JSON.parse(assignments); } catch(e) { assignments = []; }
+        }
+        if (!assignments) assignments = [];
+
+
+        var modal = $(this);
+        modal.find('.modal-title').text('Assign IDs to Project: ' + projectName);
+        modal.find('#id_project_id').val(projectId);
+        modal.find('#id_total_project_cost').val(projectCost);
+
+        // Clear table
+        $('#cost-center-body').empty();
+
+        // Loop through JSON and add rows
+        if (assignments.length > 0) {
+            assignments.forEach(function(item) {
+                addRow(item);
+            });
+        } else {
+            // If no data, add one empty row
+            addRow();
+        }
+      });
+
+      // 2. Add Row Button
+      $('#add-row-btn').on('click', function() {
+          addRow();
+      });
+
+      // 3. Remove Row Button
+      $('#cost-center-body').on('click', '.remove-row-btn', function() {
+          $(this).closest('tr').remove();
+      });
+
+      // 4. Live Calculation on Input Change
+      $('#cost-center-body').on('input', '.percent-input', function() {
+          var row = $(this).closest('tr');
+          calculateRowCost(row);
+      });
+
+      // 5. Save Changes Button Handler
+      $('#save-changes-btn').on('click', function() {
+          var projectId = $('#id_project_id').val();
+          var csrfToken = $('[name=csrfmiddlewaretoken]').val();
+          var rows = $('#cost-center-body tr');
+          var errors = [];
+          var validRows = [];
+
+          // Validate all rows first
+          rows.each(function() {
+              var deptId = $(this).find('.dept-select').val();
+              var percentage = parseFloat($(this).find('.percent-input').val());
+
+              if (deptId && !isNaN(percentage) && percentage >= 0 && percentage <= 100) {
+                  validRows.push({
+                      dept_id: deptId,
+                      percentage: percentage,
+                      row: $(this)
+                  });
+              } else if (deptId || !isNaN(percentage)) {
+                  // Only show error if partially filled
+                  errors.push('Please fill in both department and percentage for all rows, or remove empty rows.');
+              }
+          });
+
+          if (errors.length > 0) {
+              alert(errors.join('\n'));
+              return;
+          }
+
+          // Check if total percentage equals 100
+          var totalPercentage = validRows.reduce(function(sum, row) {
+              return sum + row.percentage;
+          }, 0);
+
+          if (Math.abs(totalPercentage - 100) > 0.01) {
+              if (!confirm('Total percentage is ' + totalPercentage.toFixed(2) + '%, not 100%. Do you want to continue?')) {
+                  return;
+              }
+          }
+
+          // Disable save button to prevent double submission
+          var saveBtn = $(this);
+          saveBtn.prop('disabled', true).text('Saving...');
+
+          // Send AJAX requests for each valid row
+          var baseUrl = $('#costCentersModal').data('update-url');
+          console.log('Base URL from data attribute:', baseUrl);
+
+          var promises = validRows.map(function(rowData) {
+              var finalUrl = baseUrl.replace('0', projectId);
+              console.log('Final URL for request:', finalUrl);
+              console.log('Request data:', {
+                  'project_id': projectId,
+                  'dept_id': rowData.dept_id,
+                  'percentage': rowData.percentage,
+                  'csrfmiddlewaretoken': csrfToken
+              });
+
+              return $.ajax({
+                  url: finalUrl,
+                  type: 'POST',
+                  data: {
+                      'project_id': projectId,
+                      'dept_id': rowData.dept_id,
+                      'percentage': rowData.percentage,
+                      'csrfmiddlewaretoken': csrfToken
+                  }
+              }).fail(function(xhr, status, error) {
+                  console.log('AJAX request failed:', {
+                      status: xhr.status,
+                      statusText: xhr.statusText,
+                      responseText: xhr.responseText,
+                      error: error
+                  });
+              });
+          });
+
+          // Handle all promises
+          $.when.apply($, promises).done(function() {
+              // All requests succeeded
+              alert('Cost center assignments saved successfully!');
+              $('#costCentersModal').modal('hide');
+              // Optionally refresh the page to show updated data
+              location.reload();
+          }).fail(function() {
+              // At least one request failed
+              alert('Error saving some cost center assignments. Please try again.');
+          }).always(function() {
+              // Re-enable save button
+              saveBtn.prop('disabled', false).text('Save changes');
+          });
+      });
+  });
 </script>
 {% endblock %}

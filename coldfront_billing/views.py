@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Any, Dict, Optional
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
@@ -6,11 +7,17 @@ from coldfront.core.project.forms import ProjectSearchForm
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models import Prefetch, Q, QuerySet
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView
+from django.utils.decorators import method_decorator
 
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,
@@ -21,8 +28,9 @@ from coldfront_billing.constants import (
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import BillingAllocation
-from coldfront_billing.forms import BillingSearchForm
+from coldfront_billing.forms import BillingSearchForm, CostCenterAssignmentForm
 from coldfront_billing.filters import filter_by_search_params, get_ordering
+from coldfront_billing.models import CostCenterAssignment, CostCenter
 
 logger = logging.getLogger('BillingView')
 
@@ -107,7 +115,10 @@ class BillingView(LoginRequiredMixin, ListView):
             to_attr=BILLING_ATTRIBUTE_NAME,
         )
         # Fetch only projects that have such allocations
-        projects = projects.select_related('pi', 'status').prefetch_related(allocations_prefetch)
+        projects = projects.select_related('pi', 'status').prefetch_related(
+            allocations_prefetch,
+            'cost_center_assignment'
+        )
 
         return projects.order_by(ordering)
 
@@ -124,11 +135,18 @@ class BillingView(LoginRequiredMixin, ListView):
             ]
             project_cost = sum(b.total_cost for b in billing_allocations)
             project.cost = f'${project_cost}'
-            # Cost centers currently set to '-'
-            project.cost_centers = '-'
+
+            # Get cost centers from CostCenterAssignment or default to '-'
+            try:
+                cost_center_assignment = project.cost_center_assignment
+                project.cost_centers = cost_center_assignment.get_cost_centers_display()
+            except CostCenterAssignment.DoesNotExist:
+                project.cost_centers = '-'
 
         context['billing_search_form'] = BillingSearchForm(self.request.GET)
         context['expand_accordion'] = 'show' if self.request.GET else ''
+        context['departments'] = CostCenter.objects.all()
+
         filter_params = self.request.GET.copy()
         if 'page' in filter_params:
             del filter_params['page']
@@ -144,3 +162,60 @@ class BillingView(LoginRequiredMixin, ListView):
 
 def b_link(request: HttpRequest) -> HttpResponse:
     return HttpResponse('<h1>This is the B-Link Page</h1>')
+
+
+class CostCenterAssignmentUpdateView(LoginRequiredMixin, ListView):
+    """Class-based view for updating cost center assignments."""
+
+    def check_permission(self, project: Project) -> bool:
+        """Check if user has permission to modify the project."""
+        if self.request.user.is_superuser:
+            return True
+
+        return project.projectuser_set.filter(
+            user=self.request.user,
+            role__name='Billing',
+            status__name='Active'
+        ).exists()
+
+    def post(self, request: HttpRequest, project_id: int) -> JsonResponse:
+        form = CostCenterAssignmentForm(request.POST)
+        if not form.is_valid():
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+
+        project_id = form.cleaned_data['project_id']
+        dept_id = form.cleaned_data['dept_id']  # This is already the dept_id string due to to_field_name='dept_id'
+        percentage = form.cleaned_data['percentage']
+
+        try:
+            project = get_object_or_404(Project, id=project_id)
+
+            if not self.check_permission(project):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'You do not have permission to modify this project.'
+                }, status=403)
+
+            # Get or create CostCenterAssignment for the project
+            cost_center_assignment, created = CostCenterAssignment.objects.get_or_create(
+                project=project,
+                defaults={'assignments': {}}
+            )
+            cost_center_assignment.assignments = {str(dept_id.dept_id): percentage}
+            cost_center_assignment.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Cost center assignment updated successfully.',
+                'assignments': cost_center_assignment.assignments
+            })
+
+        except Exception as cause:
+            logger.error(f"Error updating cost center assignment: {str(cause)}")
+            return JsonResponse({
+                'success': False,
+                'error': 'An error occurred while updating the cost center assignment.'
+            }, status=400)
