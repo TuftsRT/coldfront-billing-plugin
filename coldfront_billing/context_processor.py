@@ -1,4 +1,4 @@
-from coldfront.core.project.models import ProjectUser
+from coldfront.core.project.models import Project, ProjectUser
 from django.http import HttpRequest
 
 
@@ -15,4 +15,8 @@ def billing_role(request: HttpRequest):
         user=user, project__status__name__in=('Active', 'Archived'), role__name='Billing', status__name='Active'
     ).exists()
 
-    return {'has_billing_role': has_billing}
+    is_pi = Project.objects.filter(
+        pi=user, status__name__in=('Active', 'Archived')
+    ).exists()
+
+    return {'has_billing_role': has_billing or is_pi}

@@ -105,9 +105,23 @@ class TestBillingRoleContextProcessor:
             project_status_active,
             billing_role,
             project_user_status_inactive,
-            'Project with Inactive User',
+            'Project with Inactive User',)
+        request = create_billing_request(user)
+        result = billing_role_func(request)
+        assert result == {'has_billing_role': False}
+
+    def test_project_pi_returns_has_billing_role_true(self, user, project_status_active):
+        from coldfront.core.project.models import Project
+
+        # Create project with user as PI
+        project = Project.objects.create(
+            title='Test Project',
+            description='Test project for PI access',
+            pi=user,
+            status=project_status_active
         )
 
         request = create_billing_request(user)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': False}
+        assert result == {'has_billing_role': True}
+

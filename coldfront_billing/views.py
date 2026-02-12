@@ -3,14 +3,16 @@ from typing import Any, Dict, Optional
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.forms import ProjectSearchForm
-from coldfront.core.project.models import Project
+from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch, Q, QuerySet
 from django.http import HttpRequest, HttpResponse
-from django.views.generic import ListView
+from django.shortcuts import get_object_or_404
+from django.views.generic import DetailView, ListView
 
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,
@@ -52,10 +54,13 @@ class BillingView(LoginRequiredMixin, ListView):
         projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
 
         if not self.request.user.is_superuser:
+            # Allow access for users with Billing role OR project PIs
             projects = projects.filter(
-                projectuser__user=self.request.user,
-                projectuser__role__name='Billing',
-                projectuser__status__name='Active',
+                Q(
+                    projectuser__user=self.request.user,
+                    projectuser__role__name='Billing',
+                    projectuser__status__name='Active',
+                ) | Q(pi=self.request.user)
             ).distinct()
 
         if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
@@ -144,3 +149,4 @@ class BillingView(LoginRequiredMixin, ListView):
 
 def b_link(request: HttpRequest) -> HttpResponse:
     return HttpResponse('<h1>This is the B-Link Page</h1>')
+
