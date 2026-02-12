@@ -6,6 +6,7 @@ from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.forms import ProjectSearchForm
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
+from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -18,6 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView
 from django.utils.decorators import method_decorator
+
 
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,
@@ -136,12 +138,14 @@ class BillingView(LoginRequiredMixin, ListView):
             project_cost = sum(b.total_cost for b in billing_allocations)
             project.cost = f'${project_cost}'
 
-            # Get cost centers from CostCenterAssignment or default to '-'
+            # 2. Handle Cost Center & JSON Serialization safely
             try:
-                cost_center_assignment = project.cost_center_assignment
-                project.cost_centers = cost_center_assignment.get_cost_centers_display()
-            except CostCenterAssignment.DoesNotExist:
+                assignment_obj = project.cost_center_assignment
+                project.cost_centers = assignment_obj.get_cost_centers_display()
+                project.assignments_json = json.dumps(assignment_obj.assignments)
+            except ObjectDoesNotExist:
                 project.cost_centers = '-'
+                project.assignments_json = '{}'
 
         context['billing_search_form'] = BillingSearchForm(self.request.GET)
         context['expand_accordion'] = 'show' if self.request.GET else ''
@@ -154,7 +158,6 @@ class BillingView(LoginRequiredMixin, ListView):
             del filter_params['order_by']
         if 'direction' in filter_params:
             del filter_params['direction']
-
         context['filter_parameters'] = filter_params.urlencode()
 
         return context
@@ -187,8 +190,7 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, ListView):
             }, status=400)
 
         project_id = form.cleaned_data['project_id']
-        dept_id = form.cleaned_data['dept_id']  # This is already the dept_id string due to to_field_name='dept_id'
-        percentage = form.cleaned_data['percentage']
+        assignments_data = form.cleaned_data['assignments']
 
         try:
             project = get_object_or_404(Project, id=project_id)
@@ -200,11 +202,11 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, ListView):
                 }, status=403)
 
             # Get or create CostCenterAssignment for the project
-            cost_center_assignment, created = CostCenterAssignment.objects.get_or_create(
+            cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
                 project=project,
                 defaults={'assignments': {}}
             )
-            cost_center_assignment.assignments = {str(dept_id.dept_id): percentage}
+            cost_center_assignment.assignments = dict(assignments_data)
             cost_center_assignment.save()
 
             return JsonResponse({

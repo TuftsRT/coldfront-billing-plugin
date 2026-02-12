@@ -1,4 +1,5 @@
 from typing import ClassVar
+import json
 
 from django import forms
 from coldfront.core.project.models import Project
@@ -14,30 +15,17 @@ class BillingSearchForm(forms.Form):
 
 
 class CostCenterAssignmentForm(forms.Form):
-    """Form for handling cost center assignment from modal."""
+    """Form for handling cost center assignment from modal via JSON."""
 
     project_id = forms.IntegerField(
         widget=forms.HiddenInput()
     )
-
-    dept_id = forms.ModelChoiceField(
-        queryset=CostCenter.objects.all(),
-        to_field_name='dept_id',
-        empty_label="Select Department",
-        widget=forms.Select(attrs={'class': 'form-control'})
+    # CharField - because the data comes in as a JSON string
+    assignments = forms.CharField(
+        widget=forms.HiddenInput()
     )
 
-    percentage = forms.IntegerField(
-        min_value=0,
-        max_value=100,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': '0',
-            'max': '100'
-        })
-    )
-
-    def clean_project_id(self):
+    def clean_project_id(self) -> int:
         """Validate that the project exists."""
         project_id = self.cleaned_data['project_id']
         try:
@@ -46,3 +34,26 @@ class CostCenterAssignmentForm(forms.Form):
             raise forms.ValidationError("Invalid project ID.")
         return project_id
 
+    def clean_assignments(self) -> dict:
+        json_string = self.cleaned_data['assignments']
+
+        try:
+            assignments_data = json.loads(json_string)
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid JSON data format.")
+
+        if not isinstance(assignments_data, dict):
+            raise ValidationError("Assignments must be a dictionary.")
+
+        valid_dept_ids = set(
+            CostCenter.objects.values_list('dept_id', flat=True)
+        )
+        for dept_id, percentage in assignments_data.items():
+            if dept_id not in valid_dept_ids:
+                raise ValidationError(
+                    f"Cost Center '{dept_id}' does not exist.")
+            if not isinstance(percentage, int):
+                raise ValidationError(
+                    f"Percentage for '{dept_id}' must be an integer.")
+
+        return assignments_data

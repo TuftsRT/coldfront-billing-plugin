@@ -74,15 +74,18 @@ Billing
               data-project-id="{{ project.id }}"
               data-project-name="{{ project.title|escape }}"
               data-project-cost="{{ project.cost }}"
-              {# Safe access to the JSON field. If assignment exists, dump it. Else [] #}
-              data-assignments='{% if project.cost_center_assignment %}{{ project.cost_center_assignment.assignments|safe }}{% else %}[]{% endif %}'>
+              data-assignments="{{ project.assignments_json|escape }}">
+              {% if project.cost_centers != '-' %}
+                    <span class="ml-2 text-body" style="font-size: 0.9rem;">
+                        {{ project.cost_centers }}
+                    </span>
+                  <i class="fas fa-edit text-dark" style="font-size: 1.2rem;"></i>
 
-              {% if project.cost_center_assignment %}
-                  View Assignments
               {% else %}
-                  Assign Cost Centers
+                  <i class="fas fa-plus-circle text-dark" style="font-size: 1.2rem;"></i>
               {% endif %}
             </button>
+
         </td>
     </tr>
 
@@ -137,7 +140,7 @@ Billing
                 <th scope="col" style="width: 40%">Dept ID</th>
                 <th scope="col" style="width: 25%">Percentage (%)</th>
                 <th scope="col" style="width: 25%">Cost Assigned</th>
-                <th scope="col" style="width: 10%">Action</th>
+                <th scope="col" style="width: 10%"></th>
               </tr>
             </thead>
             <tbody id="cost-center-body">
@@ -170,10 +173,12 @@ Billing
             <td>
                 <input type="text" class="form-control cost-input" readonly>
             </td>
-            <td>
-                <button type="button" class="btn btn-danger btn-sm remove-row-btn">&times;</button>
-
-            </td>
+            <td class="text-center align-middle">
+        {# Clean Red Minus Icon #}
+        <button type="button" class="btn btn-link text-danger p-0 remove-row-btn" title="Remove Row">
+            <i class="fas fa-minus-circle" style="font-size: 1.2rem;"></i>
+        </button>
+    </td>
         </tr>
       </table>
 
@@ -181,14 +186,20 @@ Billing
   </div>
 </div>
 
-
 <script>
-
   document.addEventListener('DOMContentLoaded', function() {
 
       $("#navbar-main > ul > li.active").removeClass("active");
       $("#navbar-project-menu").addClass("active");
       $("#navbar-project").addClass("active");
+
+      // Helper: Calculate Cost for a specific row
+      function calculateRowCost(row) {
+          var percentage = parseInt(row.find('.percent-input').val()) || 0;
+          var totalProjectCost = parseFloat($('#id_total_project_cost').val()) || 0;
+          var assignedCost = (totalProjectCost * percentage) / 100;
+          row.find('.cost-input').val(assignedCost.toFixed(2));
+      }
 
       // Helper: Add a row and optionally fill it with data
       function addRow(data = null) {
@@ -206,14 +217,7 @@ Billing
               calculateRowCost(newRow);
           }
       }
-      // Helper: Calculate Cost for a specific row
-      function calculateRowCost(row) {
-          var percentage = parseFloat(row.find('.percent-input').val()) || 0;
-          var totalProjectCost = parseFloat($('#id_total_project_cost').val()) || 0;
 
-          var assignedCost = (totalProjectCost * percentage) / 100;
-          row.find('.cost-input').val(assignedCost.toFixed(2));
-      }
 
       // Handle modal data population
       $('#costCentersModal').on('show.bs.modal', function (event) {
@@ -223,35 +227,42 @@ Billing
         var projectId = button.data('project-id');
         var projectName = button.attr('data-project-name');
         var projectCost = button.data('project-cost');
+        var rawAssignments = button.data('assignments');
+        var assignmentsArray = [];
 
-        var assignments = button.data('assignments');
-
-        // Safety check: ensure assignments is an array
-        if (typeof assignments === 'string') {
-            // Handle edge case where it comes in as a string
-             try { assignments = JSON.parse(assignments); } catch(e) { assignments = []; }
+        if (rawAssignments) {
+        // If it's already an object (jQuery parsed it automatically)
+        if (typeof rawAssignments === 'object' && !Array.isArray(rawAssignments)) {
+            // CONVERT MAP TO ARRAY: {"105": 50} -> [{dept_id: "105", percentage: 50}]
+            Object.keys(rawAssignments).forEach(function(key) {
+                assignmentsArray.push({
+                    dept_id: key,
+                    percentage: rawAssignments[key]
+                });
+            });
         }
-        if (!assignments) assignments = [];
-
+        // If it's already an array (rare case based on your code)
+        else if (Array.isArray(rawAssignments)) {
+            assignmentsArray = rawAssignments;
+        }
+    }
 
         var modal = $(this);
-        modal.find('.modal-title').text('Assign IDs to Project: ' + projectName);
+        modal.find('.modal-title').text('Assign IDs to Project: ' + projectName + ' ('+projectId+')');
         modal.find('#id_project_id').val(projectId);
         modal.find('#id_total_project_cost').val(projectCost);
 
-        // Clear table
+        // 4. Clear and Fill Table
         $('#cost-center-body').empty();
 
-        // Loop through JSON and add rows
-        if (assignments.length > 0) {
-            assignments.forEach(function(item) {
+        if (assignmentsArray.length > 0) {
+            assignmentsArray.forEach(function(item) {
                 addRow(item);
             });
         } else {
-            // If no data, add one empty row
             addRow();
         }
-      });
+    });
 
       // 2. Add Row Button
       $('#add-row-btn').on('click', function() {
@@ -275,22 +286,21 @@ Billing
           var csrfToken = $('[name=csrfmiddlewaretoken]').val();
           var rows = $('#cost-center-body tr');
           var errors = [];
-          var validRows = [];
+          var assignmentsMap = {}; // Object to store our "Dept : Percent" map
+          var totalPercentage = 0;
 
-          // Validate all rows first
+          // --- VALIDATION & DATA GATHERING ---
           rows.each(function() {
               var deptId = $(this).find('.dept-select').val();
-              var percentage = parseFloat($(this).find('.percent-input').val());
+              // Parse as Integer (10, not 10.00)
+              var percentage = parseInt($(this).find('.percent-input').val());
 
-              if (deptId && !isNaN(percentage) && percentage >= 0 && percentage <= 100) {
-                  validRows.push({
-                      dept_id: deptId,
-                      percentage: percentage,
-                      row: $(this)
-                  });
+              if (deptId && !isNaN(percentage)) {
+                  // Add to our map: { "COST_CENTER_1": 50, "COST_CENTER_2": 50 }
+                  assignmentsMap[deptId] = percentage;
+                  totalPercentage += percentage;
               } else if (deptId || !isNaN(percentage)) {
-                  // Only show error if partially filled
-                  errors.push('Please fill in both department and percentage for all rows, or remove empty rows.');
+                  errors.push('Please fill in both department and percentage for all rows.');
               }
           });
 
@@ -299,13 +309,9 @@ Billing
               return;
           }
 
-          // Check if total percentage equals 100
-          var totalPercentage = validRows.reduce(function(sum, row) {
-              return sum + row.percentage;
-          }, 0);
-
-          if (Math.abs(totalPercentage - 100) > 0.01) {
-              if (!confirm('Total percentage is ' + totalPercentage.toFixed(2) + '%, not 100%. Do you want to continue?')) {
+          // Check if total is 100%
+          if (totalPercentage !== 100) {
+              if (!confirm('Total percentage is ' + totalPercentage + '%, not 100%. Do you want to continue?')) {
                   return;
               }
           }
@@ -314,52 +320,35 @@ Billing
           var saveBtn = $(this);
           saveBtn.prop('disabled', true).text('Saving...');
 
-          // Send AJAX requests for each valid row
+          // Prepare the URL
           var baseUrl = $('#costCentersModal').data('update-url');
-          console.log('Base URL from data attribute:', baseUrl);
+          var finalUrl = baseUrl.replace('0', projectId);
 
-          var promises = validRows.map(function(rowData) {
-              var finalUrl = baseUrl.replace('0', projectId);
-              console.log('Final URL for request:', finalUrl);
-              console.log('Request data:', {
+          console.log('Final URL:', finalUrl,  projectId, 'assignments', JSON.stringify(assignmentsMap) );
+
+          // --- SINGLE AJAX REQUEST ---
+          $.ajax({
+              url: finalUrl,
+              type: 'POST',
+              data: {
                   'project_id': projectId,
-                  'dept_id': rowData.dept_id,
-                  'percentage': rowData.percentage,
-                  'csrfmiddlewaretoken': csrfToken
-              });
-
-              return $.ajax({
-                  url: finalUrl,
-                  type: 'POST',
-                  data: {
-                      'project_id': projectId,
-                      'dept_id': rowData.dept_id,
-                      'percentage': rowData.percentage,
-                      'csrfmiddlewaretoken': csrfToken
-                  }
-              }).fail(function(xhr, status, error) {
-                  console.log('AJAX request failed:', {
-                      status: xhr.status,
-                      statusText: xhr.statusText,
-                      responseText: xhr.responseText,
-                      error: error
-                  });
-              });
-          });
-
-          // Handle all promises
-          $.when.apply($, promises).done(function() {
-              // All requests succeeded
-              alert('Cost center assignments saved successfully!');
-              $('#costCentersModal').modal('hide');
-              // Optionally refresh the page to show updated data
-              location.reload();
-          }).fail(function() {
-              // At least one request failed
-              alert('Error saving some cost center assignments. Please try again.');
-          }).always(function() {
-              // Re-enable save button
-              saveBtn.prop('disabled', false).text('Save changes');
+                  'csrfmiddlewaretoken': csrfToken,
+                  // Send assignments as a JSON string
+                  'assignments': JSON.stringify(assignmentsMap)
+              },
+              success: function(response) {
+                  alert('Cost center assignments saved successfully!');
+                  $('#costCentersModal').modal('hide');
+                  location.reload();
+              },
+              error: function(xhr, status, error) {
+                  console.log('Error:', xhr.responseText);
+                  alert('Error saving assignments. Please try again.');
+              },
+              complete: function() {
+                  // Re-enable save button
+                  saveBtn.prop('disabled', false).text('Save changes');
+              }
           });
       });
   });
