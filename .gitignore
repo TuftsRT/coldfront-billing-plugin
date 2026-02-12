@@ -211,3 +211,6 @@ coldfront/
 coldfront-branding/
 coldfront-user-management-plugin/
 postgres_data/
+
+# IDE specific
+.DS_Store
