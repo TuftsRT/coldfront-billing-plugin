@@ -19,6 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView
 from django.utils.decorators import method_decorator
+from django.views import View
 
 
 from coldfront_billing.constants import (
@@ -38,11 +39,10 @@ logger = logging.getLogger('BillingView')
 
 
 default_quota = getattr(
-    settings,
-    'COLDFRONT_BILLING_DEFAULT_QUOTA',
-    0,
-)
-
+       settings,
+       'COLDFRONT_BILLING_DEFAULT_QUOTA',
+       0,
+   )
 default_cost = getattr(
     settings,
     'COLDFRONT_BILLING_DEFAULT_COST',
@@ -167,7 +167,7 @@ def b_link(request: HttpRequest) -> HttpResponse:
     return HttpResponse('<h1>This is the B-Link Page</h1>')
 
 
-class CostCenterAssignmentUpdateView(LoginRequiredMixin, ListView):
+class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
     """Class-based view for updating cost center assignments."""
 
     def check_permission(self, project: Project) -> bool:
@@ -181,7 +181,7 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, ListView):
             status__name='Active'
         ).exists()
 
-    def post(self, request: HttpRequest, project_id: int) -> JsonResponse:
+    def post(self, request: HttpRequest) -> JsonResponse:
         form = CostCenterAssignmentForm(request.POST)
         if not form.is_valid():
             return JsonResponse({

@@ -118,7 +118,7 @@ Billing
 {% endif %}
 
 
-<div class="modal fade" id="costCentersModal" tabindex="-1" role="dialog" aria-labelledby="costCentersModalLabel" aria-hidden="true" data-update-url="{% url 'update_cost_center_assignment' project_id=0 %}">
+<div class="modal fade" id="costCentersModal" tabindex="-1" role="dialog" aria-labelledby="costCentersModalLabel" aria-hidden="true" data-update-url="{% url 'update_cost_center_assignment' %}">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
 
@@ -150,6 +150,18 @@ Billing
           <button type="button" class="btn btn-sm btn-primary" id="add-row-btn">
             <i class="fas fa-plus"></i> Add Row
           </button>
+
+          <!-- Total Calculations -->
+          <div class="mt-3">
+            <div class="col-md-6">
+              <div class="mb-2">
+                <strong>Total Percent: </strong><span id="total-percent">0%</span>
+              </div>
+              <div class="mb-2">
+                <strong>Total Cost: </strong><span id="total-cost">$0.00</span> monthly
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -196,9 +208,35 @@ Billing
       // Helper: Calculate Cost for a specific row
       function calculateRowCost(row) {
           var percentage = parseInt(row.find('.percent-input').val()) || 0;
-          var totalProjectCost = parseFloat($('#id_total_project_cost').val()) || 0;
+          var totalProjectCostRaw = $('#id_total_project_cost').val();
+          var cleanCost = totalProjectCostRaw;
+          if (typeof cleanCost === 'string') {
+              cleanCost = cleanCost.replace(/[$,\s]/g, '');
+          }
+          var totalProjectCost = parseFloat(cleanCost) || 0;
           var assignedCost = (totalProjectCost * percentage) / 100;
           row.find('.cost-input').val(assignedCost.toFixed(2));
+
+          // Update totals after calculating row cost
+          updateTotals();
+      }
+
+      // Helper: Update Total Percent and Total Cost
+      function updateTotals() {
+          var totalPercent = 0;
+          var totalCost = 0;
+
+          $('#cost-center-body tr').each(function() {
+              var percentage = parseInt($(this).find('.percent-input').val()) || 0;
+              var cost = parseFloat($(this).find('.cost-input').val()) || 0;
+
+              totalPercent += percentage;
+              totalCost += cost;
+          });
+
+          // Update the total fields
+          $('#total-percent').text(totalPercent + '%');
+          $('#total-cost').text('$' + totalCost.toFixed(2));
       }
 
       // Helper: Add a row and optionally fill it with data
@@ -213,8 +251,10 @@ Billing
           if (data) {
               newRow.find('.dept-select').val(data.dept_id);
               newRow.find('.percent-input').val(data.percentage);
-              // Trigger calculation for this row
-              calculateRowCost(newRow);
+              // Trigger calculation for this row after a brief delay to ensure values are set
+              setTimeout(function() {
+                  calculateRowCost(newRow);
+              }, 50);
           }
       }
 
@@ -262,6 +302,13 @@ Billing
         } else {
             addRow();
         }
+
+        // Trigger calculation for all existing rows after modal is populated
+        setTimeout(function() {
+            $('#cost-center-body tr').each(function() {
+                calculateRowCost($(this));
+            });
+        }, 100);
     });
 
       // 2. Add Row Button
@@ -272,6 +319,7 @@ Billing
       // 3. Remove Row Button
       $('#cost-center-body').on('click', '.remove-row-btn', function() {
           $(this).closest('tr').remove();
+          updateTotals(); // Update totals after removing row
       });
 
       // 4. Live Calculation on Input Change
@@ -321,10 +369,8 @@ Billing
           saveBtn.prop('disabled', true).text('Saving...');
 
           // Prepare the URL
-          var baseUrl = $('#costCentersModal').data('update-url');
-          var finalUrl = baseUrl.replace('0', projectId);
+          var finalUrl = $('#costCentersModal').data('update-url');
 
-          console.log('Final URL:', finalUrl,  projectId, 'assignments', JSON.stringify(assignmentsMap) );
 
           // --- SINGLE AJAX REQUEST ---
           $.ajax({
