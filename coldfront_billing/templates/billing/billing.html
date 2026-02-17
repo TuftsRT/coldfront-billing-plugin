@@ -47,12 +47,20 @@ Billing
           </th>
           <th scope="col" class="text-nowrap">
             PI
+            <a href="?order_by=pi&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort PI asc</span></a>
+            <a href="?order_by=pi&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort PI desc</span></a>
           </th>
           <th scope="col">Title</th>
           <th scope="col" class="text-nowrap">
             Status
+            <a href="?order_by=status&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Status asc</span></a>
+            <a href="?order_by=status&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Status desc</span></a>
           </th>
-          <th scope="col" class="text-nowrap">Cost</th>
+          <th scope="col" class="text-nowrap">
+            Cost
+            <a href="?order_by=cost&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Cost asc</span></a>
+            <a href="?order_by=cost&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Cost desc</span></a>
+          </th>
           <th scope="col" class="text-nowrap">Cost Centers</th>
         </tr>
       </thead>
