@@ -53,6 +53,9 @@ class BillingView(LoginRequiredMixin, ListView):
         ordering = get_ordering(get_params=self.request.GET)
         projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
 
+        order_by_cost = self.request.GET.get('order_by') == 'cost'
+        cost_direction = self.request.GET.get('direction', 'asc')
+
         if not self.request.user.is_superuser:
             # Allow access for users with Billing role OR project PIs
             projects = projects.filter(
@@ -64,7 +67,10 @@ class BillingView(LoginRequiredMixin, ListView):
             ).distinct()
 
         if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
-            return projects.select_related('pi', 'status').order_by(ordering)
+            queryset = projects.select_related('pi', 'status')
+            if not order_by_cost:
+                return queryset.order_by(ordering)
+            return queryset
 
         # Restrict to only projects that actually have paid Storage allocations
         projects = projects.filter(
@@ -114,7 +120,23 @@ class BillingView(LoginRequiredMixin, ListView):
         # Fetch only projects that have such allocations
         projects = projects.select_related('pi', 'status').prefetch_related(allocations_prefetch)
 
-        return projects.order_by(ordering)
+        if not order_by_cost:
+            return projects.order_by(ordering)
+
+        # For cost ordering, we need to calculate costs first, then sort
+        projects_list = list(projects)
+        for project in projects_list:
+            billing_allocations = [
+                BillingAllocation.parse(a, default_quota, default_cost)
+                for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])
+            ]
+            project._calculated_cost = sum(b.total_cost for b in billing_allocations)
+
+        # Sort by calculated cost
+        reverse_sort = cost_direction == 'des'
+        projects_list.sort(key=lambda p: p._calculated_cost, reverse=reverse_sort)
+
+        return projects_list
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
@@ -122,14 +144,20 @@ class BillingView(LoginRequiredMixin, ListView):
         context['projects_count'] = len(context['project_list'])
 
         project_list = context.get('project_list', [])
+        order_by_cost = self.request.GET.get('order_by') == 'cost'
+
         for project in project_list:
-            billing_allocations = [
-                BillingAllocation.parse(a, default_quota, default_cost)
-                for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])
-            ]
-            project_cost = sum(b.total_cost for b in billing_allocations)
+            # If we already calculated cost for sorting, use that value
+            if hasattr(project, '_calculated_cost'):
+                project_cost = project._calculated_cost
+            else:
+                billing_allocations = [
+                    BillingAllocation.parse(a, default_quota, default_cost)
+                    for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])
+                ]
+                project_cost = sum(b.total_cost for b in billing_allocations)
+
             project.cost = f'${project_cost}'
-            # Cost centers currently set to '-'
             project.cost_centers = '-'
 
         context['billing_search_form'] = BillingSearchForm(self.request.GET)
