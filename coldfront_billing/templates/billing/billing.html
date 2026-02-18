@@ -68,15 +68,12 @@ Billing
         {% for project in project_list %}
         <tr>
             {% if project.project_code %}
-            <td><a href="/project/{{project.id}}/">{{ project.project_code
-                }}</a></td>
+            <td><a href="/project/{{project.id}}/">{{ project.project_code }}</a></td>
             {% else %}
             <td><a href="/project/{{project.id}}/">{{ project.id }}</a></td>
             {% endif %}
             <td>{{ project.pi.username }}</td>
-            <td style="text-align: justify; text-justify: inter-word;">{{
-                project.title }}
-            </td>
+            <td style="text-align: justify; text-justify: inter-word;">{{ project.title }}</td>
             <td>{{ project.status.name }}</td>
             <td>{{ project.cost }}</td>
             <td>
@@ -189,9 +186,7 @@ Billing
                                 class="form-control custom-select dept-select">
                             <option value="">Select Dept...</option>
                             {% for department in departments %}
-                            <option value="{{ department.dept_id }}">{{
-                                department.dept_id }}
-                            </option>
+                            <option value="{{ department.dept_id }}">{{ department.dept_id }}</option>
                             {% endfor %}
                         </select>
                     </td>

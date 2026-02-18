@@ -198,7 +198,7 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
                 project=project, defaults={'assignments': {}}
             )
 
-            cost_center_assignment.assignments = assignments_data
+            cost_center_assignment.assignments = dict(assignments_data)
 
             cost_center_assignment.save()
 
