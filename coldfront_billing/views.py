@@ -171,7 +171,6 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
     """Class-based view for updating cost center assignments."""
 
     def check_permission(self, project: Project) -> bool:
-        """Check if user has permission to modify the project."""
         if self.request.user.is_superuser:
             return True
 
