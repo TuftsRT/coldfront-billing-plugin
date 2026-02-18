@@ -1,26 +1,18 @@
-import logging
 import json
-from typing import Any, Dict, Optional
+import logging
+from typing import Any, Dict
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
-from coldfront.core.project.forms import ProjectSearchForm
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
-from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
-from django.db.models import Prefetch, Q, QuerySet
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Prefetch, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView
-from django.utils.decorators import method_decorator
+from django.shortcuts import get_object_or_404
 from django.views import View
-
+from django.views.generic import ListView
 
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,
@@ -30,19 +22,19 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data import BillingAllocation
-from coldfront_billing.forms import BillingSearchForm, CostCenterAssignmentForm
+from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO, BillingAllocation
 from coldfront_billing.filters import filter_by_search_params, get_ordering
-from coldfront_billing.models import CostCenterAssignment, CostCenter
+from coldfront_billing.forms import BillingSearchForm, CostCenterAssignmentForm
+from coldfront_billing.models import CostCenter, CostCenterAssignment
 
 logger = logging.getLogger('BillingView')
 
 
 default_quota = getattr(
-       settings,
-       'COLDFRONT_BILLING_DEFAULT_QUOTA',
-       0,
-   )
+    settings,
+    'COLDFRONT_BILLING_DEFAULT_QUOTA',
+    0,
+)
 default_cost = getattr(
     settings,
     'COLDFRONT_BILLING_DEFAULT_COST',
@@ -59,7 +51,10 @@ class BillingView(LoginRequiredMixin, ListView):
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
         ordering = get_ordering(get_params=self.request.GET)
-        projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
+        projects = filter_by_search_params(
+            projects=projects,
+            get_params=self.request.GET
+        )
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
@@ -68,7 +63,8 @@ class BillingView(LoginRequiredMixin, ListView):
                 projectuser__status__name='Active',
             ).distinct()
 
-        if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
+        if not (storage_type := ResourceType.objects.only('id').filter(
+                name='Storage').first()):
             return projects.select_related('pi', 'status').order_by(ordering)
 
         # Restrict to only projects that actually have paid Storage allocations
@@ -80,7 +76,8 @@ class BillingView(LoginRequiredMixin, ListView):
         # Prefetch only what we need for cost calculation
         cost_attr_prefetch = Prefetch(
             'resourceattribute_set',
-            queryset=ResourceAttribute.objects.filter(resource_attribute_type__name=COST_ATTR_NAME).only(
+            queryset=ResourceAttribute.objects.filter(
+                resource_attribute_type__name=COST_ATTR_NAME).only(
                 'resource_id', 'value', 'resource_attribute_type_id'
             ),
             to_attr=COST_ATTRIBUTE_NAME,
@@ -99,7 +96,8 @@ class BillingView(LoginRequiredMixin, ListView):
         # Prefetch only the allocation attribute holding quota_attr_name
         quota_attr_prefetch = Prefetch(
             'allocationattribute_set',
-            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
+            queryset=AllocationAttribute.objects.filter(
+                allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
                 'allocation_id', 'value'
             ),
             to_attr=QUOTA_ATTRIBUTE_NAME,
@@ -118,8 +116,7 @@ class BillingView(LoginRequiredMixin, ListView):
         )
         # Fetch only projects that have such allocations
         projects = projects.select_related('pi', 'status').prefetch_related(
-            allocations_prefetch,
-            'cost_center_assignment'
+            allocations_prefetch, 'cost_center_assignment'
         )
 
         return projects.order_by(ordering)
@@ -168,25 +165,22 @@ def b_link(request: HttpRequest) -> HttpResponse:
 
 
 class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
-    """Class-based view for updating cost center assignments."""
+    """Updating cost center assignments View."""
 
     def check_permission(self, project: Project) -> bool:
         if self.request.user.is_superuser:
             return True
 
         return project.projectuser_set.filter(
-            user=self.request.user,
-            role__name='Billing',
-            status__name='Active'
+            user=self.request.user, role__name='Billing', status__name='Active'
         ).exists()
 
     def post(self, request: HttpRequest) -> JsonResponse:
         form = CostCenterAssignmentForm(request.POST)
+
         if not form.is_valid():
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            }, status=400)
+            error_response = ApiErrorResponseDTO(errors=form.errors)
+            return JsonResponse(error_response.to_dict(), status=400)
 
         project_id = form.cleaned_data['project_id']
         assignments_data = form.cleaned_data['assignments']
@@ -195,28 +189,28 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             project = get_object_or_404(Project, id=project_id)
 
             if not self.check_permission(project):
-                return JsonResponse({
-                    'success': False,
-                    'error': 'You do not have permission to modify this project.'
-                }, status=403)
+                error_response = ApiErrorResponseDTO(
+                    error='You do not have permission to modify this project.'
+                )
+                return JsonResponse(error_response.to_dict(), status=403)
 
-            # Get or create CostCenterAssignment for the project
             cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
-                project=project,
-                defaults={'assignments': {}}
+                project=project, defaults={'assignments': {}}
             )
-            cost_center_assignment.assignments = dict(assignments_data)
+
+            cost_center_assignment.assignments = assignments_data
+
             cost_center_assignment.save()
 
-            return JsonResponse({
-                'success': True,
-                'message': 'Cost center assignment updated successfully.',
-                'assignments': cost_center_assignment.assignments
-            })
+            success_response = ApiSuccessResponseDTO(
+                message='Cost center assignment updated successfully.',
+                assignments=cost_center_assignment.assignments
+            )
+            return JsonResponse(success_response.to_dict())
 
         except Exception as cause:
-            logger.error(f"Error updating cost center assignment: {str(cause)}")
-            return JsonResponse({
-                'success': False,
-                'error': 'An error occurred while updating the cost center assignment.'
-            }, status=400)
+            logger.error(f'Error updating cost center assignment: {str(cause)}')
+            error_response = ApiErrorResponseDTO(
+                error='An error occurred while updating the cost center assignment.'
+            )
+            return JsonResponse(error_response.to_dict(), status=400)

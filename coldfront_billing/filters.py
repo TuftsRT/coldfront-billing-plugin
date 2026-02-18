@@ -5,10 +5,7 @@ from django.http import QueryDict
 from coldfront_billing.forms import BillingSearchForm
 
 
-def filter_by_search_params(
-        projects: QuerySet[Project],
-        get_params: QueryDict
-) -> QuerySet[Project]:
+def filter_by_search_params(projects: QuerySet[Project], get_params: QueryDict) -> QuerySet[Project]:
     billing_search_form = BillingSearchForm(get_params)
     if billing_search_form.is_valid():
         if username := billing_search_form.cleaned_data.get('username'):
@@ -18,6 +15,7 @@ def filter_by_search_params(
                 & Q(projectuser__status__name='Active')
             )
     return projects
+
 
 def get_ordering(get_params: QueryDict) -> str:
     order_by = get_params.get('order_by', 'id')

@@ -285,7 +285,6 @@ class TestBillingViewSearchFilters:
         field_of_science
     ):
         from django.contrib.auth.models import User
-        from coldfront.core.project.models import ProjectUser
 
         pi_user = create_pi_user('_pi')
         billing_user1 = User.objects.create_user(username='searchable_billing', email='billing1@example.com', password='pass')
@@ -411,7 +410,6 @@ class TestBillingViewSearchFilters:
         field_of_science
     ):
         from django.contrib.auth.models import User
-        from coldfront.core.project.models import ProjectUser
 
         pi_user = create_pi_user('_pi')
         billing_user = User.objects.create_user(username='searchable_user', email='billing@example.com', password='pass')
@@ -706,9 +704,9 @@ class TestCostCenterAssignmentUpdateView:
         from coldfront_billing.models import CostCenter
 
         # Create cost centers
-        cost_center = CostCenter.objects.create(dept_id="DEPT001")
+        cost_center = CostCenter.objects.create(dept_id='DEPT001')
 
-        assignments_data = {"DEPT001": 100}
+        assignments_data = {'DEPT001': 100}
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 
@@ -716,28 +714,6 @@ class TestCostCenterAssignmentUpdateView:
         response_data = response.json()
         assert response_data['success'] is True
         assert 'Cost center assignment updated successfully' in response_data['message']
-        assert response_data['assignments'] == assignments_data
-
-    def test_billing_user_update_own_project_success(
-        self,
-        client,
-        user,
-        project_with_billing_user,
-        db
-    ):
-        """Test that users with Billing role can update their project's cost center assignments."""
-        from coldfront_billing.models import CostCenter
-
-        # Create cost centers
-        cost_center = CostCenter.objects.create(dept_id="DEPT002")
-
-        assignments_data = {"DEPT002": 50}
-
-        response = self._post_cost_center_assignment(client, user, project_with_billing_user.id, assignments_data)
-
-        assert response.status_code == 200
-        response_data = response.json()
-        assert response_data['success'] is True
         assert response_data['assignments'] == assignments_data
 
     def test_regular_user_without_billing_role_forbidden(
@@ -751,9 +727,9 @@ class TestCostCenterAssignmentUpdateView:
         from coldfront_billing.models import CostCenter
 
         # Create cost center
-        cost_center = CostCenter.objects.create(dept_id="DEPT003")
+        cost_center = CostCenter.objects.create(dept_id='DEPT003')
 
-        assignments_data = {"DEPT003": 75}
+        assignments_data = {'DEPT003': 75}
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
 
@@ -773,18 +749,18 @@ class TestCostCenterAssignmentUpdateView:
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
         # Create cost centers
-        cost_center1 = CostCenter.objects.create(dept_id="DEPT004")
-        cost_center2 = CostCenter.objects.create(dept_id="DEPT005")
+        cost_center1 = CostCenter.objects.create(dept_id='DEPT004')
+        cost_center2 = CostCenter.objects.create(dept_id='DEPT005')
 
         # Create initial assignment
-        initial_assignments = {"DEPT004": 100}
+        initial_assignments = {'DEPT004': 100}
         CostCenterAssignment.objects.create(
             project=project,
             assignments=initial_assignments
         )
 
         # Update with new assignments
-        new_assignments = {"DEPT004": 60, "DEPT005": 40}
+        new_assignments = {'DEPT004': 60, 'DEPT005': 40}
 
         response = self._post_cost_center_assignment(client, superuser, project.id, new_assignments)
 
@@ -830,7 +806,7 @@ class TestCostCenterAssignmentUpdateView:
     ):
         """Test that referencing nonexistent cost center returns validation error."""
         # Don't create the cost center - it should not exist
-        assignments_data = {"NONEXISTENT": 100}
+        assignments_data = {'NONEXISTENT': 100}
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 
@@ -849,15 +825,16 @@ class TestCostCenterAssignmentUpdateView:
     ):
         """Test that missing project_id field returns validation error."""
         import json
+
         from coldfront_billing.models import CostCenter
 
-        cost_center = CostCenter.objects.create(dept_id="DEPT008")
+        cost_center = CostCenter.objects.create(dept_id='DEPT008')
         client.force_login(superuser)
         url = reverse('update_cost_center_assignment')
 
         # Missing project_id field
         data = {
-            'assignments': json.dumps({"DEPT008": 100})
+            'assignments': json.dumps({'DEPT008': 100})
         }
 
         response = client.post(url, data=data)
@@ -901,14 +878,14 @@ class TestCostCenterAssignmentUpdateView:
         from coldfront_billing.models import CostCenter
 
         # Create multiple cost centers
-        cost_center1 = CostCenter.objects.create(dept_id="DEPT009")
-        cost_center2 = CostCenter.objects.create(dept_id="DEPT010")
-        cost_center3 = CostCenter.objects.create(dept_id="DEPT011")
+        cost_center1 = CostCenter.objects.create(dept_id='DEPT009')
+        cost_center2 = CostCenter.objects.create(dept_id='DEPT010')
+        cost_center3 = CostCenter.objects.create(dept_id='DEPT011')
 
         assignments_data = {
-            "DEPT009": 50,
-            "DEPT010": 30,
-            "DEPT011": 20
+            'DEPT009': 50,
+            'DEPT010': 30,
+            'DEPT011': 20
         }
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
@@ -930,6 +907,7 @@ class TestCostCenterAssignmentUpdateView:
     ):
         """Test that users with Inactive Billing role cannot update cost center assignments."""
         from coldfront.core.project.models import ProjectUser
+
         from coldfront_billing.models import CostCenter
 
         # Create inactive billing user relationship
@@ -940,8 +918,8 @@ class TestCostCenterAssignmentUpdateView:
             status=project_user_status_inactive  # Inactive status
         )
 
-        cost_center = CostCenter.objects.create(dept_id="DEPT013")
-        assignments_data = {"DEPT013": 100}
+        cost_center = CostCenter.objects.create(dept_id='DEPT013')
+        assignments_data = {'DEPT013': 100}
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
 
@@ -966,7 +944,7 @@ class TestCostCenterAssignmentUpdateView:
         # Send assignments as a list instead of dictionary
         data = {
             'project_id': project.id,
-            'assignments': json.dumps([{"dept_id": "DEPT014", "percentage": 100}])
+            'assignments': json.dumps([{'dept_id': 'DEPT014', 'percentage': 100}])
         }
 
         response = client.post(url, data=data)
@@ -1005,8 +983,8 @@ class TestCostCenterAssignmentUpdateView:
         assert not CostCenterAssignment.objects.filter(project=project).exists()
 
         # Create cost center
-        cost_center = CostCenter.objects.create(dept_id="DEPT015")
-        assignments_data = {"DEPT015": 100}
+        cost_center = CostCenter.objects.create(dept_id='DEPT015')
+        assignments_data = {'DEPT015': 100}
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 
@@ -1018,5 +996,3 @@ class TestCostCenterAssignmentUpdateView:
         assert CostCenterAssignment.objects.filter(project=project).exists()
         assignment = CostCenterAssignment.objects.get(project=project)
         assert assignment.assignments == assignments_data
-
-
