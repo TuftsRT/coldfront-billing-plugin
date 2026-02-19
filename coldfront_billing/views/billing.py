@@ -1,5 +1,4 @@
 import json
-import logging
 from typing import Any, Dict
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
@@ -9,9 +8,6 @@ from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch, Q, QuerySet
-from django.http import HttpRequest, JsonResponse
-from django.shortcuts import get_object_or_404
-from django.views import View
 from django.views.generic import ListView
 
 from coldfront_billing.constants import (
@@ -22,13 +18,10 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO, BillingAllocation
+from coldfront_billing.data import BillingAllocation
 from coldfront_billing.filters import filter_by_search_params, get_ordering
-from coldfront_billing.forms import BillingSearchForm, CostCenterAssignmentForm
-from coldfront_billing.models import CostCenter, CostCenterAssignment
-
-logger = logging.getLogger('BillingView')
-
+from coldfront_billing.forms import BillingSearchForm
+from coldfront_billing.models import CostCenter
 
 default_quota = getattr(
     settings,
@@ -155,50 +148,3 @@ class BillingView(LoginRequiredMixin, ListView):
         context['filter_parameters'] = filter_params.urlencode()
 
         return context
-
-
-class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
-    """Updating cost center assignments View."""
-
-    def check_permission(self, project: Project) -> bool:
-        if self.request.user.is_superuser:
-            return True
-
-        return project.projectuser_set.filter(
-            user=self.request.user, role__name='Billing', status__name='Active'
-        ).exists()
-
-    def post(self, request: HttpRequest) -> JsonResponse:
-        form = CostCenterAssignmentForm(request.POST)
-
-        if not form.is_valid():
-            error_response = ApiErrorResponseDTO(errors=form.errors)
-            return JsonResponse(error_response.to_dict(), status=400)
-
-        project_id = form.cleaned_data['project_id']
-        assignments_data = form.cleaned_data['assignments']
-
-        try:
-            project = get_object_or_404(Project, id=project_id)
-
-            if not self.check_permission(project):
-                error_response = ApiErrorResponseDTO(error='You do not have permission to modify this project.')
-                return JsonResponse(error_response.to_dict(), status=403)
-
-            cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
-                project=project, defaults={'assignments': {}}
-            )
-
-            cost_center_assignment.assignments = dict(assignments_data)
-
-            cost_center_assignment.save()
-
-            success_response = ApiSuccessResponseDTO(
-                message='Cost center assignment updated successfully.', assignments=cost_center_assignment.assignments
-            )
-            return JsonResponse(success_response.to_dict())
-
-        except Exception as cause:
-            logger.error(f'Error updating cost center assignment: {str(cause)}')
-            error_response = ApiErrorResponseDTO(error='An error occurred while updating the cost center assignment.')
-            return JsonResponse(error_response.to_dict(), status=400)
