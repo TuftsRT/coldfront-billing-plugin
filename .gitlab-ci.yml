@@ -10,20 +10,12 @@ stages:
 
 test:
   stage: test
-  image: python:3.11
+  image: python:3.12
   before_script:
     - pip install uv
-    - uv pip install --system -e ".[dev]"
-    - uv pip install --system "coldfront>=1.1.7,<2"
-    - uv pip install --system pytest pytest-django
+    - uv sync --extra dev
   script:
-    - |
-      export DJANGO_SETTINGS_MODULE=coldfront.config.settings
-      export DB_ENGINE=django.db.backends.sqlite3
-      export DB_NAME=:memory:
-      export SECRET_KEY=test-secret-key-for-ci
-      export DEBUG=False
-      pytest coldfront_billing/tests/ -v --tb=short
+    - uv run pytest coldfront_billing/tests
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
