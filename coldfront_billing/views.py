@@ -8,7 +8,7 @@ from coldfront.core.resource.models import Resource, ResourceAttribute, Resource
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
@@ -55,9 +55,12 @@ class BillingView(LoginRequiredMixin, ListView):
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
-                projectuser__user=self.request.user,
-                projectuser__role__name='Billing',
-                projectuser__status__name='Active',
+                Q(
+                    projectuser__user=self.request.user,
+                    projectuser__role__name='Billing',
+                    projectuser__status__name='Active',
+                )
+                | Q(pi=self.request.user)
             ).distinct()
 
         if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):

@@ -20,7 +20,15 @@ def get_ordering(get_params: QueryDict) -> str:
     order_by = get_params.get('order_by', 'id')
     direction = get_params.get('direction', 'asc')
 
-    if direction == 'des':
-        order_by = '-' + order_by
+    field_mapping = {
+        'id': 'id',
+        'pi': 'pi__username',
+        'status': 'status__name',
+        'cost': 'id',  # Cost ordering will be handled separately since it's calculated
+    }
+    db_field = field_mapping.get(order_by, order_by)
 
-    return order_by
+    if direction == 'des':
+        db_field = '-' + db_field
+
+    return db_field
