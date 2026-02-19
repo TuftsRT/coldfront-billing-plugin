@@ -51,10 +51,7 @@ class BillingView(LoginRequiredMixin, ListView):
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
         ordering = get_ordering(get_params=self.request.GET)
-        projects = filter_by_search_params(
-            projects=projects,
-            get_params=self.request.GET
-        )
+        projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
@@ -63,8 +60,7 @@ class BillingView(LoginRequiredMixin, ListView):
                 projectuser__status__name='Active',
             ).distinct()
 
-        if not (storage_type := ResourceType.objects.only('id').filter(
-                name='Storage').first()):
+        if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
             return projects.select_related('pi', 'status').order_by(ordering)
 
         # Restrict to only projects that actually have paid Storage allocations
@@ -76,8 +72,7 @@ class BillingView(LoginRequiredMixin, ListView):
         # Prefetch only what we need for cost calculation
         cost_attr_prefetch = Prefetch(
             'resourceattribute_set',
-            queryset=ResourceAttribute.objects.filter(
-                resource_attribute_type__name=COST_ATTR_NAME).only(
+            queryset=ResourceAttribute.objects.filter(resource_attribute_type__name=COST_ATTR_NAME).only(
                 'resource_id', 'value', 'resource_attribute_type_id'
             ),
             to_attr=COST_ATTRIBUTE_NAME,
@@ -96,8 +91,7 @@ class BillingView(LoginRequiredMixin, ListView):
         # Prefetch only the allocation attribute holding quota_attr_name
         quota_attr_prefetch = Prefetch(
             'allocationattribute_set',
-            queryset=AllocationAttribute.objects.filter(
-                allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
+            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
                 'allocation_id', 'value'
             ),
             to_attr=QUOTA_ATTRIBUTE_NAME,
@@ -189,9 +183,7 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             project = get_object_or_404(Project, id=project_id)
 
             if not self.check_permission(project):
-                error_response = ApiErrorResponseDTO(
-                    error='You do not have permission to modify this project.'
-                )
+                error_response = ApiErrorResponseDTO(error='You do not have permission to modify this project.')
                 return JsonResponse(error_response.to_dict(), status=403)
 
             cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
@@ -203,14 +195,11 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             cost_center_assignment.save()
 
             success_response = ApiSuccessResponseDTO(
-                message='Cost center assignment updated successfully.',
-                assignments=cost_center_assignment.assignments
+                message='Cost center assignment updated successfully.', assignments=cost_center_assignment.assignments
             )
             return JsonResponse(success_response.to_dict())
 
         except Exception as cause:
             logger.error(f'Error updating cost center assignment: {str(cause)}')
-            error_response = ApiErrorResponseDTO(
-                error='An error occurred while updating the cost center assignment.'
-            )
+            error_response = ApiErrorResponseDTO(error='An error occurred while updating the cost center assignment.')
             return JsonResponse(error_response.to_dict(), status=400)

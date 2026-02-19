@@ -11,8 +11,7 @@ def filter_by_search_params(projects: QuerySet[Project], get_params: QueryDict) 
         if username := billing_search_form.cleaned_data.get('username'):
             projects = projects.filter(
                 Q(pi__username__icontains=username)
-                | Q(projectuser__user__username__icontains=username)
-                & Q(projectuser__status__name='Active')
+                | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
             )
     return projects
 
