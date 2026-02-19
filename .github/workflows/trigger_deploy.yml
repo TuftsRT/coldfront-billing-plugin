@@ -2,7 +2,8 @@ name: Trigger Deploy in Test Project
 
 on:
   push:
-    # Trigger on any branch push so we can build feature branches
+    branches:
+      - main
 
 
 jobs:
