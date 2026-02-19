@@ -50,7 +50,7 @@ docstring-code-format = true
 quote-style = "single"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "coldfront.config.settings"
+DJANGO_SETTINGS_MODULE = "coldfront_billing.tests.settings"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

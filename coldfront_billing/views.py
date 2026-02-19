@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch, Q, QuerySet
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.generic import ListView
@@ -155,10 +155,6 @@ class BillingView(LoginRequiredMixin, ListView):
         context['filter_parameters'] = filter_params.urlencode()
 
         return context
-
-
-def b_link(request: HttpRequest) -> HttpResponse:
-    return HttpResponse('<h1>This is the B-Link Page</h1>')
 
 
 class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
