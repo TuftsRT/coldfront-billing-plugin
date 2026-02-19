@@ -15,9 +15,46 @@ jobs:
         run: |
           # Uses clean curl command to trigger repository dispatch
           # Requires BOT_ACCESS_TOKEN secret with 'repo' scope
-          
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token $BOT_ACCESS_TOKEN" \
-            https://api.github.com/repos/Tufts-Technology-Services/coldfront-test-project/dispatches \
-            -d '{"event_type": "trigger-deploy", "client_payload": {"plugin_branch": "'"${{ github.ref_name }}"'"}}'
+
+          set -uo pipefail
+
+          if [ -z "${BOT_ACCESS_TOKEN:-}" ]; then
+            echo "::error::BOT_ACCESS_TOKEN is empty or not set."
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+          headers_file="$(mktemp)"
+          curl_exit=0
+
+          http_code="$(
+            curl -sS -X POST \
+              -o "$response_file" \
+              -D "$headers_file" \
+              -w "%{http_code}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token $BOT_ACCESS_TOKEN" \
+              https://api.github.com/repos/Tufts-Technology-Services/coldfront-test-project/dispatches \
+              -d '{"event_type": "trigger-deploy", "client_payload": {"plugin_branch": "'"${{ github.ref_name }}"'"}}' \
+              || curl_exit=$?
+          )"
+
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "::error::curl failed with exit code $curl_exit."
+            echo "Response headers:"
+            cat "$headers_file" || true
+            echo "Response body:"
+            cat "$response_file" || true
+            exit "$curl_exit"
+          fi
+
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Repository dispatch failed with HTTP status $http_code."
+            echo "Response headers:"
+            cat "$headers_file"
+            echo "Response body:"
+            cat "$response_file"
+            exit 1
+          fi
+
+          echo "Repository dispatch succeeded with HTTP status $http_code."
