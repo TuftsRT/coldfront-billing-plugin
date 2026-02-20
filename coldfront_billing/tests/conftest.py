@@ -183,6 +183,24 @@ def project_with_billing_user(
 
 
 @pytest.fixture
+def cost_center(db):
+    """Create a test CostCenter."""
+    from coldfront_billing.models import CostCenter
+    return CostCenter.objects.create(dept_id='TEST_DEPT')
+
+
+@pytest.fixture
+def cost_center_assignment(project, db):
+    """Create a test CostCenterAssignment."""
+    from coldfront_billing.models import CostCenter, CostCenterAssignment
+    cost_center = CostCenter.objects.create(dept_id='ASSIGN_DEPT')
+    return CostCenterAssignment.objects.create(
+        project=project,
+        assignments={'ASSIGN_DEPT': 100}
+    )
+
+
+@pytest.fixture
 def storage_resource_type(db) -> ResourceType:
     """Create a Storage ResourceType."""
     return ResourceType.objects.get_or_create(name='Storage')[0]

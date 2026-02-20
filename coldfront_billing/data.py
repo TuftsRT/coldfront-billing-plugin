@@ -1,7 +1,12 @@
 import math
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
-from coldfront_billing.constants import COST_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
+from coldfront_billing.constants import (
+    COST_ATTRIBUTE_NAME,
+    QUOTA_ATTRIBUTE_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME
+)
 
 
 def _first_or_none(sequence):
@@ -27,7 +32,8 @@ class BillingAllocation:
         return int(math.ceil(self.quota_tb)) * int(round(self.cost_per_tb))
 
     @classmethod
-    def parse(cls, allocation, default_quota: int, default_cost: int) -> 'BillingAllocation':
+    def parse(cls, allocation, default_quota: int, default_cost: int
+              ) -> 'BillingAllocation':
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
             float_quota = _parse_float(quota_raw, default_quota)
@@ -35,9 +41,13 @@ class BillingAllocation:
         else:
             quota_tb = default_quota
 
-        storage_resource = _first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
+        storage_resource = _first_or_none(
+            getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, [])
+        )
 
-        if storage_resource and (cost_attrs := getattr(storage_resource, COST_ATTRIBUTE_NAME, None)):
+        if storage_resource and (
+                cost_attrs := getattr(storage_resource, COST_ATTRIBUTE_NAME, None)
+        ):
             float_cost = _parse_float(cost_attrs[0].value, default_cost)
             cost_per_tb = float_cost if float_cost >= 0 else default_cost
         else:
@@ -49,3 +59,33 @@ class BillingAllocation:
             quota_tb=quota_tb,
             cost_per_tb=cost_per_tb,
         )
+
+
+@dataclass
+class ApiErrorResponseDTO:
+    success: bool = False
+    error: Optional[str] = None
+    errors: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {'success': self.success}
+        if self.error:
+            result['error'] = self.error
+        if self.errors:
+            result['errors'] = self.errors
+        return result
+
+
+@dataclass
+class ApiSuccessResponseDTO:
+    success: bool = True
+    message: Optional[str] = None
+    assignments: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {'success': self.success}
+        if self.message:
+            result['message'] = self.message
+        if self.assignments:
+            result['assignments'] = self.assignments
+        return result
