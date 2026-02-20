@@ -1,5 +1,5 @@
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from coldfront_billing.constants import COST_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
@@ -22,7 +22,7 @@ class BillingAllocation:
     project_id: int
     quota_tb: int | float
     cost_per_tb: int | float
-    extra: Optional[Dict[str, Any]] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def total_cost(self) -> int:

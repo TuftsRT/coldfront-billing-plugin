@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict
 
 from coldfront.core.allocation.models import Allocation
@@ -11,8 +10,6 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
 
 from .mixins import BillingAllocationPrefetchMixin
-
-logger = logging.getLogger('BillingDetailsView')
 
 
 class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, DetailView):
@@ -49,18 +46,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         project = self.object
-        # project_id = project.id
 
-        # session_allocations = self.request.session.get('billing_allocations') or {}
-        # if project_id in session_allocations:
-        #     logger.info('using billing allocations from session')
-        #     allocations = session_allocations[project_id]
-        #     context['allocations'] = allocations
-        #     context['total_cost'] = sum(a['total_cost'] for a in allocations)
-        #     return context
-        # logger.info('fallback: fetching allocations from DB')
-
-        # Fallback: fetch from DB (e.g. direct URL, bookmarked link)
         if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
             context['allocations'] = []
             context['total_cost'] = 0
@@ -81,7 +67,6 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
             )
         )
         allocations = self.create_billing_allocations([a for a in allocation_objs])
-        logger.info(allocations)
         context['allocations'] = sorted(allocations, key=lambda a: a.allocation_id)
         context['total_cost'] = sum(a.total_cost for a in allocations)
         return context
