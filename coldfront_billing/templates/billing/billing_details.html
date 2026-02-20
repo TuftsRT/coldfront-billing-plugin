@@ -1,0 +1,60 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load static %}
+
+{% block title %}
+Billing Details - {{ project.title }}
+{% endblock %}
+
+{% block content %}
+<h2>Billing Details</h2>
+<hr>
+<div class="mb-3">
+    <a href="{% url 'billing_index' %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Billing
+    </a>
+</div>
+
+
+<strong>Allocations: {{ allocations|length }}</strong>
+{% if allocations %}
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th scope="col" class="text-nowrap">ID</th>
+            <th scope="col" class="text-nowrap">Project</th>
+            <th scope="col" class="text-nowrap">PI</th>
+            <th scope="col" class="text-nowrap">Resource Name</th>
+            <th scope="col" class="text-nowrap">Status</th>
+            <th scope="col" class="text-nowrap">End Date</th>
+            <th scope="col" class="text-nowrap">Cost</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for allocation in allocations %}
+        <tr>
+            <td><a href="/allocation/{{ allocation.allocation_id }}/">{{ allocation.allocation_id }}</a></td>
+            <td>{{ allocation.extra.project_title }}</td>
+            <td>{{ allocation.extra.pi_name }}</td>
+            <td>{{ allocation.extra.resource_name }}</td>
+            <td>{{ allocation.extra.status }}</td>
+            <td>{{ allocation.extra.end_date }}</td>
+            <td>${{ allocation.total_cost }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+        <tr class="font-weight-bold">
+            <td colspan="6" class="text-right">Total:</td>
+            <td>${{ total_cost }}</td>
+        </tr>
+        </tfoot>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No allocations to display for this project.
+</div>
+{% endif %}
+{% endblock %}
