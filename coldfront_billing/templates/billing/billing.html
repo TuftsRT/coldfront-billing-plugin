@@ -28,9 +28,7 @@ Billing
                       action="{% url 'billing_index' %}" autocomplete="off">
                     {{ billing_search_form|crispy }}
                     <input type="submit" class="btn btn-primary" value="Search">
-                    <button id="form_reset_button" type="button"
-                            class="btn btn-secondary">Reset
-                    </button>
+                    <a href="{% url 'billing_index' %}" class="btn btn-secondary">Reset</a>
                 </form>
             </div>
         </div>
