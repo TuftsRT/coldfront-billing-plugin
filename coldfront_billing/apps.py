@@ -15,3 +15,10 @@ class ColdfrontBillingConfig(AppConfig):
 
         if context_processor not in processors:
             processors.append(context_processor)
+
+        # Override allocation create view so users specify quota when requesting storage
+        import coldfront.core.allocation.views as allocation_views
+
+        from coldfront_billing.views.allocation import AllocationCreateView
+
+        allocation_views.AllocationCreateView = AllocationCreateView

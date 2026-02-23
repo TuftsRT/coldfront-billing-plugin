@@ -8,6 +8,18 @@ from django.core.exceptions import ValidationError
 from .models import CostCenter
 
 
+class StorageQuotaForm(forms.Form):
+    """Form for specifying storage quota when completing a storage allocation request."""
+
+    quota_in_terabyte = forms.FloatField(
+        label='Storage Quota (TB)',
+        required=True,
+        min_value=0,
+        widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0', 'class': 'form-control'}),
+        help_text='Specify the storage quota in terabytes for your allocation.',
+    )
+
+
 class BillingSearchForm(forms.Form):
     LAST_NAME: ClassVar[str] = 'Last Name'
     USERNAME: ClassVar[str] = 'Username'
@@ -47,12 +59,8 @@ class CostCenterAssignmentForm(forms.Form):
 
         for dept_id, percentage in assignments_data.items():
             if dept_id not in valid_dept_ids:
-                raise ValidationError(
-                    f"Cost Center '{dept_id}' does not exist."
-                )
+                raise ValidationError(f"Cost Center '{dept_id}' does not exist.")
             if not isinstance(percentage, int):
-                raise ValidationError(
-                    f"Percentage for '{dept_id}' must be an integer."
-                )
+                raise ValidationError(f"Percentage for '{dept_id}' must be an integer.")
 
         return assignments_data
