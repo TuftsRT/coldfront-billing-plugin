@@ -51,6 +51,7 @@ Billing Details - {{ project.title }}
         </tr>
         </tfoot>
     </table>
+    {% include 'common/pagination.html' %}
 </div>
 {% else %}
 <div class="alert alert-info">

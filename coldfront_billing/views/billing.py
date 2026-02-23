@@ -14,14 +14,14 @@ from coldfront_billing.filters import filter_by_search_params, get_ordering
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.models import CostCenter
 
-from .mixins import BillingAllocationPrefetchMixin
+from .mixins import PAGINATE_BY, BillingAllocationPrefetchMixin
 
 
 class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
     model = Project
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
-    paginate_by = 25
+    paginate_by = PAGINATE_BY
 
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
@@ -89,12 +89,12 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
                 project.assignments_json = '{}'
 
         context['billing_search_form'] = BillingSearchForm(self.request.GET)
-        context['expand_accordion'] = 'show' if self.request.GET else ''
         context['departments'] = CostCenter.objects.all()
 
         filter_params = self.request.GET.copy()
         for key in ('page', 'order_by', 'direction'):
             filter_params.pop(key, None)
         context['filter_parameters'] = filter_params.urlencode()
+        context['expand_accordion'] = 'show' if filter_params else ''
 
         return context

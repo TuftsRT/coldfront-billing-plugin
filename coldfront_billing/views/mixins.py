@@ -24,6 +24,7 @@ default_cost = getattr(
     'COLDFRONT_BILLING_DEFAULT_COST',
     10,
 )
+PAGINATE_BY = getattr(settings, 'COLDFRONT_BILLING_PAGINATE_BY', 25)
 
 
 class BillingAllocationPrefetchMixin:
