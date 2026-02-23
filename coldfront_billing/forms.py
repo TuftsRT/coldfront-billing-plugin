@@ -18,6 +18,15 @@ class StorageQuotaForm(forms.Form):
         widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0', 'class': 'form-control'}),
         help_text='Specify the storage quota in terabytes for your allocation.',
     )
+    cost_center = forms.ModelChoiceField(
+        queryset=CostCenter.objects.all().order_by('dept_id'),
+        to_field_name='dept_id',
+        label='Cost Center',
+        required=True,
+        empty_label='Select cost center...',
+        widget=forms.Select(attrs={'class': 'form-control custom-select'}),
+        help_text='Select the cost center where 100% of the allocation cost will be assigned.',
+    )
 
 
 class BillingSearchForm(forms.Form):

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from . import views
-from .views.allocation import UpdateStorageQuotaView
+from .views.allocation import UpdateAllocationDetailsView
 
 urlpatterns = [
     path('billing/', views.BillingView.as_view(), name='billing_index'),
@@ -11,8 +11,8 @@ urlpatterns = [
         name='update_cost_center_assignment',
     ),
     path(
-        'allocation/<int:pk>/update-storage-quota/',
-        UpdateStorageQuotaView.as_view(),
-        name='update-storage-quota',
+        'allocation/<int:pk>/update-allocation-details/',
+        UpdateAllocationDetailsView.as_view(),
+        name='update-allocation-details',
     ),
 ]
