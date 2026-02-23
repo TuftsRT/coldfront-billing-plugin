@@ -23,6 +23,8 @@ from coldfront_billing.filters import filter_by_search_params, get_ordering
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.models import CostCenter
 
+from .mixins import PAGINATE_BY
+
 default_quota = getattr(
     settings,
     'COLDFRONT_BILLING_DEFAULT_QUOTA',
@@ -39,7 +41,7 @@ class BillingView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
-    paginate_by = 25
+    paginate_by = PAGINATE_BY
 
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
