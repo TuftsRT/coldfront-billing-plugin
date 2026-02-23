@@ -62,11 +62,6 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
             pk=kwargs['pk'],
         )
         self.has_cost_center = project_has_cost_center_assignment(self.allocation.project)
-        if not self.allocation.resources.filter(
-            resource_type__name='Storage',
-            requires_payment=True,
-        ).exists():
-            return redirect('allocation-detail', pk=self.allocation.pk)
         if self.allocation.allocationattribute_set.filter(
             allocation_attribute_type__name=QUOTA_ATTR_NAME,
         ).exists():
