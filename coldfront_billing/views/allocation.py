@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import FormView
 
 from coldfront_billing.constants import QUOTA_ATTR_NAME
-from coldfront_billing.forms import StorageQuotaForm
+from coldfront_billing.forms import AllocationDetailsForm
 from coldfront_billing.models import CostCenterAssignment
 
 
@@ -45,7 +45,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
 
     allocation: Allocation
     has_cost_center: bool
-    form_class = StorageQuotaForm
+    form_class = AllocationDetailsForm
     template_name = 'billing/update_allocation_details.html'
 
     def test_func(self):

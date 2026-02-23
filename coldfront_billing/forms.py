@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from .models import CostCenter
 
 
-class StorageQuotaForm(forms.Form):
+class AllocationDetailsForm(forms.Form):
     """Form for specifying storage quota when completing a storage allocation request."""
 
     quota_in_terabyte = forms.FloatField(
