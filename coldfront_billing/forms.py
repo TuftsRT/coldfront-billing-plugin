@@ -9,9 +9,13 @@ from .models import CostCenter
 
 
 class BillingSearchForm(forms.Form):
-    USERNAME: ClassVar[str] = 'Username'
+    USERNAME: ClassVar[str] = 'PI name'
 
     username = forms.CharField(label=USERNAME, max_length=100, required=False)
+    no_cost_center = forms.BooleanField(
+        label='Only projects without any cost center assigned',
+        required=False,
+    )
 
 
 class CostCenterAssignmentForm(forms.Form):
@@ -45,12 +49,8 @@ class CostCenterAssignmentForm(forms.Form):
 
         for dept_id, percentage in assignments_data.items():
             if dept_id not in valid_dept_ids:
-                raise ValidationError(
-                    f"Cost Center '{dept_id}' does not exist."
-                )
+                raise ValidationError(f"Cost Center '{dept_id}' does not exist.")
             if not isinstance(percentage, int):
-                raise ValidationError(
-                    f"Percentage for '{dept_id}' must be an integer."
-                )
+                raise ValidationError(f"Percentage for '{dept_id}' must be an integer.")
 
         return assignments_data
