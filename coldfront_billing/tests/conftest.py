@@ -116,12 +116,7 @@ def field_of_science(db) -> FieldOfScience:
 
 
 @pytest.fixture
-def project(
-        pi_user: User,
-        project_status_active: ProjectStatusChoice,
-        field_of_science: FieldOfScience,
-        db
-) -> Project:
+def project(pi_user: User, project_status_active: ProjectStatusChoice, field_of_science: FieldOfScience, db) -> Project:
     """Create a test project."""
     return Project.objects.create(
         title='Test Project',
@@ -151,27 +146,12 @@ def project_with_billing_user(
         status=project_user_status_active,
     )
 
-    # Add Storage allocation for billing view
-    storage_resource = Resource.objects.create(
-        name='Test Storage',
-        resource_type=storage_resource_type,
-        requires_payment=True,
-    )
-    ResourceAttribute.objects.create(
-        resource=storage_resource,
-        resource_attribute_type=cost_attribute_type,
-        value='100',
-    )
-    allocation = Allocation.objects.create(
-        project=project,
-        status=allocation_status_active,
-        quantity=100,
-    )
-    allocation.resources.add(storage_resource)
-    AllocationAttribute.objects.create(
-        allocation=allocation,
-        allocation_attribute_type=quota_attribute_type,
-        value='5',
+    add_storage_allocation_to_project(
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
     )
 
     return project
@@ -186,6 +166,7 @@ def project_with_billing_user(
 def cost_center(db):
     """Create a test CostCenter."""
     from coldfront_billing.models import CostCenter
+
     return CostCenter.objects.create(dept_id='TEST_DEPT')
 
 
@@ -193,11 +174,9 @@ def cost_center(db):
 def cost_center_assignment(project, db):
     """Create a test CostCenterAssignment."""
     from coldfront_billing.models import CostCenter, CostCenterAssignment
-    cost_center = CostCenter.objects.create(dept_id='ASSIGN_DEPT')
-    return CostCenterAssignment.objects.create(
-        project=project,
-        assignments={'ASSIGN_DEPT': 100}
-    )
+
+    CostCenter.objects.create(dept_id='ASSIGN_DEPT')
+    return CostCenterAssignment.objects.create(project=project, assignments={'ASSIGN_DEPT': 100})
 
 
 @pytest.fixture
@@ -244,6 +223,41 @@ def quota_attribute_type(db) -> AllocationAttributeType:
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
+
+def add_storage_allocation_to_project(
+    project: Project,
+    storage_resource_type: ResourceType,
+    allocation_status_active: AllocationStatusChoice,
+    cost_attribute_type: ResourceAttributeType,
+    quota_attribute_type: AllocationAttributeType,
+    *,
+    cost_value: str = '100',
+    quota_value: str = '5',
+    resource_name: str = 'Test Storage',
+) -> None:
+    """Add Storage allocation with cost and quota attributes to a project."""
+    storage_resource = Resource.objects.create(
+        name=resource_name,
+        resource_type=storage_resource_type,
+        requires_payment=True,
+    )
+    ResourceAttribute.objects.create(
+        resource=storage_resource,
+        resource_attribute_type=cost_attribute_type,
+        value=cost_value,
+    )
+    allocation = Allocation.objects.create(
+        project=project,
+        status=allocation_status_active,
+        quantity=100,
+    )
+    allocation.resources.add(storage_resource)
+    AllocationAttribute.objects.create(
+        allocation=allocation,
+        allocation_attribute_type=quota_attribute_type,
+        value=quota_value,
+    )
 
 
 @pytest.fixture

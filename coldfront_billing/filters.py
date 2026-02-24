@@ -13,6 +13,8 @@ def filter_by_search_params(projects: QuerySet[Project], get_params: QueryDict) 
                 Q(pi__username__icontains=username)
                 | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
             )
+        if billing_search_form.cleaned_data.get('no_cost_center'):
+            projects = projects.filter(cost_center_assignment__isnull=True)
     return projects
 
 
@@ -23,8 +25,8 @@ def get_ordering(get_params: QueryDict) -> str:
     field_mapping = {
         'id': 'id',
         'pi': 'pi__username',
+        'title': 'title',
         'status': 'status__name',
-        'cost': 'id',  # Cost ordering will be handled separately since it's calculated
     }
     db_field = field_mapping.get(order_by, order_by)
 

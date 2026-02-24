@@ -23,6 +23,8 @@ from coldfront_billing.filters import filter_by_search_params, get_ordering
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.models import CostCenter
 
+from .mixins import PAGINATE_BY
+
 default_quota = getattr(
     settings,
     'COLDFRONT_BILLING_DEFAULT_QUOTA',
@@ -39,7 +41,7 @@ class BillingView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
-    paginate_by = 25
+    paginate_by = PAGINATE_BY
 
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
@@ -134,17 +136,18 @@ class BillingView(LoginRequiredMixin, ListView):
                 project.cost_centers = '-'
                 project.assignments_json = '{}'
 
-        context['billing_search_form'] = BillingSearchForm(self.request.GET)
-        context['expand_accordion'] = 'show' if self.request.GET else ''
-        context['departments'] = CostCenter.objects.all()
+        request_get = self.request.GET
+        pagination_params = request_get.copy()
+        pagination_params.pop('page', None)
 
-        filter_params = self.request.GET.copy()
-        if 'page' in filter_params:
-            del filter_params['page']
-        if 'order_by' in filter_params:
-            del filter_params['order_by']
-        if 'direction' in filter_params:
-            del filter_params['direction']
-        context['filter_parameters'] = filter_params.urlencode()
+        filter_params = pagination_params.copy()
+        for key in ('order_by', 'direction'):
+            filter_params.pop(key, None)
 
-        return context
+        return context | {
+            'billing_search_form': BillingSearchForm(request_get),
+            'departments': CostCenter.objects.all(),
+            'filter_parameters': filter_params.urlencode(),
+            'filter_parameters_with_order_by': pagination_params.urlencode(),
+            'expand_accordion': 'show' if filter_params else '',
+        }
