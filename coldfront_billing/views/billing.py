@@ -88,13 +88,18 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
                 project.cost_centers = '-'
                 project.assignments_json = '{}'
 
-        context['billing_search_form'] = BillingSearchForm(self.request.GET)
-        context['departments'] = CostCenter.objects.all()
+        request_get = self.request.GET
+        pagination_params = request_get.copy()
+        pagination_params.pop('page', None)
 
-        filter_params = self.request.GET.copy()
-        for key in ('page', 'order_by', 'direction'):
+        filter_params = pagination_params.copy()
+        for key in ('order_by', 'direction'):
             filter_params.pop(key, None)
-        context['filter_parameters'] = filter_params.urlencode()
-        context['expand_accordion'] = 'show' if filter_params else ''
 
-        return context
+        return context | {
+            'billing_search_form': BillingSearchForm(request_get),
+            'departments': CostCenter.objects.all(),
+            'filter_parameters': filter_params.urlencode(),
+            'filter_parameters_with_order_by': pagination_params.urlencode(),
+            'expand_accordion': 'show' if filter_params else '',
+        }

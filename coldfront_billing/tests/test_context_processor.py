@@ -71,7 +71,6 @@ class TestBillingRoleContextProcessor:
         billing_role,
         project_user_status_active,
         project_user_status_inactive,
-        db,
     ):
         """Test that only Active ProjectUser status is considered."""
         pi_user1 = create_pi_user('1')
@@ -95,7 +94,6 @@ class TestBillingRoleContextProcessor:
         project_status_active,
         billing_role,
         project_user_status_inactive,
-        db,
     ):
         """Test that inactive ProjectUser status returns False."""
         pi_user = create_pi_user('1')

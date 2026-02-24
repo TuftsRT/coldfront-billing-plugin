@@ -146,27 +146,12 @@ def project_with_billing_user(
         status=project_user_status_active,
     )
 
-    # Add Storage allocation for billing view
-    storage_resource = Resource.objects.create(
-        name='Test Storage',
-        resource_type=storage_resource_type,
-        requires_payment=True,
-    )
-    ResourceAttribute.objects.create(
-        resource=storage_resource,
-        resource_attribute_type=cost_attribute_type,
-        value='100',
-    )
-    allocation = Allocation.objects.create(
-        project=project,
-        status=allocation_status_active,
-        quantity=100,
-    )
-    allocation.resources.add(storage_resource)
-    AllocationAttribute.objects.create(
-        allocation=allocation,
-        allocation_attribute_type=quota_attribute_type,
-        value='5',
+    add_storage_allocation_to_project(
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
     )
 
     return project

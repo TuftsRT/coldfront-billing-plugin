@@ -57,6 +57,7 @@ class TestBillingView:
         quota_attribute_type,
     ):
         """Test that regular users without Billing role see no projects."""
+        # Even if project has allocation, user without billing role shouldn't see it
         add_storage_allocation_to_project(
             project,
             storage_resource_type,
@@ -64,6 +65,7 @@ class TestBillingView:
             cost_attribute_type,
             quota_attribute_type,
         )
+
         response = self._get_billing_response(client, user)
         assert response.status_code == 200
         assert len(response.context['project_list']) == 0
@@ -139,6 +141,23 @@ class TestBillingView:
         ids = [p.id for p in response.context['project_list']]
         assert ids == sorted(ids, reverse=True)
 
+    def test_context_includes_filter_parameters_for_pagination(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+    ):
+        """Test that context includes filter_parameters and filter_parameters_with_order_by."""
+        response = self._get_billing_response(client, superuser, '?username=test&order_by=title&direction=asc')
+        assert response.status_code == 200
+        assert 'filter_parameters' in response.context
+        assert 'filter_parameters_with_order_by' in response.context
+        # filter_parameters excludes order_by/direction for search form preservation
+        assert 'order_by' not in response.context['filter_parameters']
+        # filter_parameters_with_order_by keeps them for pagination links
+        assert 'order_by=title' in response.context['filter_parameters_with_order_by']
+        assert 'direction=asc' in response.context['filter_parameters_with_order_by']
+
     def test_context_includes_cost_and_cost_centers(
         self,
         client,
@@ -156,7 +175,10 @@ class TestBillingView:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
+            cost_value='100',  # $100 per TB
+            quota_value='5',  # 5 TB
         )
+
         response = self._get_billing_response(client, superuser)
         assert response.status_code == 200
         assert len(response.context['project_list']) == 1
@@ -461,6 +483,74 @@ class TestBillingViewSearchFilters:
         assert len(response.context['project_list']) == 1
         assert response.context['project_list'][0].title == 'Specific Project'
 
+    def test_no_cost_center_filter_includes_only_projects_without_assignment(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+    ):
+        """Test that no_cost_center filter returns only projects without cost center assignments."""
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        pi_user = create_pi_user('_pi')
+        billing_user = create_pi_user('_billing')
+
+        project_with_assignment = create_project_with_billing_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project With Cost Center',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        CostCenter.objects.create(dept_id='DEPT001')
+        CostCenterAssignment.objects.create(
+            project=project_with_assignment,
+            assignments={'DEPT001': 100},
+        )
+
+        create_project_with_billing_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project Without Cost Center',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        # Without filter: both projects visible
+        response = self._get_billing_response(client, superuser)
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        assert 'Project With Cost Center' in project_titles
+        assert 'Project Without Cost Center' in project_titles
+
+        # With no_cost_center=on: only project without assignment
+        response = self._get_billing_response(client, superuser, '?no_cost_center=on')
+        assert response.status_code == 200
+        project_titles = [p.title for p in response.context['project_list']]
+        assert 'Project With Cost Center' not in project_titles
+        assert 'Project Without Cost Center' in project_titles
+
 
 @pytest.mark.django_db
 class TestBillingViewOrdering:
@@ -556,9 +646,8 @@ class TestBillingViewOrdering:
 
         billing_user = create_pi_user('_billing')
 
-        projects = []
         for i, pi_user in enumerate(pi_users):
-            project = create_project_with_billing_user(
+            create_project_with_billing_user(
                 billing_user,
                 pi_user,
                 project_status_active,
@@ -572,7 +661,6 @@ class TestBillingViewOrdering:
                 quota_attribute_type=quota_attribute_type,
                 field_of_science=field_of_science,
             )
-            projects.append(project)
 
         response = self._get_billing_response(client, superuser, '?order_by=pi__username&direction=asc')
         assert response.status_code == 200
@@ -850,7 +938,6 @@ class TestCostCenterAssignmentUpdateView:
         """Test that superusers can update cost center assignments for any project."""
         from coldfront_billing.models import CostCenter
 
-        # Create cost centers
         CostCenter.objects.create(dept_id='DEPT001')
 
         assignments_data = {'DEPT001': 100}
@@ -867,7 +954,6 @@ class TestCostCenterAssignmentUpdateView:
         """Test that users without Billing role cannot update cost center assignments."""
         from coldfront_billing.models import CostCenter
 
-        # Create cost center
         CostCenter.objects.create(dept_id='DEPT003')
 
         assignments_data = {'DEPT003': 75}
@@ -883,7 +969,6 @@ class TestCostCenterAssignmentUpdateView:
         """Test updating an existing cost center assignment."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-        # Create cost centers
         CostCenter.objects.create(dept_id='DEPT004')
         CostCenter.objects.create(dept_id='DEPT005')
 
@@ -971,10 +1056,8 @@ class TestCostCenterAssignmentUpdateView:
         """Test assigning multiple cost centers with different percentages."""
         from coldfront_billing.models import CostCenter
 
-        # Create multiple cost centers
-        CostCenter.objects.create(dept_id='DEPT009')
-        CostCenter.objects.create(dept_id='DEPT010')
-        CostCenter.objects.create(dept_id='DEPT011')
+        for dept_id in ('DEPT009', 'DEPT010', 'DEPT011'):
+            CostCenter.objects.create(dept_id=dept_id)
 
         assignments_data = {'DEPT009': 50, 'DEPT010': 30, 'DEPT011': 20}
 
@@ -1043,7 +1126,6 @@ class TestCostCenterAssignmentUpdateView:
         # Ensure no assignment exists initially
         assert not CostCenterAssignment.objects.filter(project=project).exists()
 
-        # Create cost center
         CostCenter.objects.create(dept_id='DEPT015')
         assignments_data = {'DEPT015': 100}
 
