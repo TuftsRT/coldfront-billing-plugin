@@ -10,6 +10,8 @@ from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
 
+from coldfront_billing.filters import get_allocation_ordering
+
 from .mixins import PAGINATE_BY, BillingAllocationPrefetchMixin
 
 
@@ -69,15 +71,28 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
             )
         )
         allocations = self.create_billing_allocations([a for a in allocation_objs])
-        allocations = sorted(allocations, key=lambda a: a.allocation_id)
-        context['total_cost'] = sum(a.total_cost for a in allocations)
+        key, reverse = get_allocation_ordering(self.request.GET)
+        allocations = sorted(allocations, key=key, reverse=reverse)
+
+        request_get = self.request.GET
 
         paginator = Paginator(allocations, self.paginate_by)
-        page_number = self.request.GET.get('page', 1)
+        page_number = request_get.get('page', 1)
         page_obj = paginator.get_page(page_number)
-        context['allocations'] = page_obj.object_list
-        context['page_obj'] = page_obj
-        context['is_paginated'] = page_obj.has_other_pages()
-        context['filter_parameters_with_order_by'] = ''
 
-        return context
+        pagination_params = request_get.copy()
+        pagination_params.pop('page', None)
+
+        filter_params = pagination_params.copy()
+        for key in ('order_by', 'direction'):
+            filter_params.pop(key, None)
+
+        return context | {
+            'total_cost': sum(a.total_cost for a in allocations),
+            'allocations': page_obj.object_list,
+            'page_obj': page_obj,
+            'is_paginated': page_obj.has_other_pages(),
+            'filter_parameters': filter_params.urlencode(),
+            'filter_parameters_with_order_by': pagination_params.urlencode(),
+            'expand_accordion': 'show' if filter_params else '',
+        }
