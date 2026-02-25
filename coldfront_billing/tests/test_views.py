@@ -175,8 +175,6 @@ class TestBillingView:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            cost_value='100',  # $100 per TB
-            quota_value='5',  # 5 TB
         )
 
         response = self._get_billing_response(client, superuser)
