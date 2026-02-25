@@ -80,6 +80,7 @@ Billing
             </th>
             <th scope="col" class="text-nowrap">Cost</th>
             <th scope="col" class="text-nowrap">Cost Centers</th>
+            <th scope="col" class="text-nowrap"></th>
         </tr>
         </thead>
         <tbody>
@@ -115,6 +116,11 @@ Billing
                        style="font-size: 1.2rem;"></i>
                     {% endif %}
                 </button>
+            </td>
+            <td class="text-right">
+                <a href="{% url 'billing_details' project.id %}">
+                    show details
+                </a>
             </td>
         </tr>
 

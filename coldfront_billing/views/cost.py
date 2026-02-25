@@ -10,7 +10,7 @@ from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO
 from coldfront_billing.forms import CostCenterAssignmentForm
 from coldfront_billing.models import CostCenterAssignment
 
-logger = logging.getLogger('BillingView')
+logger = logging.getLogger('CostCenterView')
 
 
 class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):

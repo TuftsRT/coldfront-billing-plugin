@@ -221,7 +221,7 @@ def quota_attribute_type(db) -> AllocationAttributeType:
 
 
 # ============================================================================
-# Helper Functions
+# Storage Allocation Helpers & Fixtures
 # ============================================================================
 
 
@@ -231,22 +231,23 @@ def add_storage_allocation_to_project(
     allocation_status_active: AllocationStatusChoice,
     cost_attribute_type: ResourceAttributeType,
     quota_attribute_type: AllocationAttributeType,
-    *,
     cost_value: str = '100',
     quota_value: str = '5',
     resource_name: str = 'Test Storage',
-) -> None:
-    """Add Storage allocation with cost and quota attributes to a project."""
-    storage_resource = Resource.objects.create(
-        name=resource_name,
-        resource_type=storage_resource_type,
-        requires_payment=True,
-    )
-    ResourceAttribute.objects.create(
-        resource=storage_resource,
-        resource_attribute_type=cost_attribute_type,
-        value=cost_value,
-    )
+    storage_resource: Optional[Resource] = None,
+):
+    """Add a storage allocation to a project. Returns (allocation, storage_resource)."""
+    if storage_resource is None:
+        storage_resource = Resource.objects.create(
+            name=resource_name,
+            resource_type=storage_resource_type,
+            requires_payment=True,
+        )
+        ResourceAttribute.objects.create(
+            resource=storage_resource,
+            resource_attribute_type=cost_attribute_type,
+            value=cost_value,
+        )
     allocation = Allocation.objects.create(
         project=project,
         status=allocation_status_active,
@@ -258,6 +259,7 @@ def add_storage_allocation_to_project(
         allocation_attribute_type=quota_attribute_type,
         value=quota_value,
     )
+    return allocation, storage_resource
 
 
 @pytest.fixture
@@ -275,7 +277,7 @@ def multiple_projects(
     projects = []
     for i in range(5):
         project = Project.objects.create(
-            title=f'Test Project {i+1}',
+            title=f'Test Project {i + 1}',
             pi=pi_user,
             status=project_status_active,
             field_of_science=field_of_science,
@@ -283,7 +285,7 @@ def multiple_projects(
 
         # Create a storage resource for each project
         storage_resource = Resource.objects.create(
-            name=f'Storage Resource {i+1}',
+            name=f'Storage Resource {i + 1}',
             resource_type=storage_resource_type,
             requires_payment=True,
         )
