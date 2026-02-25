@@ -175,6 +175,8 @@ class TestBillingView:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
+            cost_value='100',  # $100 per TB
+            quota_value='5',  # 5 TB
         )
 
         response = self._get_billing_response(client, superuser)
@@ -806,8 +808,8 @@ class TestBillingDetailsView:
             cost_attribute_type,
             quota_attribute_type,
             resource_name='PI Storage',
-            cost='50',
-            quota='4',
+            cost_value='50',
+            quota_value='4',
         )
 
         response = self._get_billing_details_response(client, pi_user, project.id)
@@ -876,7 +878,7 @@ class TestBillingDetailsView:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            quota='5',
+            quota_value='5',
         )
         add_storage_allocation_to_project(
             project,
@@ -885,7 +887,7 @@ class TestBillingDetailsView:
             cost_attribute_type,
             quota_attribute_type,
             storage_resource=storage_resource,
-            quota='3',
+            quota_value='3',
         )
 
         response = self._get_billing_details_response(client, superuser, project.id)

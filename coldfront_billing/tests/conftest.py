@@ -231,9 +231,9 @@ def add_storage_allocation_to_project(
     allocation_status_active: AllocationStatusChoice,
     cost_attribute_type: ResourceAttributeType,
     quota_attribute_type: AllocationAttributeType,
+    cost_value: str = '100',
+    quota_value: str = '5',
     resource_name: str = 'Test Storage',
-    cost: str = '100',
-    quota: str = '5',
     storage_resource: Optional[Resource] = None,
 ):
     """Add a storage allocation to a project. Returns (allocation, storage_resource)."""
@@ -246,7 +246,7 @@ def add_storage_allocation_to_project(
         ResourceAttribute.objects.create(
             resource=storage_resource,
             resource_attribute_type=cost_attribute_type,
-            value=cost,
+            value=cost_value,
         )
     allocation = Allocation.objects.create(
         project=project,
@@ -257,14 +257,9 @@ def add_storage_allocation_to_project(
     AllocationAttribute.objects.create(
         allocation=allocation,
         allocation_attribute_type=quota_attribute_type,
-        value=quota,
+        value=quota_value,
     )
     return allocation, storage_resource
-
-
-# ============================================================================
-# Helper Functions
-# ============================================================================
 
 
 @pytest.fixture
