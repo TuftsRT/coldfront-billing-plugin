@@ -96,26 +96,30 @@ Billing
             <td>{{ project.status.name }}</td>
             <td>{{ project.cost }}</td>
             <td>
-                <button type="button"
-                        class="btn btn-link p-0 d-flex justify-content-between align-items-center w-100 text-left"
-                        data-toggle="modal"
-                        data-target="#costCentersModal"
-                        data-project-id="{{ project.id }}"
-                        data-project-name="{{ project.title|escape }}"
-                        data-project-cost="{{ project.cost }}"
-                        data-assignments="{{ project.assignments_json|escape }}">
+                <span data-toggle="tooltip"
+                      data-placement="top"
+                      title="{{ project.all_cost_centers }}">
+                    <button type="button"
+                            class="btn btn-link p-0 d-flex justify-content-between align-items-center w-100 text-left"
+                            data-toggle="modal"
+                            data-target="#costCentersModal"
+                            data-project-id="{{ project.id }}"
+                            data-project-name="{{ project.title|escape }}"
+                            data-project-cost="{{ project.cost }}"
+                            data-assignments="{{ project.assignments_json|escape }}">
                     {% if project.cost_centers != '-' %}
-                    <span class="text-body" style="font-size: 0.9rem;">
-                        {{ project.cost_centers }}
-                    </span>
-                    <i class="fas fa-edit text-dark"
-                       style="font-size: 1.2rem;"></i>
-                    {% else %}
-                    <span></span>
-                    <i class="fas fa-plus-circle text-dark"
-                       style="font-size: 1.2rem;"></i>
-                    {% endif %}
-                </button>
+                        <span class="text-body" style="font-size: 0.9rem;">
+                            {{ project.cost_centers }}
+                        </span>
+                        <i class="fas fa-edit text-dark"
+                           style="font-size: 1.2rem;"></i>
+                        {% else %}
+                        <span></span>
+                        <i class="fas fa-plus-circle text-dark"
+                           style="font-size: 1.2rem;"></i>
+                        {% endif %}
+                    </button>
+                </span>
             </td>
             <td class="text-right">
                 <a href="{% url 'billing_details' project.id %}">
@@ -160,6 +164,9 @@ Billing
             </div>
 
             <div class="modal-body">
+                <div id="cost-center-validation-error" class="alert alert-danger d-none" role="alert">
+                    Total percentage must equal 100%.
+                </div>
                 <table class="table table-bordered text-center">
                     <thead class="thead-light">
                     <tr>
@@ -209,7 +216,7 @@ Billing
                                 class="form-control custom-select dept-select">
                             <option value="">Select Dept...</option>
                             {% for department in departments %}
-                            <option value="{{ department.dept_id }}">{{ department.dept_id }}</option>
+                            <option value="{{ department }}">{{ department }}</option>
                             {% endfor %}
                         </select>
                     </td>

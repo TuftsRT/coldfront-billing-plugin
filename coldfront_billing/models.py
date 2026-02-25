@@ -6,11 +6,7 @@ from .schemas import CostCenterSchema
 
 
 class CostCenter(models.Model):
-    dept_id = models.CharField(
-        max_length=60,
-        unique=True,
-        help_text='Unique identifier for the cost center'
-    )
+    dept_id = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
 
 
 class CostCenterAssignment(models.Model):
@@ -20,10 +16,7 @@ class CostCenterAssignment(models.Model):
         related_name='cost_center_assignment',
         help_text='Project associated with this cost center assignment',
     )
-    assignments = models.JSONField(
-        blank=True,
-        help_text='JSON field storing cost center assignments with percentages'
-    )
+    assignments = models.JSONField(blank=True, help_text='JSON field storing cost center assignments with percentages')
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
@@ -45,6 +38,3 @@ class CostCenterAssignment(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-
-    def get_cost_centers_display(self):
-        return self.assignments if self.assignments else '-'
