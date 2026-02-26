@@ -30,11 +30,13 @@ class AllocationDetailsForm(forms.Form):
 
 
 class BillingSearchForm(forms.Form):
-    LAST_NAME: ClassVar[str] = 'Last Name'
-    USERNAME: ClassVar[str] = 'Username'
+    USERNAME: ClassVar[str] = 'PI name'
 
-    last_name = forms.CharField(label=LAST_NAME, max_length=100, required=False)
     username = forms.CharField(label=USERNAME, max_length=100, required=False)
+    no_cost_center = forms.BooleanField(
+        label='Only projects without any cost center assigned',
+        required=False,
+    )
 
 
 class CostCenterAssignmentForm(forms.Form):

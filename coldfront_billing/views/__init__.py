@@ -1,7 +1,9 @@
-from coldfront_billing.views.billing import BillingView
-from coldfront_billing.views.cost import CostCenterAssignmentUpdateView
+from .billing import BillingView
+from .cost import CostCenterAssignmentUpdateView
+from .details import BillingDetailsView
 
 __all__ = [
     'BillingView',
     'CostCenterAssignmentUpdateView',
+    'BillingDetailsView',
 ]

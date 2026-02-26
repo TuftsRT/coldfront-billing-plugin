@@ -11,23 +11,53 @@ class TestBillingAllocation:
     """Test suite for BillingAllocation class."""
 
     @staticmethod
-    def _create_mock_allocation(allocation_id=1, project_id=1, quota_attrs=None, storage_resources=None):
+    def _create_mock_allocation(
+        allocation_id=1,
+        project_id=1,
+        quota_attrs=None,
+        storage_resources=None,
+        project=None,
+        status=None,
+        end_date=None,
+    ):
         """Helper to create a mock allocation object."""
         allocation = Mock()
         allocation.id = allocation_id
         allocation.project_id = project_id
+        allocation.end_date = end_date
+
+        status_mock = Mock()
+        status_mock.name = status or 'Active'
+        allocation.status = status_mock
 
         setattr(allocation, QUOTA_ATTRIBUTE_NAME, quota_attrs)
-        setattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, storage_resources)
+        setattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, storage_resources or [])
+        allocation.project = project
 
         return allocation
 
     @staticmethod
-    def _create_mock_storage_resource(cost_attrs=None):
+    def _create_mock_storage_resource(cost_attrs=None, name='Test Storage'):
         """Helper to create a mock storage resource object."""
         resource = Mock()
+        resource.name = name
         setattr(resource, COST_ATTRIBUTE_NAME, cost_attrs)
         return resource
+
+    @staticmethod
+    def _create_mock_project(title='Test Project', pi=None):
+        """Helper to create a mock project object."""
+        project = Mock()
+        project.title = title
+        project.pi = pi
+        return project
+
+    @staticmethod
+    def _create_mock_pi(username='pi_user'):
+        """Helper to create a mock PI user object."""
+        pi = Mock()
+        pi.username = username
+        return pi
 
     def test_total_cost_basic_calculation(self):
         """Test basic total cost calculation."""
@@ -311,6 +341,86 @@ class TestBillingAllocation:
             storage_resources=[storage_resource],
         )
 
-        billing = BillingAllocation.parse(allocation, default_quota=DEFAULT_QUOTA, default_cost=DEFAULT_COST)
+        billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
         # ceil(7.3) = 8, int(150.5) = 150, so 8 * 150 = 1200
         assert billing.total_cost == 1200
+
+    def test_parse_includes_extra_project_title_and_pi_name(self):
+        """Test parse populates extra.project_title and extra.pi_name from project."""
+        pi = self._create_mock_pi(username='test_pi')
+        project = self._create_mock_project(title='My Project', pi=pi)
+        storage_resource = self._create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = self._create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+            project=project,
+        )
+
+        result = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
+
+        assert result.extra is not None
+        assert result.extra['project_title'] == 'My Project'
+        assert result.extra['pi_name'] == 'test_pi'
+
+    def test_parse_includes_extra_resource_name(self):
+        """Test parse populates extra.resource_name from first storage resource."""
+        storage_resource = self._create_mock_storage_resource(
+            cost_attrs=[Mock(value='100')],
+            name='My Storage Resource',
+        )
+        allocation = self._create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+        )
+
+        result = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
+
+        assert result.extra is not None
+        assert result.extra['resource_name'] == 'My Storage Resource'
+
+    def test_parse_includes_extra_status(self):
+        """Test parse populates extra.status from allocation status."""
+        storage_resource = self._create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = self._create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+            status='Active',
+        )
+
+        result = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
+
+        assert result.extra is not None
+        assert result.extra['status'] == 'Active'
+
+    def test_parse_includes_extra_end_date_when_present(self):
+        """Test parse populates extra.end_date when allocation has end_date."""
+        from datetime import date
+
+        storage_resource = self._create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = self._create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+            end_date=date(2025, 12, 31),
+        )
+
+        result = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
+
+        assert result.extra is not None
+        assert result.extra['end_date'] == date(2025, 12, 31)
+
+    def test_parse_uses_dash_for_missing_extra_fields(self):
+        """Test parse uses '-' for missing project_title, pi_name, resource_name, end_date."""
+        allocation = self._create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[],
+            project=None,
+            end_date=None,
+        )
+
+        result = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
+
+        assert result.extra is not None
+        assert result.extra['project_title'] == '-'
+        assert result.extra['pi_name'] == '-'
+        assert result.extra['resource_name'] == '-'
+        assert result.extra['end_date'] == '-'
