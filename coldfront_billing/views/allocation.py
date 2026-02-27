@@ -4,6 +4,7 @@ from coldfront.core.project.models import Project
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.views.generic import FormView
 
 from coldfront_billing.constants import QUOTA_ATTR_NAME
@@ -25,13 +26,16 @@ class AllocationCreateView(ColdfrontAllocationCreateView):
 
     def form_valid(self, form):
         redirect_response = super().form_valid(form)
-        allocation: Allocation = self.object
+        allocation = Allocation.objects.filter(project_id=self.kwargs['project_pk']).order_by('-pk').first()
 
         # Redirect to update-allocation-details page for paid storage allocations
-        if allocation.resources.filter(
-            resource_type__name='Storage',
-            requires_payment=True,
-        ).exists():
+        if (
+            allocation
+            and allocation.resources.filter(
+                resource_type__name='Storage',
+                requires_payment=True,
+            ).exists()
+        ):
             return redirect(
                 'update-allocation-details',
                 pk=allocation.pk,
@@ -66,7 +70,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
             allocation_attribute_type__name=QUOTA_ATTR_NAME,
         ).exists():
             messages.info(request, 'Storage quota is already set for this allocation.')
-            return redirect(self.allocation.project.get_absolute_url())
+            return redirect(reverse('project-detail', kwargs={'pk': self.allocation.project_id}))
         return super().dispatch(request, *args, **kwargs)
 
     def get_form(self, form_class=None):
@@ -114,4 +118,4 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
             else:
                 msg = f'Storage quota of {quota} TB has been set. Your allocation request is complete.'
             messages.success(self.request, msg)
-            return redirect(self.allocation.project.get_absolute_url())
+            return redirect(reverse('project-detail', kwargs={'pk': self.allocation.project_id}))

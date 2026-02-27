@@ -22,10 +22,13 @@ class AllocationDetailsForm(forms.Form):
         queryset=CostCenter.objects.all().order_by('dept_id'),
         to_field_name='dept_id',
         label='Cost Center',
-        required=True,
+        required=False,
         empty_label='Select cost center...',
         widget=forms.Select(attrs={'class': 'form-control custom-select'}),
-        help_text='Select the cost center where 100% of the allocation cost will be assigned.',
+        help_text='Select the cost center where the project cost will be initially assigned. '
+        'To update the value or split the cost between multiple Cost Centers, '
+        'visit the "Billing" page under the "Project" menu after the request has been approved.'
+        'If you are not sure about the cost center - leave it blank',
     )
 
 
