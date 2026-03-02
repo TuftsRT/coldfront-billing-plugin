@@ -80,19 +80,13 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
         page_number = request_get.get('page', 1)
         page_obj = paginator.get_page(page_number)
 
-        pagination_params = request_get.copy()
-        pagination_params.pop('page', None)
-
-        filter_params = pagination_params.copy()
-        for key in ('order_by', 'direction'):
-            filter_params.pop(key, None)
-
-        return context | {
-            'total_cost': sum(a.total_cost for a in allocations),
-            'allocations': page_obj.object_list,
-            'page_obj': page_obj,
-            'is_paginated': page_obj.has_other_pages(),
-            'filter_parameters': filter_params.urlencode(),
-            'filter_parameters_with_order_by': pagination_params.urlencode(),
-            'expand_accordion': 'show' if filter_params else '',
-        }
+        return (
+            context
+            | self.get_view_params(request_get)
+            | {
+                'total_cost': sum(a.total_cost for a in allocations),
+                'allocations': page_obj.object_list,
+                'page_obj': page_obj,
+                'is_paginated': page_obj.has_other_pages(),
+            }
+        )
