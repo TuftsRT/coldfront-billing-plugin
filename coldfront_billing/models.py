@@ -41,6 +41,3 @@ class CostCenterAssignment(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-
-    def get_cost_centers_display(self):
-        return self.assignments if self.assignments else '-'
