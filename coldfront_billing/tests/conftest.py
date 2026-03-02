@@ -29,8 +29,17 @@ from coldfront.core.resource.models import (
 )
 from django.contrib.auth.models import User
 from django.http import HttpRequest
+from django.test import override_settings
 
 from coldfront_billing.constants import COST_ATTR_NAME, QUOTA_ATTR_NAME
+
+
+@pytest.fixture
+def configure_urls():
+    """Configure URLs for view tests."""
+    with override_settings(ROOT_URLCONF='coldfront_billing.tests.conftest_urls'):
+        yield
+
 
 # ============================================================================
 # User Fixtures
@@ -235,6 +244,7 @@ def add_storage_allocation_to_project(
     quota_value: str = '5',
     resource_name: str = 'Test Storage',
     storage_resource: Optional[Resource] = None,
+    with_quota: bool = True,
 ):
     """Add a storage allocation to a project. Returns (allocation, storage_resource)."""
     if storage_resource is None:
@@ -252,13 +262,15 @@ def add_storage_allocation_to_project(
         project=project,
         status=allocation_status_active,
         quantity=100,
+        justification='Test justification',
     )
     allocation.resources.add(storage_resource)
-    AllocationAttribute.objects.create(
-        allocation=allocation,
-        allocation_attribute_type=quota_attribute_type,
-        value=quota_value,
-    )
+    if with_quota:
+        AllocationAttribute.objects.create(
+            allocation=allocation,
+            allocation_attribute_type=quota_attribute_type,
+            value=quota_value,
+        )
     return allocation, storage_resource
 
 
@@ -302,6 +314,7 @@ def multiple_projects(
             project=project,
             status=allocation_status_active,
             quantity=100,
+            justification='Test justification',
         )
         allocation.resources.add(storage_resource)
 
@@ -377,6 +390,7 @@ def create_project_with_billing_user(
             project=project,
             status=allocation_status_active,
             quantity=100,
+            justification='Test justification',
         )
         allocation.resources.add(storage_resource)
 

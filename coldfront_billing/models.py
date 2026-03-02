@@ -8,6 +8,9 @@ from .schemas import CostCenterSchema
 class CostCenter(models.Model):
     dept_id = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
 
+    def __str__(self):
+        return self.dept_id
+
 
 class CostCenterAssignment(models.Model):
     project = models.OneToOneField(
