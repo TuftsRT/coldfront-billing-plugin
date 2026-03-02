@@ -140,7 +140,7 @@ class TestBillingView:
         quota_attribute_type,
     ):
         """Test that context includes filter_parameters, all_params, and return_params."""
-        response = self._get_billing_response(client, superuser, '?username=test&order_by=title&direction=asc&page=1')
+        response = _get_billing_response(client, superuser, '?username=test&order_by=title&direction=asc&page=1')
         assert response.status_code == 200
         assert 'filter_parameters' in response.context
         assert 'all_params' in response.context
