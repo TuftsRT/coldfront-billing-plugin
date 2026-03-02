@@ -10,7 +10,7 @@ Billing Details - {{ project.title }}
 <h2>Billing Details</h2>
 <hr>
 <div class="mb-3">
-    <a href="{% url 'billing_index' %}" class="btn btn-primary btn-sm">
+    <a href="{% url 'billing_index' %}{% if return_params %}?{{ return_params }}{% endif %}" class="btn btn-primary btn-sm">
         <i class="fas fa-arrow-left"></i> Back to Billing
     </a>
 </div>

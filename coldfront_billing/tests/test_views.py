@@ -146,17 +146,27 @@ class TestBillingView:
         client,
         superuser,
         multiple_projects,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
     ):
-        """Test that context includes filter_parameters and filter_parameters_with_order_by."""
-        response = self._get_billing_response(client, superuser, '?username=test&order_by=title&direction=asc')
+        """Test that context includes filter_parameters, all_params, and return_params."""
+        response = self._get_billing_response(client, superuser, '?username=test&order_by=title&direction=asc&page=1')
         assert response.status_code == 200
         assert 'filter_parameters' in response.context
-        assert 'filter_parameters_with_order_by' in response.context
+        assert 'all_params' in response.context
+        assert 'return_params' in response.context
         # filter_parameters excludes order_by/direction for search form preservation
         assert 'order_by' not in response.context['filter_parameters']
-        # filter_parameters_with_order_by keeps them for pagination links
-        assert 'order_by=title' in response.context['filter_parameters_with_order_by']
-        assert 'direction=asc' in response.context['filter_parameters_with_order_by']
+        # all_params keeps them for pagination links (excludes page)
+        assert 'order_by=title' in response.context['all_params']
+        assert 'direction=asc' in response.context['all_params']
+        assert 'page' not in response.context['all_params']
+        # return_params includes full query string for back-to-billing
+        assert 'order_by=title' in response.context['return_params']
+        assert 'direction=asc' in response.context['return_params']
+        assert 'page=1' in response.context['return_params']
 
     def test_context_includes_cost_and_cost_centers(
         self,
@@ -911,6 +921,23 @@ class TestBillingDetailsView:
         assert 'allocations' in response.context
         assert 'total_cost' in response.context
         assert isinstance(response.context['total_cost'], int)
+
+    def test_details_view_passes_return_params_for_back_button(
+        self,
+        client,
+        superuser,
+        project_with_billing_user,
+    ):
+        """Test that billing details view passes return_params for Back to Billing link."""
+        client.force_login(superuser)
+        url = reverse('billing_details', kwargs={'project_id': project_with_billing_user.id})
+        response = client.get(url + '?username=foo&order_by=title&direction=asc&page=2')
+
+        assert response.status_code == 200
+        assert 'return_params' in response.context
+        assert 'username=foo' in response.context['return_params']
+        assert 'order_by=title' in response.context['return_params']
+        assert 'page=2' in response.context['return_params']
 
 
 @pytest.mark.django_db
