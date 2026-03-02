@@ -4,6 +4,7 @@ from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.resource.models import Resource, ResourceAttribute
 from django.conf import settings
 from django.db.models import Prefetch
+from django.http import QueryDict
 
 from coldfront_billing.constants import (
     COST_ATTR_NAME,
@@ -66,3 +67,19 @@ class BillingAllocationPrefetchMixin:
     @staticmethod
     def create_billing_allocations(allocation_objs: list[Allocation]) -> list[BillingAllocation]:
         return [BillingAllocation.parse(a, default_quota, default_cost) for a in allocation_objs]
+
+    @staticmethod
+    def get_view_params(request_get: QueryDict) -> dict:
+        all_params = request_get.copy()
+        all_params.pop('page', None)
+
+        filter_params = all_params.copy()
+        for key in ('order_by', 'direction'):
+            filter_params.pop(key, None)
+
+        return {
+            'filter_parameters': filter_params.urlencode(),
+            'all_params': all_params.urlencode(),
+            'return_params': request_get.urlencode(),
+            'expand_accordion': 'show' if filter_params else '',
+        }

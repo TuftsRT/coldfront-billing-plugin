@@ -118,7 +118,7 @@ Billing
                 </button>
             </td>
             <td class="text-right">
-                <a href="{% url 'billing_details' project.id %}">
+                <a href="{% url 'billing_details' project.id %}{% if return_params %}?{{ return_params }}{% endif %}">
                     show details
                 </a>
             </td>
