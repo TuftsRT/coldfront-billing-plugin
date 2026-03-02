@@ -15,7 +15,7 @@ class AllocationDetailsForm(forms.Form):
         label='Storage Quota (TB)',
         required=True,
         min_value=0,
-        widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0', 'class': 'form-control'}),
+        widget=forms.NumberInput(attrs={'step': '1.0', 'min': '0', 'class': 'form-control'}),
         help_text='Specify the storage quota in terabytes for your allocation.',
     )
     cost_center = forms.ModelChoiceField(
