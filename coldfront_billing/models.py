@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from .constants import NO_COST_QUOTA_TYPE_ATTR_NAME, QUOTA_ATTR_NAME
+from .constants import BILLING_ROLE_NAME, NO_COST_QUOTA_TYPE_ATTR_NAME, QUOTA_ATTR_NAME
 from .schemas import CostCenterSchema
 
 User = get_user_model()
@@ -152,13 +152,13 @@ class NoCostQuotaAllotment(models.Model):
             project = self.allocation.project
 
             is_pi = project.pi_id == user.id
-            has_management_role = ProjectUser.objects.filter(
+            has_billing_role = ProjectUser.objects.filter(
                 project=project,
                 user=user,
-                role__name='Manager',
+                role__name=BILLING_ROLE_NAME,
                 status__name='Active',
             ).exists()
-            if not (is_pi or has_management_role):
+            if not (is_pi or has_billing_role):
                 raise ValidationError(
                     {'no_cost_quota': "User must be project PI or have Manager role on the allocation's project."}
                 )
