@@ -3,7 +3,7 @@ from django.contrib.auth.models import AnonymousUser
 
 from coldfront_billing.context_processor import billing_role as billing_role_func
 
-from .conftest import create_billing_request, create_pi_user, create_project_with_billing_user
+from .conftest import create_billing_request, create_pi_user, create_project_with_role_user
 
 
 @pytest.mark.django_db
@@ -34,6 +34,12 @@ class TestBillingRoleContextProcessor:
         result = billing_role_func(request)
         assert result == {'has_billing_role': True}
 
+    def test_user_with_active_manager_role_returns_true(self, user, project_with_manager_user):
+        """Test that users with active Manager role return True."""
+        request = create_billing_request(user)
+        result = billing_role_func(request)
+        assert result == {'has_billing_role': True}
+
     def test_only_active_and_archived_projects_considered(
         self,
         user,
@@ -45,17 +51,17 @@ class TestBillingRoleContextProcessor:
     ):
         """Test that only Active/Archived projects are considered, not New ones."""
         pi_user1 = create_pi_user('1')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user, pi_user1, project_status_active, billing_role, project_user_status_active, 'Active Project'
         )
 
         pi_user2 = create_pi_user('2')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user, pi_user2, project_status_archived, billing_role, project_user_status_active, 'Archived Project'
         )
 
         pi_user3 = create_pi_user('3')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user, pi_user3, project_status_new, billing_role, project_user_status_active, 'New Project'
         )
 
@@ -74,12 +80,12 @@ class TestBillingRoleContextProcessor:
     ):
         """Test that only Active ProjectUser status is considered."""
         pi_user1 = create_pi_user('1')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user, pi_user1, project_status_active, billing_role, project_user_status_active, 'Active User Project'
         )
 
         pi_user2 = create_pi_user('2')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user, pi_user2, project_status_active, billing_role, project_user_status_inactive, 'Inactive User Project'
         )
 
@@ -97,7 +103,7 @@ class TestBillingRoleContextProcessor:
     ):
         """Test that inactive ProjectUser status returns False."""
         pi_user = create_pi_user('1')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user,
             pi_user,
             project_status_active,

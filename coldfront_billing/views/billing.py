@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Prefetch, Q, QuerySet
 from django.views.generic import ListView
 
-from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME
+from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.filters import filter_by_search_params, get_ordering
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.models import CostCenter
@@ -32,7 +32,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
             projects = projects.filter(
                 Q(
                     projectuser__user=self.request.user,
-                    projectuser__role__name=BILLING_ROLE_NAME,
+                    projectuser__role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
                     projectuser__status__name='Active',
                 )
                 | Q(pi=self.request.user)

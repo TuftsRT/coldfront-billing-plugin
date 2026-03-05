@@ -4,6 +4,7 @@ env = environ.Env()
 
 
 BILLING_ROLE_NAME = 'Billing'
+MANAGER_ROLE_NAME = 'Manager'
 QUOTA_ATTR_NAME = env.str('COLDFRONT_BILLING_QUOTA_ATTRIBUTE_NAME', 'quota_in_terabyte')
 COST_ATTR_NAME = env.str('COLDFRONT_BILLING_COST_ATTRIBUTE_NAME', 'cost_per_terabyte')
 NO_COST_QUOTA_TYPE_ATTR_NAME = env.str('COLDFRONT_BILLING_NO_COST_QUOTA_TYPE_ATTR_NAME', 'no_cost_quota_type')
