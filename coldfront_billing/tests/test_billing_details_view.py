@@ -71,6 +71,20 @@ class TestBillingDetailsView:
         assert len(response.context['allocations']) == 1
         assert response.context['total_cost'] == 500
 
+    def test_user_with_manager_role_can_view_project_details(
+        self,
+        client,
+        user,
+        project_with_manager_user,
+    ):
+        """Test that users with Manager role can view their project's billing details."""
+        response = self._get_billing_details_response(client, user, project_with_manager_user.id)
+
+        assert response.status_code == 200
+        assert response.context['project'] == project_with_manager_user
+        assert len(response.context['allocations']) == 1
+        assert response.context['total_cost'] == 500
+
     def test_pi_can_view_own_project_details(
         self,
         client,

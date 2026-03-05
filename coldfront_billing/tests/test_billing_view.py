@@ -1,7 +1,11 @@
 import pytest
 from django.urls import reverse
 
-from .conftest import add_storage_allocation_to_project, create_pi_user, create_project_with_billing_user
+from .conftest import (
+    add_storage_allocation_to_project,
+    create_pi_user,
+    create_project_with_role_user,
+)
 
 
 def _get_billing_response(client, user, query_params=''):
@@ -68,6 +72,13 @@ class TestBillingView:
         assert len(response.context['project_list']) == 1
         assert response.context['project_list'][0] == project_with_billing_user
 
+    def test_regular_user_with_manager_role_sees_projects(self, client, user, project_with_manager_user):
+        """Test that users with Manager role can see their projects with Storage allocations."""
+        response = _get_billing_response(client, user)
+        assert response.status_code == 200
+        assert len(response.context['project_list']) == 1
+        assert response.context['project_list'][0] == project_with_manager_user
+
     def test_user_only_sees_active_project_user_status(
         self,
         client,
@@ -83,7 +94,7 @@ class TestBillingView:
     ):
         """Test that only Active ProjectUser status is shown."""
         pi_user1 = create_pi_user('1')
-        active_project = create_project_with_billing_user(
+        active_project = create_project_with_role_user(
             user,
             pi_user1,
             project_status_active,
@@ -98,7 +109,7 @@ class TestBillingView:
         )
 
         pi_user2 = create_pi_user('2')
-        inactive_project = create_project_with_billing_user(
+        inactive_project = create_project_with_role_user(
             user,
             pi_user2,
             project_status_active,
@@ -117,6 +128,57 @@ class TestBillingView:
         project_ids = [p.id for p in response.context['project_list']]
         assert active_project.id in project_ids
         assert inactive_project.id not in project_ids
+
+    def test_user_with_manager_role_only_sees_active_project_user_status(
+        self,
+        client,
+        user,
+        project_status_active,
+        manager_role,
+        project_user_status_active,
+        project_user_status_inactive,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that Manager role users only see projects where their status is Active."""
+        pi_user1 = create_pi_user('_mgr1')
+        active_project = create_project_with_role_user(
+            user,
+            pi_user1,
+            project_status_active,
+            manager_role,
+            project_user_status_active,
+            'Active Manager Project',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+        )
+
+        pi_user2 = create_pi_user('_mgr2')
+        create_project_with_role_user(
+            user,
+            pi_user2,
+            project_status_active,
+            manager_role,
+            project_user_status_inactive,
+            'Inactive Manager Project',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+        )
+
+        response = _get_billing_response(client, user)
+        assert response.status_code == 200
+        project_ids = [p.id for p in response.context['project_list']]
+        assert active_project.id in project_ids
+        # Inactive Manager project should not appear
+        assert len(project_ids) == 1
 
     def test_ordering_success(self, client, superuser, multiple_projects):
         response = _get_billing_response(client, superuser, '?order_by=id&direction=asc')
@@ -211,7 +273,7 @@ class TestBillingViewSearchFilters:
         pi_user1 = create_pi_user('_searchable')
         pi_user2 = create_pi_user('_other')
         user = create_pi_user('_billing')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user,
             pi_user1,
             project_status_active,
@@ -225,7 +287,7 @@ class TestBillingViewSearchFilters:
             quota_attribute_type=quota_attribute_type,
             field_of_science=field_of_science,
         )
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user,
             pi_user2,
             project_status_active,
@@ -269,7 +331,7 @@ class TestBillingViewSearchFilters:
         billing_user2 = User.objects.create_user(
             username='other_billing', email='billing2@example.com', password='pass'
         )
-        create_project_with_billing_user(
+        create_project_with_role_user(
             billing_user1,
             pi_user,
             project_status_active,
@@ -283,7 +345,7 @@ class TestBillingViewSearchFilters:
             quota_attribute_type=quota_attribute_type,
             field_of_science=field_of_science,
         )
-        create_project_with_billing_user(
+        create_project_with_role_user(
             billing_user2,
             pi_user,
             project_status_active,
@@ -319,7 +381,7 @@ class TestBillingViewSearchFilters:
     ):
         pi_user = create_pi_user('_CamelCase')
         user = create_pi_user('_billing')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             user,
             pi_user,
             project_status_active,
@@ -394,7 +456,7 @@ class TestBillingViewSearchFilters:
         billing_user = User.objects.create_user(
             username='searchable_user', email='billing@example.com', password='pass'
         )
-        create_project_with_billing_user(
+        create_project_with_role_user(
             billing_user,
             pi_user,
             project_status_active,
@@ -408,7 +470,7 @@ class TestBillingViewSearchFilters:
             quota_attribute_type=quota_attribute_type,
             field_of_science=field_of_science,
         )
-        create_project_with_billing_user(
+        create_project_with_role_user(
             billing_user,
             pi_user,
             project_status_active,
@@ -454,7 +516,7 @@ class TestBillingViewSearchFilters:
             last_name='Specific',
         )
         billing_user = create_pi_user('_billing')
-        create_project_with_billing_user(
+        create_project_with_role_user(
             billing_user,
             pi_user,
             project_status_active,
@@ -494,7 +556,7 @@ class TestBillingViewSearchFilters:
         pi_user = create_pi_user('_pi')
         billing_user = create_pi_user('_billing')
 
-        project_with_assignment = create_project_with_billing_user(
+        project_with_assignment = create_project_with_role_user(
             billing_user,
             pi_user,
             project_status_active,
@@ -514,7 +576,7 @@ class TestBillingViewSearchFilters:
             assignments={'DEPT001': 100},
         )
 
-        create_project_with_billing_user(
+        create_project_with_role_user(
             billing_user,
             pi_user,
             project_status_active,
@@ -630,7 +692,7 @@ class TestBillingViewOrdering:
         billing_user = create_pi_user('_billing')
 
         for i, pi_user in enumerate(pi_users):
-            create_project_with_billing_user(
+            create_project_with_role_user(
                 billing_user,
                 pi_user,
                 project_status_active,
@@ -673,7 +735,7 @@ class TestBillingViewOrdering:
         billing_user = create_pi_user('_billing')
 
         for i, pi_user in enumerate(pi_users):
-            create_project_with_billing_user(
+            create_project_with_role_user(
                 billing_user,
                 pi_user,
                 project_status_active,
