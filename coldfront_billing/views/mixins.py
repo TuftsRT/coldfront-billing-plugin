@@ -9,11 +9,13 @@ from django.http import QueryDict
 from coldfront_billing.constants import (
     COST_ATTR_NAME,
     COST_ATTRIBUTE_NAME,
+    NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
     QUOTA_ATTR_NAME,
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import BillingAllocation
+from coldfront_billing.models import NoCostQuotaAllotment
 
 default_quota = getattr(
     settings,
@@ -62,6 +64,19 @@ class BillingAllocationPrefetchMixin:
                 'allocation_id', 'value'
             ),
             to_attr=QUOTA_ATTRIBUTE_NAME,
+        )
+
+    @staticmethod
+    def get_no_cost_quota_allotments_prefetch() -> Prefetch:
+        return Prefetch(
+            'no_cost_quota_allotments',
+            queryset=NoCostQuotaAllotment.objects.select_related('no_cost_quota').only(
+                'id',
+                'allocation_id',
+                'amount',
+                'no_cost_quota__units',
+            ),
+            to_attr=NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
         )
 
     @staticmethod

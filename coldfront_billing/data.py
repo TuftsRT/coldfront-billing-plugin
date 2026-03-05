@@ -1,8 +1,14 @@
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from coldfront_billing.constants import COST_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
+from coldfront_billing.constants import (
+    COST_ATTRIBUTE_NAME,
+    NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
+    QUOTA_ATTRIBUTE_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME,
+)
 
 
 def _first_or_none(sequence):
@@ -16,6 +22,27 @@ def _parse_float(value, default):
         return default
 
 
+class StorageUnit(str, Enum):
+    TB = 'TB'
+    GB = 'GB'
+
+
+UNIT_TO_TB = {
+    StorageUnit.TB: 1.0,
+    StorageUnit.GB: 1.0 / 1000.0,
+}
+
+
+@dataclass
+class BillingNoCostQuota:
+    amount: float
+    unit: StorageUnit
+
+    @property
+    def normalized_amount(self) -> float:
+        return self.amount * UNIT_TO_TB[self.unit]
+
+
 @dataclass
 class BillingAllocation:
     allocation_id: int
@@ -23,10 +50,13 @@ class BillingAllocation:
     quota_tb: int | float
     cost_per_tb: int | float
     extra: Dict[str, Any] = field(default_factory=dict)
+    no_cost_quotas: List[BillingNoCostQuota] = field(default_factory=list)
 
     @property
     def total_cost(self) -> int:
-        return int(math.ceil(self.quota_tb)) * int(round(self.cost_per_tb))
+        total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
+        final_quota = max(self.quota_tb - total_no_cost_quota, 0)
+        return int(math.ceil(final_quota)) * int(round(self.cost_per_tb))
 
     @classmethod
     def parse(
@@ -65,6 +95,11 @@ class BillingAllocation:
         storage_resources = getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, [])
         resource_name = storage_resources[0].name if storage_resources else '-'
 
+        allotments = getattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, [])
+        no_cost_quotas = [
+            BillingNoCostQuota(allotment.amount, StorageUnit(allotment.no_cost_quota.units)) for allotment in allotments
+        ]
+
         return cls(
             allocation_id=allocation.id,
             project_id=allocation.project_id,
@@ -76,6 +111,7 @@ class BillingAllocation:
                 'status': allocation.status.name,
                 'end_date': getattr(allocation, 'end_date', None) or '-',
             },
+            no_cost_quotas=no_cost_quotas,
         )
 
 
