@@ -9,10 +9,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-
-
-def _first_or_none(sequence):
-    return sequence[0] if sequence else None
+from coldfront_billing.utils import first_or_none
 
 
 def _parse_float(value, default):
@@ -41,6 +38,14 @@ class BillingNoCostQuota:
     @property
     def normalized_amount(self) -> float:
         return self.amount * UNIT_TO_TB[self.unit]
+
+    @staticmethod
+    def create(ammount: float, units: str) -> 'BillingNoCostQuota':
+        try:
+            unit = StorageUnit(units)
+        except ValueError:
+            unit = StorageUnit.TB
+        return BillingNoCostQuota(ammount, unit)
 
 
 @dataclass
@@ -72,7 +77,7 @@ class BillingAllocation:
         else:
             quota_tb = default_quota
 
-        storage_resource = _first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
+        storage_resource = first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
 
         if storage_resource and (cost_attrs := getattr(storage_resource, COST_ATTRIBUTE_NAME, None)):
             float_cost = _parse_float(cost_attrs[0].value, default_cost)
@@ -97,7 +102,7 @@ class BillingAllocation:
 
         allotments = getattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, [])
         no_cost_quotas = [
-            BillingNoCostQuota(allotment.amount, StorageUnit(allotment.no_cost_quota.units)) for allotment in allotments
+            BillingNoCostQuota.create(allotment.amount, allotment.no_cost_quota.units) for allotment in allotments
         ]
 
         return cls(

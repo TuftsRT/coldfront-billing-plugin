@@ -15,8 +15,8 @@ Assign No-Cost Quota
     to an allocation. Select an allocation to create a new allotment.
 </p>
 
-<strong>Eligible Allocations: {{ allocation_count }}</strong>
-{% if allocation_list_with_allotments %}
+<strong>Eligible Allocations: {{ allocation_list|length }}</strong>
+{% if allocations %}
 <div class="table-responsive">
     <table class="table table-sm">
         <thead>
@@ -34,7 +34,7 @@ Assign No-Cost Quota
         </tr>
         </thead>
         <tbody>
-        {% for row in allocation_list_with_allotments %}
+        {% for row in allocations %}
         {% with allocation=row.allocation %}
         <tr>
             <td><a href="/allocation/{{ allocation.id }}/">{{ allocation.id }}</a></td>
@@ -42,9 +42,9 @@ Assign No-Cost Quota
                 <a href="{% url 'billing_details' project_id=allocation.project_id %}">{{ allocation.project.title }}</a>
             </td>
             <td>{{ allocation.project.pi.username }}</td>
-            <td>{% for r in allocation.resources.all %}{% if forloop.first %}{{ r.name }}{% endif %}{% empty %}-{% endfor %}</td>
-            <td>{{ allocation.status.name }}</td>
-            <td>{% if allocation.quota_attr %}{{ allocation.quota_attr.0.value }}{% else %}-{% endif %}</td>
+            <td>{{ row.resource_name }}</td>
+            <td>{{ row.status_name }}</td>
+            <td>{{ row.quota_amount_display }}</td>
             <td>{{ quota.quota_type }}</td>
             <td>{{ row.other_users_display }}</td>
             <td>{{ row.current_user_display }}</td>
@@ -106,33 +106,5 @@ Assign No-Cost Quota
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var allocationIdInput = document.getElementById('assignQuotaAllocationId');
-    var allocationDisplayEl = document.getElementById('assignQuotaModalAllocation');
-    var amountInput = document.getElementById('assignQuotaAmount');
-
-    document.querySelectorAll('[data-target="#assignQuotaModal"], [data-bs-target="#assignQuotaModal"]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var allocationId = this.getAttribute('data-allocation-id');
-            var allocationDisplay = this.getAttribute('data-allocation-display');
-            var existingAmount = this.getAttribute('data-existing-amount');
-            allocationIdInput.value = allocationId || '';
-            allocationDisplayEl.textContent = allocationDisplay || '';
-            amountInput.value = existingAmount || '';
-        });
-    });
-
-    var form = document.getElementById('assignQuotaForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            if (!allocationIdInput.value) {
-                e.preventDefault();
-                alert('Please select an allocation first.');
-                return false;
-            }
-        });
-    }
-});
-</script>
+<script src="{% static 'billing/js/no_cost_quota_assign.js' %}"></script>
 {% endblock %}

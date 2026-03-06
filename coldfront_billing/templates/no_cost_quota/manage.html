@@ -16,7 +16,7 @@ Manage No-Cost Quotas
     the owner or have been granted the 'Manager' or 'Billing' role.
 </p>
 
-<strong>No-Cost Quotas: {{ quota_count }}</strong>
+<strong>No-Cost Quotas: {{ quota_list|length }}</strong>
 {% if request.user.is_superuser %}
 <p class="text-muted small mb-2">Showing all no-cost quotas (superuser view).</p>
 {% endif %}
