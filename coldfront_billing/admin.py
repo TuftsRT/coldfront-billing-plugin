@@ -25,7 +25,7 @@ class CostCenterAssignmentAdmin(admin.ModelAdmin):
 
 @admin.register(NoCostQuota)
 class NoCostQuotaAdmin(admin.ModelAdmin):
-    list_display = ['user', 'quota_type', 'amount', 'units', 'minimum_increment', 'created', 'updated']
+    list_display = ['user', 'quota_type', 'description', 'amount', 'units', 'minimum_increment', 'created', 'updated']
     list_filter = ['quota_type', 'created', 'updated']
     search_fields = ['user__username', 'user__email', 'quota_type']
     readonly_fields = ['created', 'updated']

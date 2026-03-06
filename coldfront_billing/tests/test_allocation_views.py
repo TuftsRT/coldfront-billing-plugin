@@ -16,14 +16,14 @@ class TestUpdateAllocationDetailsView:
     def _get_update_allocation_details(client, user, allocation_pk):
         """Helper to GET the update allocation details page."""
         client.force_login(user)
-        url = reverse('update-allocation-details', kwargs={'pk': allocation_pk})
+        url = reverse('update_allocation_details', kwargs={'pk': allocation_pk})
         return client.get(url)
 
     @staticmethod
     def _post_update_allocation_details(client, user, allocation_pk, data):
         """Helper to POST the update allocation details form."""
         client.force_login(user)
-        url = reverse('update-allocation-details', kwargs={'pk': allocation_pk})
+        url = reverse('update_allocation_details', kwargs={'pk': allocation_pk})
         return client.post(url, data=data)
 
     def test_unauthenticated_user_redirected(
@@ -44,7 +44,7 @@ class TestUpdateAllocationDetailsView:
             quota_attribute_type,
             with_quota=False,
         )
-        url = reverse('update-allocation-details', kwargs={'pk': allocation.pk})
+        url = reverse('update_allocation_details', kwargs={'pk': allocation.pk})
         response = client.get(url)
         assert response.status_code == 302
         assert '/login' in response.url
@@ -269,7 +269,7 @@ class TestAllocationCreateView:
         cost_attribute_type,
         project_user_status_active,
     ):
-        """Test that creating paid storage allocation redirects to update-allocation-details."""
+        """Test that creating paid storage allocation redirects to update_allocation_details."""
         from coldfront.core.allocation.models import (
             AllocationStatusChoice,
             AllocationUserStatusChoice,
@@ -317,6 +317,6 @@ class TestAllocationCreateView:
         response = client.post(url, data=data)
 
         assert response.status_code == 302
-        assert 'update-allocation-details' in response.url
+        assert 'update_allocation_details' in response.url
         assert '/allocation/' in response.url
-        assert '/update-allocation-details/' in response.url
+        assert '/update_allocation_details/' in response.url

@@ -1,0 +1,138 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load static %}
+
+{% block title %}
+Assign No-Cost Quota
+{% endblock %}
+
+{% block content %}
+<h2>Assign No-Cost Quota</h2>
+<hr>
+
+<p class="mb-4">
+    Assign a portion of your <strong>{{ quota.quota_type }}</strong> quota ({{ quota_remaining }} {{ quota.units }} remaining)
+    to an allocation. Select an allocation to create a new allotment.
+</p>
+
+<strong>Eligible Allocations: {{ allocation_count }}</strong>
+{% if allocation_list_with_allotments %}
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th scope="col" class="text-nowrap">ID</th>
+            <th scope="col" class="text-nowrap">Project</th>
+            <th scope="col" class="text-nowrap">PI</th>
+            <th scope="col" class="text-nowrap">Resource name</th>
+            <th scope="col" class="text-nowrap">Status</th>
+            <th scope="col" class="text-nowrap">Amount</th>
+            <th scope="col" class="text-nowrap">Quota type</th>
+            <th scope="col" class="text-nowrap">Others applied</th>
+            <th scope="col" class="text-nowrap">My applied</th>
+            <th scope="col" class="text-nowrap"></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in allocation_list_with_allotments %}
+        {% with allocation=row.allocation %}
+        <tr>
+            <td><a href="/allocation/{{ allocation.id }}/">{{ allocation.id }}</a></td>
+            <td>
+                <a href="{% url 'billing_details' project_id=allocation.project_id %}">{{ allocation.project.title }}</a>
+            </td>
+            <td>{{ allocation.project.pi.username }}</td>
+            <td>{% for r in allocation.resources.all %}{% if forloop.first %}{{ r.name }}{% endif %}{% empty %}-{% endfor %}</td>
+            <td>{{ allocation.status.name }}</td>
+            <td>{% if allocation.quota_attr %}{{ allocation.quota_attr.0.value }}{% else %}-{% endif %}</td>
+            <td>{{ quota.quota_type }}</td>
+            <td>{{ row.other_users_display }}</td>
+            <td>{{ row.current_user_display }}</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-toggle="modal"
+                        data-target="#assignQuotaModal"
+                        data-allocation-id="{{ allocation.id }}"
+                        data-allocation-display="Allocation {{ allocation.id }} - {{ allocation.project.title }}"
+                        data-existing-amount="{% for a in allocation.all_allotments %}{% if a.no_cost_quota_id == quota.pk %}{{ a.amount }}{% endif %}{% endfor %}"
+                        title="Assign quota">
+                    <i class="fas fa-arrows-alt-h" aria-hidden="true"></i>
+                </button>
+            </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No eligible allocations with matching no-cost quota type.
+</div>
+{% endif %}
+
+<p class="mt-3">
+    <a href="{% url 'manage_no_cost_quota' %}" class="btn btn-secondary">Back</a>
+</p>
+
+<div class="modal fade" id="assignQuotaModal" tabindex="-1" role="dialog"
+     aria-labelledby="assignQuotaModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="{% url 'create_no_cost_quota_allotment' %}" id="assignQuotaForm">
+                {% csrf_token %}
+                <input type="hidden" name="quota_id" value="{{ quota.pk }}">
+                <input type="hidden" name="allocation_id" id="assignQuotaAllocationId">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignQuotaModalLabel">Assign No-Cost Quota</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="assignQuotaModalAllocation" class="mb-3"></p>
+                    <div class="form-group">
+                        <label for="assignQuotaAmount">Quota amount ({{ quota.units }})</label>
+                        <input type="number" class="form-control" id="assignQuotaAmount"
+                               name="amount" step="any" min="0" placeholder="Enter amount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Assign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var allocationIdInput = document.getElementById('assignQuotaAllocationId');
+    var allocationDisplayEl = document.getElementById('assignQuotaModalAllocation');
+    var amountInput = document.getElementById('assignQuotaAmount');
+
+    document.querySelectorAll('[data-target="#assignQuotaModal"], [data-bs-target="#assignQuotaModal"]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var allocationId = this.getAttribute('data-allocation-id');
+            var allocationDisplay = this.getAttribute('data-allocation-display');
+            var existingAmount = this.getAttribute('data-existing-amount');
+            allocationIdInput.value = allocationId || '';
+            allocationDisplayEl.textContent = allocationDisplay || '';
+            amountInput.value = existingAmount || '';
+        });
+    });
+
+    var form = document.getElementById('assignQuotaForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!allocationIdInput.value) {
+                e.preventDefault();
+                alert('Please select an allocation first.');
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

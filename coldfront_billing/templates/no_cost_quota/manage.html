@@ -1,0 +1,62 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+{% load static %}
+
+{% block title %}
+Manage No-Cost Quotas
+{% endblock %}
+
+{% block content %}
+<h2>Manage No-Cost Quotas</h2>
+<hr>
+
+<p class="mb-4">
+    Apply portions of your no-cost quotas to Active Allocations requiring payment.
+    Allocations that appear in this list belong to projects in which you are either
+    the owner or have been granted the 'Manager' or 'Billing' role.
+</p>
+
+<strong>No-Cost Quotas: {{ quota_count }}</strong>
+{% if request.user.is_superuser %}
+<p class="text-muted small mb-2">Showing all no-cost quotas (superuser view).</p>
+{% endif %}
+
+{% if quota_list %}
+<form method="get" action="{% url 'assign_no_cost_quota' %}">
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th scope="col"></th>
+            <th scope="col" class="text-nowrap">Owner</th>
+            <th scope="col" class="text-nowrap">Quota type</th>
+            <th scope="col" class="text-nowrap">Description</th>
+            <th scope="col" class="text-nowrap">Total amount</th>
+            <th scope="col" class="text-nowrap">Remaining amount</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for quota in quota_list %}
+        <tr>
+            <td><input type="radio" name="selected_quota" value="{{ quota.pk }}" aria-label="Select quota {{ quota.quota_type }}"></td>
+            <td>{{ quota.user.username }}</td>
+            <td>{{ quota.quota_type }}</td>
+            <td>{{ quota.description|default:quota.quota_type }}</td>
+            <td>{{ quota.amount }} {{ quota.units }}</td>
+            <td>{{ quota.remaining }} {{ quota.units }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="mt-2 text-muted">Select a No Cost Quota to assign</p>
+<div class="text-right mb-3">
+    <button type="submit" class="btn btn-primary">Next</button>
+</div>
+</form>
+{% else %}
+<div class="alert alert-info">
+    No no-cost quotas to display.
+</div>
+{% endif %}
+{% endblock %}

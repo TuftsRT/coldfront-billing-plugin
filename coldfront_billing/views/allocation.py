@@ -28,7 +28,7 @@ class AllocationCreateView(ColdfrontAllocationCreateView):
         redirect_response = super().form_valid(form)
         allocation = Allocation.objects.filter(project_id=self.kwargs['project_pk']).order_by('-pk').first()
 
-        # Redirect to update-allocation-details page for paid storage allocations
+        # Redirect to update_allocation_details page for paid storage allocations
         if (
             allocation
             and allocation.resources.filter(
@@ -37,7 +37,7 @@ class AllocationCreateView(ColdfrontAllocationCreateView):
             ).exists()
         ):
             return redirect(
-                'update-allocation-details',
+                'update_allocation_details',
                 pk=allocation.pk,
             )
 
@@ -50,7 +50,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
     allocation: Allocation
     has_cost_center: bool
     form_class = AllocationDetailsForm
-    template_name = 'billing/update_allocation_details.html'
+    template_name = 'allocation/update_details.html'
 
     def test_func(self):
         allocation = get_object_or_404(Allocation, pk=self.kwargs['pk'])

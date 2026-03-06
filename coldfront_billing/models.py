@@ -62,6 +62,11 @@ class NoCostQuota(models.Model):
     )
 
     quota_type = models.CharField(max_length=64, help_text='Storage quota name')
+    description = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text='Human-readable description of the quota type',
+    )
 
     amount = models.FloatField(help_text='Total quota amount')
     units = models.CharField(
