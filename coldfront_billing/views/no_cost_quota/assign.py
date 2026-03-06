@@ -24,12 +24,15 @@ from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
 
 def sum_allotments(allotments) -> float:
     """Sum allotment amounts normalized to TB. Unknown units default to TB."""
-    return sum(
-        BillingNoCostQuota.create(
-            allotment.amount,
-            getattr(allotment.no_cost_quota, 'units', None) or 'TB',
-        ).normalized_amount
-        for allotment in allotments
+    return round(
+        sum(
+            BillingNoCostQuota.create(
+                allotment.amount,
+                getattr(allotment.no_cost_quota, 'units', None) or 'TB',
+            ).normalized_amount
+            for allotment in allotments
+        ),
+        2,
     )
 
 
@@ -129,6 +132,6 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
 
         return context | {
             'quota': self.quota,
-            'quota_remaining': self.quota.amount - used,
+            'quota_remaining': round(self.quota.amount - used, 2),
             'allocations': allocations,
         }

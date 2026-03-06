@@ -11,7 +11,7 @@ Assign No-Cost Quota
 <hr>
 
 <p class="mb-4">
-    Assign a portion of your <strong>{{ quota.quota_type }}</strong> quota ({{ quota_remaining }} {{ quota.units }} remaining)
+    Assign a portion of your <strong>{{ quota.quota_type }}</strong> quota ({{ quota_remaining|floatformat:2 }} {{ quota.units }} remaining)
     to an allocation. Select an allocation to create a new allotment.
 </p>
 
@@ -54,7 +54,7 @@ Assign No-Cost Quota
                         data-target="#assignQuotaModal"
                         data-allocation-id="{{ allocation.id }}"
                         data-allocation-display="Allocation {{ allocation.id }} - {{ allocation.project.title }}"
-                        data-existing-amount="{% for a in allocation.all_allotments %}{% if a.no_cost_quota_id == quota.pk %}{{ a.amount }}{% endif %}{% endfor %}"
+                        data-existing-amount="{% for a in allocation.all_allotments %}{% if a.no_cost_quota_id == quota.pk %}{{ a.amount|floatformat:2 }}{% endif %}{% endfor %}"
                         title="Assign quota">
                     <i class="fas fa-arrows-alt-h" aria-hidden="true"></i>
                 </button>

@@ -28,7 +28,7 @@ class CreateNoCostQuotaAllotmentView(LoginRequiredMixin, View):
             messages.error(request, 'Please enter a valid amount.')
             return redirect(assign_url)
 
-        if amount <= 0:
+        if amount < 0:
             messages.error(request, 'Amount must be greater than zero.')
             return redirect(assign_url)
 
@@ -39,35 +39,29 @@ class CreateNoCostQuotaAllotmentView(LoginRequiredMixin, View):
 
         allocation = get_object_or_404(Allocation, pk=allocation_id)
 
-        existing_allotment = NoCostQuotaAllotment.objects.filter(
+        allotment, created = NoCostQuotaAllotment.objects.get_or_create(
             no_cost_quota=quota,
             allocation=allocation,
-        ).first()
+            defaults={'amount': amount},
+        )
 
-        if existing_allotment:
-            allotment = existing_allotment
+        if not created:
             allotment.amount = amount
-            is_update = True
-        else:
-            allotment = NoCostQuotaAllotment(
-                no_cost_quota=quota,
-                allocation=allocation,
-                amount=amount,
-            )
-            is_update = False
 
         try:
             allotment.full_clean()
             allotment.save()
         except Exception as e:
             if hasattr(e, 'message_dict'):
-                msg = '; '.join(f'{k}: {v[0]}' for k, v in e.message_dict.items())
+                msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
             else:
                 msg = str(e)
             messages.error(request, f'Could not save allotment: {msg}')
-            assign_url = reverse('assign_no_cost_quota') + f'?selected_quota={quota_id}'
             return redirect(assign_url)
 
-        action = 'Updated' if is_update else 'Assigned'
-        messages.success(request, f'{action} {amount} {quota.units} for allocation {allocation_id}.')
+        action = 'Assigned' if created else 'Updated'
+        messages.success(
+            request,
+            f'{action} {amount} {quota.units} for allocation {allocation.id}.',
+        )
         return redirect('manage_no_cost_quota')

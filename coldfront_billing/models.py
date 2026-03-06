@@ -156,8 +156,17 @@ class NoCostQuotaAllotment(models.Model):
                     {'allocation': f"Allocation's resource does not have {NO_COST_QUOTA_TYPE_ATTR_NAME}='{quota_type}'"}
                 )
 
-            amount = f'{self.amount} {self.no_cost_quota.units}'
+            min_inc = self.no_cost_quota.minimum_increment
+            minimum = f'{min_inc} {self.no_cost_quota.units}'
+            if self.amount < (min_inc):
+                raise ValidationError({'amount': f'Allotment amount must be ≥ minimum increment ({minimum})'})
+            # Ensure amount is a multiple of minimum_increment (with float tolerance)
+            if self.amount % min_inc != 0:
+                raise ValidationError(
+                    {'amount': f'Allotment amount must be a multiple of minimum increment ({minimum})'}
+                )
 
+            amount = f'{self.amount} {self.no_cost_quota.units}'
             if self.amount > (ncq_amount := self.no_cost_quota.amount):
                 no_cost_quota = f'{ncq_amount} {self.no_cost_quota.units}'
                 raise ValidationError(

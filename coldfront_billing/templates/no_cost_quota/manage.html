@@ -42,8 +42,8 @@ Manage No-Cost Quotas
             <td>{{ quota.user.username }}</td>
             <td>{{ quota.quota_type }}</td>
             <td>{{ quota.description|default:quota.quota_type }}</td>
-            <td>{{ quota.amount }} {{ quota.units }}</td>
-            <td>{{ quota.remaining }} {{ quota.units }}</td>
+            <td>{{ quota.amount|floatformat:2 }} {{ quota.units }}</td>
+            <td>{{ quota.remaining|floatformat:2 }} {{ quota.units }}</td>
         </tr>
         {% endfor %}
         </tbody>
