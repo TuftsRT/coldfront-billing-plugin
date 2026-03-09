@@ -28,10 +28,6 @@ class CreateNoCostQuotaAllotmentView(LoginRequiredMixin, View):
             messages.error(request, 'Please enter a valid amount.')
             return redirect(assign_url)
 
-        if amount < 0:
-            messages.error(request, 'Amount must be greater than zero.')
-            return redirect(assign_url)
-
         quota = get_object_or_404(NoCostQuota, pk=quota_id)
         if not request.user.is_superuser and quota.user_id != request.user.id:
             messages.error(request, 'You do not have permission to assign this quota.')

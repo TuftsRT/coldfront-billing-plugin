@@ -11,7 +11,7 @@ Assign No-Cost Quota
 <hr>
 
 <p class="mb-4">
-    Assign a portion of your <strong>{{ quota.quota_type }}</strong> quota ({{ quota_remaining|floatformat:2 }} {{ quota.units }} remaining)
+    Assign a portion of your <strong>{{ quota.quota_type }}</strong> quota ({{ quota_remaining|floatformat:-2 }} {{ quota.units }} remaining)
     to an allocation. Select an allocation to create a new allotment.
 </p>
 
@@ -44,17 +44,19 @@ Assign No-Cost Quota
             <td>{{ allocation.project.pi.username }}</td>
             <td>{{ row.resource_name }}</td>
             <td>{{ row.status_name }}</td>
-            <td>{{ row.quota_amount_display }}</td>
+            <td>{{ row.quota_amount }}</td>
             <td>{{ quota.quota_type }}</td>
-            <td>{{ row.other_users_display }}</td>
-            <td>{{ row.current_user_display }}</td>
+            <td>{{ row.others_applied }}</td>
+            <td>{{ row.my_applied }}</td>
             <td>
                 <button type="button" class="btn btn-sm btn-outline-primary"
                         data-toggle="modal"
                         data-target="#assignQuotaModal"
                         data-allocation-id="{{ allocation.id }}"
                         data-allocation-display="Allocation {{ allocation.id }} - {{ allocation.project.title }}"
-                        data-existing-amount="{% for a in allocation.all_allotments %}{% if a.no_cost_quota_id == quota.pk %}{{ a.amount|floatformat:2 }}{% endif %}{% endfor %}"
+                        data-existing-amount="{{ row.existing_amount }}"
+                        data-max-amount="{{ row.max_possible|floatformat:-2 }}"
+                        data-increment="{{ row.minimum_increment|floatformat:-2 }}"
                         title="Assign quota">
                     <i class="fas fa-arrows-alt-h" aria-hidden="true"></i>
                 </button>
@@ -79,7 +81,7 @@ Assign No-Cost Quota
      aria-labelledby="assignQuotaModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form method="post" action="{% url 'create_no_cost_quota_allotment' %}" id="assignQuotaForm">
+            <form method="post" action="{% url 'create_no_cost_quota_allotment' %}" id="assignQuotaForm" data-units="{{ quota.units }}">
                 {% csrf_token %}
                 <input type="hidden" name="quota_id" value="{{ quota.pk }}">
                 <input type="hidden" name="allocation_id" id="assignQuotaAllocationId">
@@ -91,10 +93,12 @@ Assign No-Cost Quota
                 </div>
                 <div class="modal-body">
                     <p id="assignQuotaModalAllocation" class="mb-3"></p>
+                    <p id="assignQuotaModalLimits" class="mb-3 text-muted small"></p>
                     <div class="form-group">
                         <label for="assignQuotaAmount">Quota amount ({{ quota.units }})</label>
                         <input type="number" class="form-control" id="assignQuotaAmount"
-                               name="amount" step="any" min="0" placeholder="Enter amount" required>
+                               name="amount" step="{{ quota.minimum_increment }}" min="0"
+                               placeholder="Multiple of {{ quota.minimum_increment|floatformat:-2 }} {{ quota.units }}" required>
                     </div>
                 </div>
                 <div class="modal-footer">

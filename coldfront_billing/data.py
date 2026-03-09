@@ -23,6 +23,13 @@ class StorageUnit(str, Enum):
     TB = 'TB'
     GB = 'GB'
 
+    @staticmethod
+    def parse(units: str):
+        try:
+            return StorageUnit(units)
+        except ValueError:
+            return StorageUnit.TB
+
 
 UNIT_TO_TB = {
     StorageUnit.TB: 1.0,
@@ -40,12 +47,8 @@ class BillingNoCostQuota:
         return self.amount * UNIT_TO_TB[self.unit]
 
     @staticmethod
-    def create(ammount: float, units: str) -> 'BillingNoCostQuota':
-        try:
-            unit = StorageUnit(units)
-        except ValueError:
-            unit = StorageUnit.TB
-        return BillingNoCostQuota(ammount, unit)
+    def create(ammount: float, unit: str) -> 'BillingNoCostQuota':
+        return BillingNoCostQuota(ammount, StorageUnit.parse(unit))
 
 
 @dataclass
