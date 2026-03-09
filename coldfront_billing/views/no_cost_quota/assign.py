@@ -119,7 +119,6 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
 
             user_total_tb = sum_allotments(user_allotments)
             other_total_tb = sum_allotments(other_allotments)
-            total_applied_tb = user_total_tb + other_total_tb
 
             first_resource = next(iter(allocation.resources.all()), None)
 
@@ -133,11 +132,17 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                 allocation_quota_tb = None
 
             # Get existing allotments from current no-cost quota on allocation
-            amount = self.quota.get_allotment_amount_for_allocation(allocation)
+            amount = sum(
+                (
+                    allotment.amount
+                    for allotment in getattr(allocation, 'all_allotments', ())
+                    if allotment.no_cost_quota_id == self.quota.pk
+                )
+            )
             quota_remaining += amount or 0
 
             if allocation_quota_tb is not None:
-                allocation_available_tb = max(0, allocation_quota_tb - total_applied_tb)
+                allocation_available_tb = max(0, allocation_quota_tb - user_total_tb - other_total_tb)
                 allocation_available = allocation_available_tb * tb_to_quota_unit
                 max_possible = round(min(quota_remaining, allocation_available), 2)
             else:

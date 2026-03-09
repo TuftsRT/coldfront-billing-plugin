@@ -317,6 +317,5 @@ class TestAllocationCreateView:
         response = client.post(url, data=data)
 
         assert response.status_code == 302
-        assert 'update-allocation-details' in response.url
+        assert '/update-allocation-details/' in response.url
         assert '/allocation/' in response.url
-        assert '/update_allocation_details/' in response.url

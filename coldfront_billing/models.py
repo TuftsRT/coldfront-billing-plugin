@@ -102,17 +102,6 @@ class NoCostQuota(models.Model):
     def __str__(self):
         return f'{str(self.user)} - {self.quota_type}'
 
-    def get_allotment_amount_for_allocation(self, allocation):
-        """Return the allotment amount for this quota on the given allocation, or None."""
-        return next(
-            (
-                allotment.amount
-                for allotment in getattr(allocation, 'all_allotments', ())
-                if allotment.no_cost_quota_id == self.pk
-            ),
-            None,
-        )
-
 
 class NoCostQuotaAllotment(models.Model):
     no_cost_quota = models.ForeignKey(
