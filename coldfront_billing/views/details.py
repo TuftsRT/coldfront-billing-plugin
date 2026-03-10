@@ -69,6 +69,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
             .prefetch_related(
                 self.get_quota_attr_prefetch(),
                 self.get_paid_storage_resources_prefetch(storage_type.id),
+                self.get_no_cost_quota_allotments_prefetch(),
             )
         )
         allocations = self.create_billing_allocations([a for a in allocation_objs])

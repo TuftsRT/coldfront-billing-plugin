@@ -125,29 +125,6 @@ class NoCostQuotaAllotment(models.Model):
 
     def clean(self):
         if self.no_cost_quota_id and self.allocation_id:
-            quota_type = self.no_cost_quota.quota_type
-            if not self.allocation.resources.filter(
-                resourceattribute__resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME,
-                resourceattribute__value=quota_type,
-            ).exists():
-                raise ValidationError(
-                    {'allocation': f"Allocation's resource does not have {NO_COST_QUOTA_TYPE_ATTR_NAME}='{quota_type}'"}
-                )
-
-            if self.amount > (ncq_amount := self.no_cost_quota.amount):
-                raise ValidationError(
-                    {
-                        'no_cost_quota': f'No cost quota allotment: {self.amount}  is bigger than no-cost quota size: {ncq_amount}'
-                    }
-                )
-            allocation_quota = self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
-            if allocation_quota is not None and self.amount > float(allocation_quota):
-                raise ValidationError(
-                    {
-                        'allocation': f'No cost quota allotment: {self.amount}  is bigger than allocation size: {allocation_quota}'
-                    }
-                )
-
             user = self.no_cost_quota.user
             project = self.allocation.project
 
@@ -162,6 +139,32 @@ class NoCostQuotaAllotment(models.Model):
                 raise ValidationError(
                     {
                         'no_cost_quota': "User must be project PI or have Manager or Billing role on the allocation's project."
+                    }
+                )
+
+            quota_type = self.no_cost_quota.quota_type
+            if not self.allocation.resources.filter(
+                resourceattribute__resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME,
+                resourceattribute__value=quota_type,
+            ).exists():
+                raise ValidationError(
+                    {'allocation': f"Allocation's resource does not have {NO_COST_QUOTA_TYPE_ATTR_NAME}='{quota_type}'"}
+                )
+
+            amount = f'{self.amount} {self.no_cost_quota.units}'
+
+            if self.amount > (ncq_amount := self.no_cost_quota.amount):
+                no_cost_quota = f'{ncq_amount} {self.no_cost_quota.units}'
+                raise ValidationError(
+                    {
+                        'amount': f'No cost quota allotment size ({amount}) is bigger than no-cost quota size ({no_cost_quota})'
+                    }
+                )
+            allocation_quota = self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
+            if allocation_quota is not None and self.amount > float(allocation_quota):
+                raise ValidationError(
+                    {
+                        'amount': f'No cost quota allotment size ({amount}) is bigger than allocation size ({allocation_quota} TB)'
                     }
                 )
 

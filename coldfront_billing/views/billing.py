@@ -58,6 +58,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
             .prefetch_related(
                 self.get_quota_attr_prefetch(),
                 self.get_paid_storage_resources_prefetch(storage_type.id),
+                self.get_no_cost_quota_allotments_prefetch(),
             ),
             to_attr=BILLING_ATTRIBUTE_NAME,
         )
