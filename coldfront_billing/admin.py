@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CostCenter, CostCenterAssignment, NoCostQuota, NoCostQuotaAllotment
+from .models import CostCenter, CostCenterAssignment, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
 
 
 @admin.register(CostCenter)
@@ -39,3 +39,12 @@ class NoCostQuotaAllotmentAdmin(admin.ModelAdmin):
     search_fields = ['no_cost_quota__user__username', 'allocation__project__title']
     readonly_fields = ['created', 'updated']
     ordering = ['no_cost_quota', 'allocation']
+
+
+@admin.register(NoCostQuotaGroup)
+class NoCostQuotaGroupAdmin(admin.ModelAdmin):
+    list_display = ['group', 'quota_type', 'description', 'amount', 'units', 'minimum_increment', 'created', 'updated']
+    list_filter = ['quota_type', 'created', 'updated']
+    search_fields = ['group__name', 'quota_type']
+    readonly_fields = ['created', 'updated']
+    ordering = ['group__name', 'quota_type']
