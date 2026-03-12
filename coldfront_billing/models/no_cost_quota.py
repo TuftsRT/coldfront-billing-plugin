@@ -42,6 +42,9 @@ class NoCostQuota(QuotaBase):
                 {'units': f'Invalid units: {self.units}. Allowed: {", ".join(allowed_units.keys())}.'}
             )
 
+        if self.amount < self.minimum_increment:
+            raise ValidationError({'amount': 'Amount cannot be smaller than minimum allocation increment.'})
+
         if self.minimum_increment < (required := allowed_units[self.units]):
             raise ValidationError(
                 {'minimum_increment': f'Minimum allocation increment must be ≥ {required} for {self.units}.'}
