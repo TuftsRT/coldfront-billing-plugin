@@ -16,17 +16,10 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data import UNIT_TO_TB, BillingQuota, StorageUnit
+from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
-
-
-def create_no_cost_quota(allotment):
-    return BillingQuota.create(
-        allotment.amount,
-        allotment.no_cost_quota.units,
-    )
 
 
 class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
@@ -98,53 +91,39 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         quota_remaining = round(self.quota.remaining, 2)
+        quota_units = self.quota.units
 
         allocations = []
-        user_id = self.quota.user_id
-
-        # Allocation quota is always in TB - needs to normalize quota unit
-        tb_to_quota_unit = 1.0 / UNIT_TO_TB[StorageUnit.parse(self.quota.units)]
 
         for allocation in context.get('allocation_list', []):
             all_allotments = getattr(allocation, 'all_allotments', ())
-            # allotment on this allocation
-            user_allotment = next(
-                (create_no_cost_quota(a) for a in all_allotments if a.no_cost_quota.user_id == user_id), None
-            )
-            other_allotments = [create_no_cost_quota(a) for a in all_allotments if a.no_cost_quota.user_id != user_id]
 
-            user_total_tb = user_allotment.normalized_amount if user_allotment else 0
-            other_total_tb = sum(a.normalized_amount for a in other_allotments)
-
-            first_resource = next(iter(allocation.resources.all()), None)
-
-            quota_attrs = getattr(allocation, QUOTA_ATTRIBUTE_NAME, None)
-            first_quota_attr = first_or_none(quota_attrs)
-
+            # Get quota attribute from allocation
+            quota_attr_tb = first_or_none(getattr(allocation, QUOTA_ATTRIBUTE_NAME, None))
             # Check if allocation has quota_in_terabyte set
             try:
-                allocation_quota_tb = float(first_quota_attr.value) if first_quota_attr else None
+                allocation_size = float(quota_attr_tb.value) if quota_attr_tb else None
             except (TypeError, ValueError):
-                allocation_quota_tb = None
+                allocation_size = None
 
-            existing_quota = user_allotment.amount if user_allotment else 0
+            ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation_size, all_allotments)
 
-            if allocation_quota_tb is not None:
-                allocation_available_tb = max(0, allocation_quota_tb - other_total_tb)
-                allocation_available = allocation_available_tb * tb_to_quota_unit
-                max_possible = round(min(quota_remaining + existing_quota, allocation_available), 2)
-            else:
-                max_possible = round(quota_remaining + existing_quota, 2)
+            other_total_quota = ncq_allocation.other_allotments_amount
+            max_possible = ncq_allocation.max_possible_allocation(
+                quota_remaining, quota_units, self.quota.minimum_increment
+            )
+            user_ammount = ncq_allocation.user_ammount
+            first_resource = next(iter(allocation.resources.all()), None)
 
             allocations.append(
                 {
                     'allocation': allocation,
                     'resource_name': first_resource.name if first_resource else '-',
                     'status_name': allocation.status.name,
-                    'quota_amount': first_quota_attr.value if first_quota_attr else '-',
-                    'others_applied': f'{other_total_tb:g} TB',
-                    'my_applied': f'{user_total_tb:g} TB',
-                    'existing_amount': f'{user_allotment.amount:g}' if user_allotment is not None else '',
+                    'quota_amount': allocation_size or '-',
+                    'other_applications': f'{other_total_quota:g} TB',
+                    'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
+                    'existing_amount': f'{user_ammount:g}' if user_ammount else '',
                     'max_possible': max_possible,
                     'minimum_increment': self.quota.minimum_increment,
                 }
