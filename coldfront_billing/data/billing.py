@@ -1,7 +1,6 @@
 import math
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from coldfront_billing.constants import (
     COST_ATTRIBUTE_NAME,
@@ -11,44 +10,14 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.utils import first_or_none
 
+from .no_cost_quota import BillingNoCostQuota
+
 
 def _parse_float(value, default):
     try:
         return float(value)
     except (TypeError, ValueError):
         return default
-
-
-class StorageUnit(str, Enum):
-    TB = 'TB'
-    GB = 'GB'
-
-    @staticmethod
-    def parse(units: str):
-        try:
-            return StorageUnit(units)
-        except ValueError:
-            return StorageUnit.TB
-
-
-UNIT_TO_TB = {
-    StorageUnit.TB: 1.0,
-    StorageUnit.GB: 1.0 / 1000.0,
-}
-
-
-@dataclass
-class BillingNoCostQuota:
-    amount: float
-    unit: StorageUnit
-
-    @property
-    def normalized_amount(self) -> float:
-        return self.amount * UNIT_TO_TB[self.unit]
-
-    @staticmethod
-    def create(ammount: float, unit: str) -> 'BillingNoCostQuota':
-        return BillingNoCostQuota(ammount, StorageUnit.parse(unit))
 
 
 @dataclass
@@ -121,33 +90,3 @@ class BillingAllocation:
             },
             no_cost_quotas=no_cost_quotas,
         )
-
-
-@dataclass
-class ApiErrorResponseDTO:
-    success: bool = False
-    error: Optional[str] = None
-    errors: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {'success': self.success}
-        if self.error:
-            result['error'] = self.error
-        if self.errors:
-            result['errors'] = self.errors
-        return result
-
-
-@dataclass
-class ApiSuccessResponseDTO:
-    success: bool = True
-    message: Optional[str] = None
-    assignments: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {'success': self.success}
-        if self.message:
-            result['message'] = self.message
-        if self.assignments:
-            result['assignments'] = self.assignments
-        return result

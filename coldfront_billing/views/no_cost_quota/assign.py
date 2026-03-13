@@ -22,17 +22,10 @@ from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
 
 
-def sum_allotments(allotments) -> float:
-    """Sum allotment amounts normalized to TB. Unknown units default to TB."""
-    return round(
-        sum(
-            BillingNoCostQuota.create(
-                allotment.amount,
-                getattr(allotment.no_cost_quota, 'units', None) or 'TB',
-            ).normalized_amount
-            for allotment in allotments
-        ),
-        2,
+def create_no_cost_quota(allotment):
+    return BillingNoCostQuota.create(
+        allotment.amount,
+        allotment.no_cost_quota.units,
     )
 
 
@@ -107,18 +100,21 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
         quota_remaining = round(self.quota.remaining, 2)
 
         allocations = []
-        user_id = self.request.user.id
+        user_id = self.quota.user_id
 
         # Allocation quota is always in TB - needs to normalize quota unit
         tb_to_quota_unit = 1.0 / UNIT_TO_TB[StorageUnit.parse(self.quota.units)]
 
         for allocation in context.get('allocation_list', []):
             all_allotments = getattr(allocation, 'all_allotments', ())
-            user_allotments = [a for a in all_allotments if a.no_cost_quota.user_id == user_id]
-            other_allotments = [a for a in all_allotments if a.no_cost_quota.user_id != user_id]
+            # allotment on this allocation
+            user_allotment = next(
+                (create_no_cost_quota(a) for a in all_allotments if a.no_cost_quota.user_id == user_id), None
+            )
+            other_allotments = [create_no_cost_quota(a) for a in all_allotments if a.no_cost_quota.user_id != user_id]
 
-            user_total_tb = sum_allotments(user_allotments)
-            other_total_tb = sum_allotments(other_allotments)
+            user_total_tb = user_allotment.normalized_amount if user_allotment else 0
+            other_total_tb = sum(a.normalized_amount for a in other_allotments)
 
             first_resource = next(iter(allocation.resources.all()), None)
 
@@ -131,24 +127,14 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             except (TypeError, ValueError):
                 allocation_quota_tb = None
 
-            # Get existing allotments from current no-cost quota on allocation
-            amount = sum(
-                (
-                    allotment.amount
-                    for allotment in getattr(allocation, 'all_allotments', ())
-                    if allotment.no_cost_quota_id == self.quota.pk
-                )
-            )
-            quota_remaining += amount or 0
+            existing_quota = user_allotment.amount if user_allotment else 0
 
             if allocation_quota_tb is not None:
-                allocation_available_tb = max(0, allocation_quota_tb - user_total_tb - other_total_tb)
+                allocation_available_tb = max(0, allocation_quota_tb - other_total_tb)
                 allocation_available = allocation_available_tb * tb_to_quota_unit
-                max_possible = round(min(quota_remaining, allocation_available), 2)
+                max_possible = round(min(quota_remaining + existing_quota, allocation_available), 2)
             else:
-                max_possible = round(quota_remaining, 2)
-
-            existing_amount = f'{amount:g}' if amount is not None else ''
+                max_possible = round(quota_remaining + existing_quota, 2)
 
             allocations.append(
                 {
@@ -158,7 +144,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                     'quota_amount': first_quota_attr.value if first_quota_attr else '-',
                     'others_applied': f'{other_total_tb:g} TB',
                     'my_applied': f'{user_total_tb:g} TB',
-                    'existing_amount': existing_amount,
+                    'existing_amount': f'{user_allotment.amount:g}' if user_allotment is not None else '',
                     'max_possible': max_possible,
                     'minimum_increment': self.quota.minimum_increment,
                 }

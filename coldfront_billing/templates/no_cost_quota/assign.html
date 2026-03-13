@@ -11,7 +11,9 @@ Assign No-Cost Quota
 <hr>
 
 <p class="mb-4">
-    Assign a portion of your <strong>{{ quota.quota_type }}</strong> quota ({{ quota_remaining|floatformat:-2 }} {{ quota.units }} remaining)
+    Assign a portion of {% if request.user.is_superuser %}the selected user's{% else %}your{% endif %}
+    <strong>{{ quota.quota_type }}</strong>
+    quota ({{ quota_remaining|floatformat:-2 }} {{ quota.units }} remaining)
     to an allocation. Select an allocation to create a new allotment.
 </p>
 
@@ -24,12 +26,14 @@ Assign No-Cost Quota
             <th scope="col" class="text-nowrap">ID</th>
             <th scope="col" class="text-nowrap">Project</th>
             <th scope="col" class="text-nowrap">PI</th>
-            <th scope="col" class="text-nowrap">Resource name</th>
+            <th scope="col" class="text-nowrap">Resource Name</th>
             <th scope="col" class="text-nowrap">Status</th>
             <th scope="col" class="text-nowrap">Amount</th>
-            <th scope="col" class="text-nowrap">Quota type</th>
-            <th scope="col" class="text-nowrap">Others applied</th>
-            <th scope="col" class="text-nowrap">My applied</th>
+            <th scope="col" class="text-nowrap">Quota Type</th>
+            <th scope="col" class="text-nowrap">Other Applications</th>
+            <th scope="col" class="text-nowrap">
+                {% if request.user.is_superuser %}User{% else %}My{% endif %} Applications
+            </th>
             <th scope="col" class="text-nowrap"></th>
         </tr>
         </thead>
@@ -39,7 +43,8 @@ Assign No-Cost Quota
         <tr>
             <td><a href="/allocation/{{ allocation.id }}/">{{ allocation.id }}</a></td>
             <td>
-                <a href="{% url 'billing_details' project_id=allocation.project_id %}">{{ allocation.project.title }}</a>
+                <a href="{% url 'billing_details' project_id=allocation.project_id %}">
+                    {{ allocation.project.title }}</a>
             </td>
             <td>{{ allocation.project.pi.username }}</td>
             <td>{{ row.resource_name }}</td>
@@ -81,7 +86,8 @@ Assign No-Cost Quota
      aria-labelledby="assignQuotaModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form method="post" action="{% url 'create_no_cost_quota_allotment' %}" id="assignQuotaForm" data-units="{{ quota.units }}">
+            <form method="post" action="{% url 'create_no_cost_quota_allotment' %}" id="assignQuotaForm"
+                  data-units="{{ quota.units }}">
                 {% csrf_token %}
                 <input type="hidden" name="quota_id" value="{{ quota.pk }}">
                 <input type="hidden" name="allocation_id" id="assignQuotaAllocationId">
@@ -98,7 +104,8 @@ Assign No-Cost Quota
                         <label for="assignQuotaAmount">Quota amount ({{ quota.units }})</label>
                         <input type="number" class="form-control" id="assignQuotaAmount"
                                name="amount" step="{{ quota.minimum_increment }}" min="0"
-                               placeholder="Multiple of {{ quota.minimum_increment|floatformat:-2 }} {{ quota.units }}" required>
+                               placeholder="Multiple of {{ quota.minimum_increment|floatformat:-2 }} {{ quota.units }}"
+                               required>
                     </div>
                 </div>
                 <div class="modal-footer">
