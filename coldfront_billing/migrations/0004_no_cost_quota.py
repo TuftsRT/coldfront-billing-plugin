@@ -40,6 +40,14 @@ class Migration(migrations.Migration):
                     'quota_type',
                     models.CharField(max_length=64, help_text='Storage no-cost quota type (e.g. tier_1, tier_2).'),
                 ),
+                (
+                    'description',
+                    models.CharField(
+                        blank=True,
+                        help_text='Human-readable description of the quota type',
+                        max_length=128,
+                    ),
+                ),
                 ('amount', models.FloatField(help_text='Total quota amount')),
                 ('units', models.CharField(default='TB', max_length=16, help_text='Units for the quota (TB or GB)')),
                 ('minimum_increment', models.FloatField(help_text='Minimum allocation increment')),

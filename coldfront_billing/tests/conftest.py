@@ -31,7 +31,12 @@ from django.contrib.auth.models import User
 from django.http import HttpRequest
 from django.test import override_settings
 
-from coldfront_billing.constants import BILLING_ROLE_NAME, COST_ATTR_NAME, MANAGER_ROLE_NAME, QUOTA_ATTR_NAME
+from coldfront_billing.constants import (
+    BILLING_ROLE_NAME,
+    COST_ATTR_NAME,
+    MANAGER_ROLE_NAME,
+    QUOTA_ATTR_NAME,
+)
 
 
 @pytest.fixture

@@ -7,6 +7,8 @@ class ColdfrontBillingConfig(AppConfig):
     verbose_name = 'ColdFront Billing'
 
     def ready(self):
+        import coldfront_billing.signals  # noqa: F401 - register signal handlers
+
         context_processor = 'coldfront_billing.context_processor.billing_role'
 
         templates = settings.TEMPLATES

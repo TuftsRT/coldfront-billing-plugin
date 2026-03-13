@@ -18,6 +18,6 @@ urlpatterns = [
     path(
         'allocation/<int:pk>/update-allocation-details/',
         UpdateAllocationDetailsView.as_view(),
-        name='update-allocation-details',
+        name='update_allocation_details',
     ),
 ]

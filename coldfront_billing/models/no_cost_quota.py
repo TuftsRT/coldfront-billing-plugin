@@ -1,54 +1,21 @@
 from coldfront.core.allocation.models import Allocation
-from coldfront.core.project.models import Project, ProjectUser
+from coldfront.core.project.models import ProjectUser
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from .constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME, NO_COST_QUOTA_TYPE_ATTR_NAME, QUOTA_ATTR_NAME
-from .schemas import CostCenterSchema
+from coldfront_billing.constants import (
+    BILLING_ROLE_NAME,
+    MANAGER_ROLE_NAME,
+    NO_COST_QUOTA_TYPE_ATTR_NAME,
+    QUOTA_ATTR_NAME,
+)
+from coldfront_billing.models.common import QuotaBase
 
 User = get_user_model()
 
 
-class CostCenter(models.Model):
-    dept_id = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
-
-    def __str__(self):
-        return self.dept_id
-
-
-class CostCenterAssignment(models.Model):
-    project = models.OneToOneField(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='cost_center_assignment',
-        help_text='Project associated with this cost center assignment',
-    )
-    assignments = models.JSONField(blank=True, help_text='JSON field storing cost center assignments with percentages')
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Cost Center Assignment'
-        verbose_name_plural = 'Cost Center Assignments'
-
-    def __str__(self):
-        return f'Cost Center Assignment for {self.project.title}'
-
-    def clean(self):
-        """Validate the JSON field using Pydantic schema."""
-        if self.assignments:
-            try:
-                CostCenterSchema(assignments=self.assignments)
-            except Exception as e:
-                raise ValidationError(f'Invalid cost center assignments: {e}')
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
-
-
-class NoCostQuota(models.Model):
+class NoCostQuota(QuotaBase):
     """
     Represents a no-cost quota allocation for a specific user
     and a class of Resources identified by quota_type.
@@ -60,20 +27,6 @@ class NoCostQuota(models.Model):
         related_name='no_cost_quotas',
         help_text='User who owns this no-cost quota',
     )
-
-    quota_type = models.CharField(max_length=64, help_text='Storage quota name')
-
-    amount = models.FloatField(help_text='Total quota amount')
-    units = models.CharField(
-        max_length=16,
-        default='TB',
-        help_text='Units for the quota (default: TB)',
-    )
-
-    minimum_increment = models.FloatField(help_text='Minimum allocation increment')
-
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['user', 'quota_type'], name='uniq_nocostquota_user_quota_type')]
@@ -88,6 +41,9 @@ class NoCostQuota(models.Model):
             raise ValidationError(
                 {'units': f'Invalid units: {self.units}. Allowed: {", ".join(allowed_units.keys())}.'}
             )
+
+        if self.amount < self.minimum_increment:
+            raise ValidationError({'amount': 'Amount cannot be smaller than minimum allocation increment.'})
 
         if self.minimum_increment < (required := allowed_units[self.units]):
             raise ValidationError(
@@ -150,9 +106,19 @@ class NoCostQuotaAllotment(models.Model):
                 raise ValidationError(
                     {'allocation': f"Allocation's resource does not have {NO_COST_QUOTA_TYPE_ATTR_NAME}='{quota_type}'"}
                 )
+            if self.amount < 0:
+                raise ValidationError({'amount': 'Allotment amount must be greater or equal 0'})
+            min_inc = self.no_cost_quota.minimum_increment
+            minimum = f'{min_inc} {self.no_cost_quota.units}'
+            if 0 < self.amount < min_inc:
+                raise ValidationError({'amount': f'Allotment amount must be ≥ minimum increment ({minimum})'})
+            # Ensure amount is a multiple of minimum_increment (with float tolerance)
+            if self.amount % min_inc != 0:
+                raise ValidationError(
+                    {'amount': f'Allotment amount must be a multiple of minimum increment ({minimum})'}
+                )
 
             amount = f'{self.amount} {self.no_cost_quota.units}'
-
             if self.amount > (ncq_amount := self.no_cost_quota.amount):
                 no_cost_quota = f'{ncq_amount} {self.no_cost_quota.units}'
                 raise ValidationError(
