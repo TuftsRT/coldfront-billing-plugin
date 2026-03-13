@@ -35,7 +35,6 @@ from coldfront_billing.constants import (
     BILLING_ROLE_NAME,
     COST_ATTR_NAME,
     MANAGER_ROLE_NAME,
-    NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
 )
 
@@ -294,31 +293,6 @@ def quota_attribute_type(db) -> AllocationAttributeType:
     )[0]
 
 
-@pytest.fixture
-def no_cost_quota_type_attribute_type(db) -> ResourceAttributeType:
-    """Create a no_cost_quota_type attribute type for resources."""
-    text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name='Text')
-    return ResourceAttributeType.objects.get_or_create(
-        name=NO_COST_QUOTA_TYPE_ATTR_NAME,
-        defaults={'attribute_type': text_attr_type},
-    )[0]
-
-
-@pytest.fixture
-def no_cost_quota(user, db):
-    """Create a NoCostQuota for a user."""
-    from coldfront_billing.models import NoCostQuota
-
-    return NoCostQuota.objects.create(
-        user=user,
-        quota_type='tier_1',
-        description='Tier 1 storage',
-        amount=100.0,
-        units='TB',
-        minimum_increment=1.0,  # Use 1.0 to avoid float modulo issues in tests
-    )
-
-
 # ============================================================================
 # Storage Allocation Helpers & Fixtures
 # ============================================================================
@@ -362,45 +336,6 @@ def add_storage_allocation_to_project(
             value=quota_value,
         )
     return allocation, storage_resource
-
-
-def add_no_cost_quota_storage_allocation(
-    project: Project,
-    storage_resource_type: ResourceType,
-    allocation_status_active: AllocationStatusChoice,
-    cost_attribute_type: ResourceAttributeType,
-    quota_attribute_type: AllocationAttributeType,
-    no_cost_quota_type_attribute_type: ResourceAttributeType,
-    quota_type_value: str = 'tier_1',
-    resource_name: str = 'No-Cost Storage',
-    quota_value: str = '5',
-) -> tuple:
-    """Add a storage allocation with no_cost_quota_type attribute. Returns (allocation, storage_resource)."""
-    storage_resource = Resource.objects.create(
-        name=resource_name,
-        resource_type=storage_resource_type,
-        requires_payment=True,
-    )
-    ResourceAttribute.objects.create(
-        resource=storage_resource,
-        resource_attribute_type=cost_attribute_type,
-        value='100',
-    )
-    ResourceAttribute.objects.create(
-        resource=storage_resource,
-        resource_attribute_type=no_cost_quota_type_attribute_type,
-        value=quota_type_value,
-    )
-    return add_storage_allocation_to_project(
-        project,
-        storage_resource_type,
-        allocation_status_active,
-        cost_attribute_type,
-        quota_attribute_type,
-        storage_resource=storage_resource,
-        resource_name=resource_name,
-        quota_value=quota_value,
-    )
 
 
 @pytest.fixture
