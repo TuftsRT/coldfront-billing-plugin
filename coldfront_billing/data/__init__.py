@@ -1,12 +1,12 @@
 from .billing import BillingAllocation
 from .dto import ApiErrorResponseDTO, ApiSuccessResponseDTO
-from .no_cost_quota import UNIT_TO_TB, BillingNoCostQuota, StorageUnit
+from .quota import UNIT_TO_TB, BillingQuota, StorageUnit
 
 __all__ = [
     'ApiErrorResponseDTO',
     'ApiSuccessResponseDTO',
     'BillingAllocation',
-    'BillingNoCostQuota',
+    'BillingQuota',
     'StorageUnit',
     'UNIT_TO_TB',
 ]

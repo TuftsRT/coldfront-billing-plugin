@@ -21,7 +21,7 @@ UNIT_TO_TB = {
 
 
 @dataclass
-class BillingNoCostQuota:
+class BillingQuota:
     amount: float
     unit: StorageUnit
 
@@ -30,5 +30,5 @@ class BillingNoCostQuota:
         return self.amount * UNIT_TO_TB[self.unit]
 
     @staticmethod
-    def create(ammount: float, unit: str, *_, **__) -> 'BillingNoCostQuota':
-        return BillingNoCostQuota(ammount, StorageUnit.parse(unit))
+    def create(ammount: float, unit: str, *_, **__) -> 'BillingQuota':
+        return BillingQuota(ammount, StorageUnit.parse(unit))

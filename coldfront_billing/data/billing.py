@@ -10,7 +10,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.utils import first_or_none
 
-from .no_cost_quota import BillingNoCostQuota
+from .quota import BillingQuota
 
 
 def _parse_float(value, default):
@@ -27,7 +27,7 @@ class BillingAllocation:
     quota_tb: int | float
     cost_per_tb: int | float
     extra: Dict[str, Any] = field(default_factory=dict)
-    no_cost_quotas: List[BillingNoCostQuota] = field(default_factory=list)
+    no_cost_quotas: List[BillingQuota] = field(default_factory=list)
 
     @property
     def total_cost(self) -> int:
@@ -74,7 +74,7 @@ class BillingAllocation:
 
         allotments = getattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, [])
         no_cost_quotas = [
-            BillingNoCostQuota.create(allotment.amount, allotment.no_cost_quota.units) for allotment in allotments
+            BillingQuota.create(allotment.amount, allotment.no_cost_quota.units) for allotment in allotments
         ]
 
         return cls(

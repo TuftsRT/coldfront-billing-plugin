@@ -16,14 +16,14 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data import UNIT_TO_TB, BillingNoCostQuota, StorageUnit
+from coldfront_billing.data import UNIT_TO_TB, BillingQuota, StorageUnit
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
 
 
 def create_no_cost_quota(allotment):
-    return BillingNoCostQuota.create(
+    return BillingQuota.create(
         allotment.amount,
         allotment.no_cost_quota.units,
     )

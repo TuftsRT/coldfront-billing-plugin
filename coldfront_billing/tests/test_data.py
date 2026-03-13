@@ -6,7 +6,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data import BillingAllocation, BillingNoCostQuota, StorageUnit
+from coldfront_billing.data import BillingAllocation, BillingQuota, StorageUnit
 
 DEFAULT_QUOTA = 0
 DEFAULT_COST = 10
@@ -454,17 +454,17 @@ class TestBillingNoCostQuota:
 
     def test_normalized_amount_tb(self):
         """Test normalized_amount for TB unit (1:1 conversion)."""
-        ncq = BillingNoCostQuota(amount=5.0, unit=StorageUnit.TB)
+        ncq = BillingQuota(amount=5.0, unit=StorageUnit.TB)
         assert ncq.normalized_amount == 5.0
 
     def test_normalized_amount_gb(self):
         """Test normalized_amount for GB unit (converts to TB)."""
-        ncq = BillingNoCostQuota(amount=1000.0, unit=StorageUnit.GB)
+        ncq = BillingQuota(amount=1000.0, unit=StorageUnit.GB)
         assert ncq.normalized_amount == 1.0
 
     def test_normalized_amount_gb_fractional(self):
         """Test normalized_amount for fractional GB."""
-        ncq = BillingNoCostQuota(amount=500.0, unit=StorageUnit.GB)
+        ncq = BillingQuota(amount=500.0, unit=StorageUnit.GB)
         assert ncq.normalized_amount == 0.5
 
 
@@ -478,7 +478,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=10,
             cost_per_tb=100,
-            no_cost_quotas=[BillingNoCostQuota(amount=3.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
         )
         # 10 - 3 = 7 TB billable, ceil(7) * 100 = 700
         assert billing.total_cost == 700
@@ -490,7 +490,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=5,
             cost_per_tb=100,
-            no_cost_quotas=[BillingNoCostQuota(amount=1000.0, unit=StorageUnit.GB)],
+            no_cost_quotas=[BillingQuota(amount=1000.0, unit=StorageUnit.GB)],
         )
         # 5 - 1 = 4 TB billable, 4 * 100 = 400
         assert billing.total_cost == 400
@@ -503,8 +503,8 @@ class TestBillingAllocationNoCostQuotas:
             quota_tb=10,
             cost_per_tb=100,
             no_cost_quotas=[
-                BillingNoCostQuota(amount=2.0, unit=StorageUnit.TB),
-                BillingNoCostQuota(amount=500.0, unit=StorageUnit.GB),  # 0.5 TB
+                BillingQuota(amount=2.0, unit=StorageUnit.TB),
+                BillingQuota(amount=500.0, unit=StorageUnit.GB),  # 0.5 TB
             ],
         )
         # 10 - 2.5 = 7.5 TB billable, ceil(7.5) * 100 = 800
@@ -517,7 +517,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=5,
             cost_per_tb=100,
-            no_cost_quotas=[BillingNoCostQuota(amount=10.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=10.0, unit=StorageUnit.TB)],
         )
         # max(5 - 10, 0) = 0, 0 * 100 = 0
         assert billing.total_cost == 0
