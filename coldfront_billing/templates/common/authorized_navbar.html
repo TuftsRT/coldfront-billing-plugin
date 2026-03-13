@@ -31,6 +31,7 @@
             {% endif %}
             {% if has_billing_role %}
                <a id="navbar-billing" class="dropdown-item" href="{% url 'billing_index' %}">Billing</a>
+               <a id="navbar-manage-no-cost-quotas" class="dropdown-item" href="{% url 'manage_no_cost_quota' %}">No-Cost Quotas</a>
             {% endif %}
           </div>
         </li>
