@@ -112,6 +112,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             )
             user_amount = ncq_allocation.user_ammount
             first_resource = next(iter(allocation.resources.all()), None)
+            user_allotment = next((a.pk for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
 
             allocations.append(
                 {
@@ -124,6 +125,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                     'existing_amount': f'{user_amount:g}' if user_amount else '',
                     'max_possible': max_possible,
                     'minimum_increment': self.quota.minimum_increment,
+                    'allotment_id': user_allotment or '',
                 }
             )
 
