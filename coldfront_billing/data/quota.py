@@ -44,11 +44,11 @@ class NoCostQuotaAllocation:
 
     @property
     def user_ammount(self):
-        return self.users_allotment.amount if self.users_allotment else None
+        return self.users_allotment.amount if self.users_allotment else 0
 
     def max_possible_allocation(self, remaining_quota: float, quota_unit: str, min_increment: float) -> float:
         quota_unit = StorageUnit.parse(quota_unit)
-        possible_quota = remaining_quota + self.user_allotment_amount
+        possible_quota = remaining_quota + self.user_ammount
 
         if self.allocation_amount is None:
             return round(possible_quota, 2)

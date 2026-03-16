@@ -614,7 +614,7 @@ class TestNoCostQuotaAllocation:
             users_allotment=None,
             other_allotments=[],
         )
-        assert allocation.user_ammount is None
+        assert allocation.user_ammount == 0
 
     def test_user_allotment_amount_with_users_allotment_tb(self):
         """Test user_allotment_amount returns normalized TB amount."""
@@ -762,8 +762,8 @@ class TestNoCostQuotaAllocation:
         result = allocation.max_possible_allocation(remaining_quota=5.0, quota_unit='TB', min_increment=1.0)
         assert result == 0.0
 
-    def test_max_possible_allocation_quota_unit_gb(self):
-        """Test max_possible_allocation with GB quota unit."""
+    def test_max_possible_allocation_quota_unit_gb_no_allotments(self):
+        """Test max_possible_allocation with GB quota unit without existing allotment."""
         allocation = NoCostQuotaAllocation(
             user_id=1,
             allocation_amount=1.0,  # 1 TB
@@ -773,6 +773,18 @@ class TestNoCostQuotaAllocation:
         # allocation_available = 1 TB = 1000 GB, min(500, 1000) = 500
         result = allocation.max_possible_allocation(remaining_quota=500.0, quota_unit='GB', min_increment=1.0)
         assert result == 500.0
+
+    def test_max_possible_allocation_quota_unit_gb_with_allotments(self):
+        """Test max_possible_allocation with GB quota unit with existing allotment."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=2.0,  # 1 TB
+            users_allotment=BillingQuota(amount=500, unit=StorageUnit.GB),
+            other_allotments=[],
+        )
+        # allocation_available = 2 TB = 2000 GB, min(500 + 500, 2000) = 1000
+        result = allocation.max_possible_allocation(remaining_quota=500.0, quota_unit='GB', min_increment=1.0)
+        assert result == 1000.0
 
     def test_create_with_user_in_allotments(self):
         """Test create extracts user allotment for matching user_id."""
