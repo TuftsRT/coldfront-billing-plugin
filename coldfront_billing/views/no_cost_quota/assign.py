@@ -5,8 +5,7 @@ from coldfront.core.project.models import Project
 from coldfront.core.resource.models import ResourceType
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import F, FloatField, Prefetch, Q, QuerySet, Sum, Value
-from django.db.models.functions import Coalesce
+from django.db.models import Prefetch, Q, QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView
 
@@ -17,9 +16,10 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import NoCostQuotaAllocation
-from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
+from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
+from coldfront_billing.views.no_cost_quota.common import remaining_quota
 
 
 class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
@@ -32,9 +32,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             messages.error(request, 'Please select a No Cost Quota first.')
             return redirect('manage_no_cost_quota')
         self.quota = get_object_or_404(
-            NoCostQuota.objects.annotate(
-                used=Coalesce(Sum('allotments__amount'), Value(0, output_field=FloatField())),
-            ).annotate(remaining=F('amount') - F('used')),
+            remaining_quota,
             pk=selected_quota,
         )
         if not request.user.is_superuser and self.quota.user_id != request.user.id:
