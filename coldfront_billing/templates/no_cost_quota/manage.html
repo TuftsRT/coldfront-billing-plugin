@@ -50,7 +50,12 @@ Manage No-Cost Quotas
 {% endif %}
 
 {% if quota_list %}
-<form method="get" action="{% url 'assign_no_cost_quota' %}{% if return_params %}?{{ return_params }}{% endif %}">
+<form method="get" action="{% url 'assign_no_cost_quota' %}">
+    {% for key, value in request.GET.lists %}
+        {% for v in value %}
+            <input type="hidden" name="{{ key }}" value="{{ v }}">
+        {% endfor %}
+    {% endfor %}
     <div class="table-responsive">
         <table class="table table-sm">
             <thead>

@@ -6,11 +6,11 @@ from django.views.generic import ListView
 
 from coldfront_billing.forms import NoCostQuotaSearchForm
 from coldfront_billing.models import NoCostQuota
-from coldfront_billing.views.mixins import NoCostQuotaListViewStateMixin
+from coldfront_billing.views.mixins import NoCostQuotaStateMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
-class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaListViewStateMixin, ListView):
+class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaStateMixin, ListView):
     template_name = 'no_cost_quota/manage.html'
     context_object_name = 'quota_list'
     model = NoCostQuota

@@ -18,11 +18,11 @@ from coldfront_billing.constants import (
 from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
-from coldfront_billing.views.mixins import ListViewStateMixin, PrefetchPaginationMixin
+from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin, PrefetchPaginationMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
-class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, ListViewStateMixin, ListView):
+class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCostQuotaAssignViewMixin, ListView):
     template_name = 'no_cost_quota/assign.html'
     context_object_name = 'allocation_list'
     model = Allocation
@@ -90,9 +90,10 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, ListVi
         quota_remaining = round(self.quota.remaining, 2)
         quota_units = self.quota.units
 
+        allocation_objs = list(self.get_queryset())
         allocations = []
 
-        for allocation in context.get('allocation_list', []):
+        for allocation in allocation_objs:
             all_allotments = getattr(allocation, 'all_allotments', ())
 
             # Get quota attribute from allocation
@@ -133,12 +134,14 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, ListVi
                 }
             )
 
+        key_func, reverse = self.get_object_ordering()
+        allocations = sorted(allocations, key=key_func, reverse=reverse)
+
         return (
             context
             | {
                 'quota': self.quota,
                 'quota_remaining': quota_remaining,
-                'allocations': allocations,
             }
-            | self.get_pagination_params()
+            | self.get_extended_pagination_params(allocations)
         )

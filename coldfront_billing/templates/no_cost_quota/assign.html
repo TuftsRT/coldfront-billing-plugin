@@ -18,18 +18,38 @@ Assign No-Cost Quota
     <br>Select an allocation to create a new allotment or update/delete an existing one.
 </p>
 
-<strong>Eligible Allocations: {{ allocation_list|length }}</strong>
+<strong>Eligible Allocations: {% if is_paginated %}{{ page_obj.paginator.count }}{% else %}{{ allocations|length }}{% endif %}</strong>
 {% if allocations %}
 <div class="table-responsive">
     <table class="table table-sm">
         <thead>
         <tr>
-            <th scope="col" class="text-nowrap">ID</th>
-            <th scope="col" class="text-nowrap">Project</th>
-            <th scope="col" class="text-nowrap">PI</th>
-            <th scope="col" class="text-nowrap">Resource Name</th>
+            <th scope="col" class="text-nowrap">
+                ID
+                <a href="?order_by=id&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort ID asc</span></a>
+                <a href="?order_by=id&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort ID desc</span></a>
+            </th>
+            <th scope="col" class="text-nowrap">
+                Project
+                <a href="?order_by=project&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Project asc</span></a>
+                <a href="?order_by=project&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Project desc</span></a>
+            </th>
+            <th scope="col" class="text-nowrap">
+                PI
+                <a href="?order_by=pi&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort PI asc</span></a>
+                <a href="?order_by=pi&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort PI desc</span></a>
+            </th>
+            <th scope="col" class="text-nowrap">
+                Resource Name
+                <a href="?order_by=resource_name&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Resource Name asc</span></a>
+                <a href="?order_by=resource_name&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Resource Name desc</span></a>
+            </th>
             <th scope="col" class="text-nowrap">Status</th>
-            <th scope="col" class="text-nowrap">Amount</th>
+            <th scope="col" class="text-nowrap">
+                Amount
+                <a href="?order_by=amount&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Amount asc</span></a>
+                <a href="?order_by=amount&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Amount desc</span></a>
+            </th>
             <th scope="col" class="text-nowrap">Quota Type</th>
             <th scope="col" class="text-nowrap">Other Applications</th>
             <th scope="col" class="text-nowrap">
@@ -78,6 +98,9 @@ Assign No-Cost Quota
         {% endfor %}
         </tbody>
     </table>
+    {% if is_paginated %}
+    {% include 'common/pagination.html' %}
+    {% endif %}
 </div>
 {% else %}
 <div class="alert alert-info">
