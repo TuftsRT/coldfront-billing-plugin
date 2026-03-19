@@ -3,7 +3,7 @@ from django.db.models.functions import Coalesce
 
 from coldfront_billing.models import NoCostQuota
 
-remaining_quota = NoCostQuota.objects.annotate(
+quota_with_remaining = NoCostQuota.objects.annotate(
     used=Coalesce(
         Sum(
             'allotments__amount',

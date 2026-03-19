@@ -1,12 +1,6 @@
 from django.urls import path
 
 from . import views
-from .views.allocation import UpdateAllocationDetailsView
-from .views.no_cost_quota import (
-    AssignNoCostQuotasView,
-    CreateNoCostQuotaAllotmentView,
-    ManageNoCostQuotasView,
-)
 
 urlpatterns = [
     path('billing/', views.BillingView.as_view(), name='billing_index'),
@@ -22,22 +16,22 @@ urlpatterns = [
     ),
     path(
         'allocation/<int:pk>/update-allocation-details/',
-        UpdateAllocationDetailsView.as_view(),
+        views.UpdateAllocationDetailsView.as_view(),
         name='update_allocation_details',
     ),
     path(
         'no-cost-quota/manage/',
-        ManageNoCostQuotasView.as_view(),
+        views.ManageNoCostQuotasView.as_view(),
         name='manage_no_cost_quota',
     ),
     path(
         'no-cost-quota/assign/',
-        AssignNoCostQuotasView.as_view(),
+        views.AssignNoCostQuotasView.as_view(),
         name='assign_no_cost_quota',
     ),
     path(
         'no-cost-quota/allotment/create/',
-        CreateNoCostQuotaAllotmentView.as_view(),
+        views.CreateNoCostQuotaAllotmentView.as_view(),
         name='create_no_cost_quota_allotment',
     ),
 ]

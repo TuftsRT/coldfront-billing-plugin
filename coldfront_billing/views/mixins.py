@@ -30,6 +30,22 @@ default_cost = getattr(
 PAGINATE_BY = getattr(settings, 'COLDFRONT_BILLING_PAGINATE_BY', 25)
 
 
+def get_pagination_params(request_get: QueryDict) -> dict:
+    all_params = request_get.copy()
+    all_params.pop('page', None)
+
+    filter_params = all_params.copy()
+    for key in ('order_by', 'direction'):
+        filter_params.pop(key, None)
+
+    return {
+        'filter_parameters': filter_params.urlencode(),
+        'all_params': all_params.urlencode(),
+        'return_params': request_get.urlencode(),
+        'expand_accordion': 'show' if filter_params else '',
+    }
+
+
 class BillingAllocationPrefetchMixin:
     """Mixin providing Prefetch configurations for billing allocation queries."""
 
@@ -82,19 +98,3 @@ class BillingAllocationPrefetchMixin:
     @staticmethod
     def create_billing_allocations(allocation_objs: list[Allocation]) -> list[BillingAllocation]:
         return [BillingAllocation.parse(a, default_quota, default_cost) for a in allocation_objs]
-
-    @staticmethod
-    def get_view_params(request_get: QueryDict) -> dict:
-        all_params = request_get.copy()
-        all_params.pop('page', None)
-
-        filter_params = all_params.copy()
-        for key in ('order_by', 'direction'):
-            filter_params.pop(key, None)
-
-        return {
-            'filter_parameters': filter_params.urlencode(),
-            'all_params': all_params.urlencode(),
-            'return_params': request_get.urlencode(),
-            'expand_accordion': 'show' if filter_params else '',
-        }

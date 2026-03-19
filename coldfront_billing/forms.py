@@ -42,6 +42,12 @@ class BillingSearchForm(forms.Form):
     )
 
 
+class NoCostQuotaSearchForm(forms.Form):
+    USERNAME: ClassVar[str] = 'Owner name'
+
+    username = forms.CharField(label=USERNAME, max_length=100, required=False)
+
+
 class CostCenterAssignmentForm(forms.Form):
     """Form for handling cost center assignment from modal via JSON."""
 

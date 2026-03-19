@@ -18,8 +18,8 @@ from coldfront_billing.constants import (
 from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
-from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
-from coldfront_billing.views.no_cost_quota.common import remaining_quota
+from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, get_pagination_params
+from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
 class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
@@ -32,7 +32,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             messages.error(request, 'Please select a No Cost Quota first.')
             return redirect('manage_no_cost_quota')
         self.quota = get_object_or_404(
-            remaining_quota,
+            quota_with_remaining,
             pk=selected_quota,
         )
         if not request.user.is_superuser and self.quota.user_id != request.user.id:
@@ -127,8 +127,12 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                 }
             )
 
-        return context | {
-            'quota': self.quota,
-            'quota_remaining': quota_remaining,
-            'allocations': allocations,
-        }
+        return (
+            context
+            | {
+                'quota': self.quota,
+                'quota_remaining': quota_remaining,
+                'allocations': allocations,
+            }
+            | get_pagination_params(self.request.GET)
+        )
