@@ -10,11 +10,10 @@ from django.db.models import Prefetch, Q, QuerySet
 from django.views.generic import ListView
 
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
-from coldfront_billing.filters import filter_by_search_params, get_ordering
+from coldfront_billing.filters import get_ordering
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.models import CostCenter
-
-from .mixins import PAGINATE_BY, BillingAllocationPrefetchMixin
+from coldfront_billing.views.mixins import PAGINATE_BY, BillingAllocationPrefetchMixin, get_pagination_params
 
 
 class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
@@ -23,10 +22,22 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
     context_object_name = 'project_list'
     paginate_by = PAGINATE_BY
 
+    def filter_projects(self, projects: QuerySet[Project]) -> QuerySet[Project]:
+        search_form = BillingSearchForm(self.request.GET)
+        if search_form.is_valid():
+            if username := search_form.cleaned_data.get('username'):
+                projects = projects.filter(
+                    Q(pi__username__icontains=username)
+                    | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
+                )
+            if search_form.cleaned_data.get('no_cost_center'):
+                projects = projects.filter(cost_center_assignment__isnull=True)
+        return projects
+
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
-        ordering = get_ordering(get_params=self.request.GET)
-        projects = filter_by_search_params(projects=projects, get_params=self.request.GET)
+        ordering = get_ordering(params=self.request.GET)
+        projects = self.filter_projects(projects=projects)
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
@@ -99,9 +110,9 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
 
         return (
             context
-            | self.get_view_params(self.request.GET)
+            | get_pagination_params(self.request.GET)
             | {
-                'billing_search_form': BillingSearchForm(self.request.GET),
+                'search_form': BillingSearchForm(self.request.GET),
                 'departments': departments,
             }
         )

@@ -86,7 +86,7 @@ Assign No-Cost Quota
 {% endif %}
 
 <p class="mt-3">
-    <a href="{% url 'manage_no_cost_quota' %}" class="btn btn-secondary">Back</a>
+    <a href="{% url 'manage_no_cost_quota' %}{% if return_params %}?{{ return_params }}{% endif %}" class="btn btn-secondary">Back</a>
 </p>
 
 <div class="modal fade" id="assignQuotaModal" tabindex="-1" role="dialog"

@@ -432,8 +432,8 @@ class TestBillingViewSearchFilters:
         response = _get_billing_response(client, superuser, '?username=test')
 
         assert response.status_code == 200
-        assert 'billing_search_form' in response.context
-        form = response.context['billing_search_form']
+        assert 'search_form' in response.context
+        form = response.context['search_form']
         assert form.initial.get('username') == 'test' or form.data.get('username') == 'test'
 
     def test_search_filters_only_active_project_users(

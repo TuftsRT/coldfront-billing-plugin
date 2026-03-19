@@ -12,8 +12,7 @@ from django.views.generic import DetailView
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.filters import get_allocation_ordering
-
-from .mixins import PAGINATE_BY, BillingAllocationPrefetchMixin
+from coldfront_billing.views.mixins import PAGINATE_BY, BillingAllocationPrefetchMixin, get_pagination_params
 
 
 class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, DetailView):
@@ -84,7 +83,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
 
         return (
             context
-            | self.get_view_params(request_get)
+            | get_pagination_params(request_get)
             | {
                 'total_cost': sum(a.total_cost for a in allocations),
                 'allocations': page_obj.object_list,
