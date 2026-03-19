@@ -5,37 +5,6 @@ from django.http import QueryDict
 from coldfront_billing.data import BillingAllocation
 
 
-def get_ordering(params: QueryDict) -> str:
-    order_by = params.get('order_by', 'id')
-
-    db_field = {
-        'id': 'id',
-        'pi': 'pi__username',
-        'title': 'title',
-        'status': 'status__name',
-    }.get(order_by, order_by)
-
-    prefix = '-' if params.get('direction') == 'des' else ''
-
-    return f'{prefix}{db_field}'
-
-
-def get_no_cost_quota_ordering(params: QueryDict) -> str:
-    order_by = params.get('order_by', 'owner')
-
-    db_field = {
-        'owner': 'user__username',
-        'quota_type': 'quota_type',
-        'description': 'description',
-        'amount': 'amount',
-        'remaining': 'remaining',
-    }.get(order_by, 'user__username')
-
-    prefix = '-' if params.get('direction') == 'des' else ''
-
-    return f'{prefix}{db_field}'
-
-
 def get_allocation_ordering(get_params: QueryDict) -> tuple[Callable[..., Any], bool]:
     """Used for sorting BillingAllocation objects - not DB"""
     order_by = get_params.get('order_by', 'id')

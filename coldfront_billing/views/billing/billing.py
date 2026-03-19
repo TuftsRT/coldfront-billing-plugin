@@ -10,17 +10,15 @@ from django.db.models import Prefetch, Q, QuerySet
 from django.views.generic import ListView
 
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
-from coldfront_billing.filters import get_ordering
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.models import CostCenter
-from coldfront_billing.views.mixins import PAGINATE_BY, BillingAllocationPrefetchMixin, get_pagination_params
+from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
 
 
-class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
+class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingListViewStateMixin, ListView):
     model = Project
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
-    paginate_by = PAGINATE_BY
 
     def filter_projects(self, projects: QuerySet[Project]) -> QuerySet[Project]:
         search_form = BillingSearchForm(self.request.GET)
@@ -36,7 +34,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
 
     def get_queryset(self) -> QuerySet[Project]:
         projects = Project.objects.all()
-        ordering = get_ordering(params=self.request.GET)
+        ordering = self.get_ordering()
         projects = self.filter_projects(projects=projects)
 
         if not self.request.user.is_superuser:
@@ -110,7 +108,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
 
         return (
             context
-            | get_pagination_params(self.request.GET)
+            | self.get_pagination_params()
             | {
                 'search_form': BillingSearchForm(self.request.GET),
                 'departments': departments,
