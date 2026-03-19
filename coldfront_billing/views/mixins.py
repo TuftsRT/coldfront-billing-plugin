@@ -209,8 +209,6 @@ class NoCostQuotaStateMixin(ListViewStateMixin):
                     return allocation.id
                 case 'project':
                     return (allocation.project.title or '').lower()
-                case 'pi':
-                    return (allocation.project.pi.username or '').lower()
                 case 'resource_name':
                     return (row.get('resource_name') or '').lower()
                 case 'amount':
