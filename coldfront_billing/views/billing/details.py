@@ -12,17 +12,16 @@ from django.views.generic import DetailView
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.filters import get_allocation_ordering
-from coldfront_billing.views.mixins import PAGINATE_BY, BillingAllocationPrefetchMixin, get_pagination_params
+from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, ListViewStateMixin
 
 
-class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, DetailView):
+class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListViewStateMixin, DetailView):
     """Project billing details view showing all allocations for a project."""
 
     model = Project
     template_name = 'billing/billing_details.html'
     context_object_name = 'project'
     pk_url_kwarg = 'project_id'
-    paginate_by = PAGINATE_BY
 
     def check_permission(self, project: Project) -> bool:
         user = self.request.user
@@ -83,7 +82,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
 
         return (
             context
-            | get_pagination_params(request_get)
+            | self.get_pagination_params()
             | {
                 'total_cost': sum(a.total_cost for a in allocations),
                 'allocations': page_obj.object_list,

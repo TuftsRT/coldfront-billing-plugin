@@ -90,7 +90,7 @@ Manage No-Cost Quotas
                            aria-label="Select quota {{ quota.quota_type }}"></td>
                 <td>{{ quota.user.username }}</td>
                 <td>{{ quota.quota_type }}</td>
-                <td>{{ quota.description|default:quota.quota_type }}</td>
+                <td>{{ quota.description|default:'-'}}</td>
                 <td>{{ quota.amount|floatformat:-2 }} {{ quota.units }}</td>
                 <td>{{ quota.remaining|floatformat:-2 }} {{ quota.units }}</td>
             </tr>
