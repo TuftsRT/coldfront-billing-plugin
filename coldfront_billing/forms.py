@@ -48,6 +48,12 @@ class NoCostQuotaSearchForm(forms.Form):
     username = forms.CharField(label=USERNAME, max_length=100, required=False)
 
 
+class AllocationSearchForm(forms.Form):
+    PROJECT: ClassVar[str] = 'Project name'
+
+    project = forms.CharField(label=PROJECT, max_length=100, required=False)
+
+
 class CostCenterAssignmentForm(forms.Form):
     """Form for handling cost center assignment from modal via JSON."""
 

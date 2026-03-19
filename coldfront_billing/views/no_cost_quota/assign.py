@@ -16,6 +16,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import NoCostQuotaAllocation
+from coldfront_billing.forms import AllocationSearchForm
 from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin, PrefetchPaginationMixin
@@ -26,6 +27,16 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
     template_name = 'no_cost_quota/assign.html'
     context_object_name = 'allocation_list'
     model = Allocation
+
+    @property
+    def filtered_allocations(self) -> QuerySet[Allocation]:
+        search_form = AllocationSearchForm(self.request.GET)
+        allocations = self.get_queryset()
+        if search_form.is_valid() and (project := search_form.cleaned_data.get('project')):
+            project_lower = project.lower()
+            allocations = [a for a in allocations if project_lower in (a.project.title or '').lower()]
+
+        return allocations
 
     def get(self, request, *args, **kwargs):
         if not (selected_quota := request.GET.get('selected_quota')):
@@ -90,7 +101,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
         quota_remaining = round(self.quota.remaining, 2)
         quota_units = self.quota.units
 
-        allocation_objs = list(self.get_queryset())
+        allocation_objs = list(self.filtered_allocations)
         allocations = []
 
         for allocation in allocation_objs:
@@ -142,6 +153,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
             | {
                 'quota': self.quota,
                 'quota_remaining': quota_remaining,
+                'search_form': AllocationSearchForm(self.request.GET),
             }
             | self.get_extended_pagination_params(allocations)
         )

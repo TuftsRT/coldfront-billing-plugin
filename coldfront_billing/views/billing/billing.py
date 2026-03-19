@@ -20,8 +20,10 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
 
-    def filter_projects(self, projects: QuerySet[Project]) -> QuerySet[Project]:
+    @property
+    def filtered_projects(self) -> QuerySet[Project]:
         search_form = BillingSearchForm(self.request.GET)
+        projects = Project.objects.all()
         if search_form.is_valid():
             if username := search_form.cleaned_data.get('username'):
                 projects = projects.filter(
@@ -33,9 +35,8 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
         return projects
 
     def get_queryset(self) -> QuerySet[Project]:
-        projects = Project.objects.all()
         ordering = self.get_ordering()
-        projects = self.filter_projects(projects=projects)
+        projects = self.filtered_projects
 
         if not self.request.user.is_superuser:
             projects = projects.filter(
