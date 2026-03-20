@@ -31,7 +31,7 @@ urlpatterns = [
     ),
     path(
         'no-cost-quota/allotment/create/',
-        views.CreateNoCostQuotaAllotmentView.as_view(),
+        views.NoCostQuotaAllotmentView.as_view(),
         name='create_no_cost_quota_allotment',
     ),
 ]
