@@ -110,7 +110,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             max_possible = ncq_allocation.max_possible_allocation(
                 quota_remaining, quota_units, self.quota.minimum_increment
             )
-            user_amount = ncq_allocation.user_ammount
+            user_amount = ncq_allocation.user_amount
             first_resource = next(iter(allocation.resources.all()), None)
 
             allocations.append(

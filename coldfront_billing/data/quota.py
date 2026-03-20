@@ -43,12 +43,12 @@ class NoCostQuotaAllocation:
     other_allotments: list[BillingQuota]
 
     @property
-    def user_ammount(self):
+    def user_amount(self):
         return self.users_allotment.amount if self.users_allotment else 0
 
     def max_possible_allocation(self, remaining_quota: float, quota_unit: str, min_increment: float) -> float:
         quota_unit = StorageUnit.parse(quota_unit)
-        possible_quota = remaining_quota + self.user_ammount
+        possible_quota = remaining_quota + self.user_amount
 
         if self.allocation_amount is None:
             return round(possible_quota, 2)
