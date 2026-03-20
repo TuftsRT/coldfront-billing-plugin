@@ -10,6 +10,7 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
 )
+from coldfront_billing.data import BillingQuota
 from coldfront_billing.models.common import QuotaBase
 
 User = get_user_model()
@@ -112,7 +113,7 @@ class NoCostQuotaAllotment(models.Model):
             minimum = f'{min_inc} {self.no_cost_quota.units}'
             if 0 < self.amount < min_inc:
                 raise ValidationError({'amount': f'Allotment amount must be ≥ minimum increment ({minimum})'})
-            # Ensure amount is a multiple of minimum_increment (with float tolerance)
+            # Ensure the amount is a multiple of minimum_increment (with float tolerance)
             if self.amount % min_inc != 0:
                 raise ValidationError(
                     {'amount': f'Allotment amount must be a multiple of minimum increment ({minimum})'}
@@ -126,11 +127,18 @@ class NoCostQuotaAllotment(models.Model):
                         'amount': f'No cost quota allotment size ({amount}) is bigger than no-cost quota size ({no_cost_quota})'
                     }
                 )
-            allocation_quota = self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
-            if allocation_quota is not None and self.amount > float(allocation_quota):
+            allocation_quota_value = self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
+
+            if not allocation_quota_value:
+                return
+
+            allocation_quota = BillingQuota.create(allocation_quota_value, 'TB')
+            allotment_quota = BillingQuota.create(self.amount, self.no_cost_quota.units)
+
+            if alottment_size := allotment_quota.normalized_amount > (alloc_size := allocation_quota.normalized_amount):
                 raise ValidationError(
                     {
-                        'amount': f'No cost quota allotment size ({amount}) is bigger than allocation size ({allocation_quota} TB)'
+                        'amount': f'No cost quota allotment size ({alottment_size}) is bigger than allocation size ({alloc_size} TB)'
                     }
                 )
 

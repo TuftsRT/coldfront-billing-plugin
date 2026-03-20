@@ -6,7 +6,12 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data import BillingAllocation, BillingNoCostQuota, StorageUnit
+from coldfront_billing.data import (
+    BillingAllocation,
+    BillingQuota,
+    NoCostQuotaAllocation,
+    StorageUnit,
+)
 
 DEFAULT_QUOTA = 0
 DEFAULT_COST = 10
@@ -40,7 +45,17 @@ class TestBillingAllocation:
         Attributes are only set when provided (truthy), so missing attributes
         trigger getattr defaults - matching real allocations without prefetched data.
         """
-        spec = ['id', 'project_id', 'end_date', 'status', 'project']
+        spec = [
+            'id',
+            'project_id',
+            'end_date',
+            'status',
+            'project',
+            QUOTA_ATTRIBUTE_NAME,
+            STORAGE_RESOURCE_ATTRIBUTE_NAME,
+        ]
+        if no_cost_quota_data:
+            spec = spec + [NO_COST_QUOTA_DATA_ATTRIBUTE_NAME]
         allocation = Mock(spec=spec)
         allocation.id = allocation_id
         allocation.project_id = project_id
@@ -51,10 +66,10 @@ class TestBillingAllocation:
         allocation.status = status_mock
 
         allocation.project = project
-        if quota_attrs:
-            setattr(allocation, QUOTA_ATTRIBUTE_NAME, quota_attrs)
-        if storage_resources:
-            setattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, storage_resources)
+        # Always set quota_attrs and storage_resources so getattr returns real values
+        # (not Mock) when tests use empty list or None for "missing" attributes
+        setattr(allocation, QUOTA_ATTRIBUTE_NAME, quota_attrs)
+        setattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, storage_resources)
         if no_cost_quota_data:
             setattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, no_cost_quota_data)
         return allocation
@@ -449,22 +464,22 @@ class TestBillingAllocation:
         assert result.extra['end_date'] == '-'
 
 
-class TestBillingNoCostQuota:
-    """Test suite for BillingNoCostQuota class."""
+class TestBillingQuota:
+    """Test suite for BillingQuota class."""
 
     def test_normalized_amount_tb(self):
         """Test normalized_amount for TB unit (1:1 conversion)."""
-        ncq = BillingNoCostQuota(amount=5.0, unit=StorageUnit.TB)
+        ncq = BillingQuota(amount=5.0, unit=StorageUnit.TB)
         assert ncq.normalized_amount == 5.0
 
     def test_normalized_amount_gb(self):
         """Test normalized_amount for GB unit (converts to TB)."""
-        ncq = BillingNoCostQuota(amount=1000.0, unit=StorageUnit.GB)
+        ncq = BillingQuota(amount=1000.0, unit=StorageUnit.GB)
         assert ncq.normalized_amount == 1.0
 
     def test_normalized_amount_gb_fractional(self):
         """Test normalized_amount for fractional GB."""
-        ncq = BillingNoCostQuota(amount=500.0, unit=StorageUnit.GB)
+        ncq = BillingQuota(amount=500.0, unit=StorageUnit.GB)
         assert ncq.normalized_amount == 0.5
 
 
@@ -478,7 +493,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=10,
             cost_per_tb=100,
-            no_cost_quotas=[BillingNoCostQuota(amount=3.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
         )
         # 10 - 3 = 7 TB billable, ceil(7) * 100 = 700
         assert billing.total_cost == 700
@@ -490,7 +505,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=5,
             cost_per_tb=100,
-            no_cost_quotas=[BillingNoCostQuota(amount=1000.0, unit=StorageUnit.GB)],
+            no_cost_quotas=[BillingQuota(amount=1000.0, unit=StorageUnit.GB)],
         )
         # 5 - 1 = 4 TB billable, 4 * 100 = 400
         assert billing.total_cost == 400
@@ -503,8 +518,8 @@ class TestBillingAllocationNoCostQuotas:
             quota_tb=10,
             cost_per_tb=100,
             no_cost_quotas=[
-                BillingNoCostQuota(amount=2.0, unit=StorageUnit.TB),
-                BillingNoCostQuota(amount=500.0, unit=StorageUnit.GB),  # 0.5 TB
+                BillingQuota(amount=2.0, unit=StorageUnit.TB),
+                BillingQuota(amount=500.0, unit=StorageUnit.GB),  # 0.5 TB
             ],
         )
         # 10 - 2.5 = 7.5 TB billable, ceil(7.5) * 100 = 800
@@ -517,7 +532,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=5,
             cost_per_tb=100,
-            no_cost_quotas=[BillingNoCostQuota(amount=10.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=10.0, unit=StorageUnit.TB)],
         )
         # max(5 - 10, 0) = 0, 0 * 100 = 0
         assert billing.total_cost == 0
@@ -565,3 +580,253 @@ class TestBillingAllocationNoCostQuotas:
 
         assert result.no_cost_quotas == []
         assert result.total_cost == 500
+
+
+class TestNoCostQuotaAllocation:
+    """Test suite for NoCostQuotaAllocation class."""
+
+    @staticmethod
+    def _create_mock_allotment(amount, units='TB', user_id=1):
+        """Helper to create a mock allotment for NoCostQuotaAllocation.create()."""
+        allotment = Mock()
+        allotment.amount = amount
+        allotment.no_cost_quota = Mock()
+        allotment.no_cost_quota.units = units
+        allotment.no_cost_quota.user_id = user_id
+        return allotment
+
+    def test_user_ammount_with_users_allotment(self):
+        """Test user_ammount returns the amount when users_allotment is set."""
+        users_allotment = BillingQuota(amount=5.0, unit=StorageUnit.TB)
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=users_allotment,
+            other_allotments=[],
+        )
+        assert allocation.user_amount == 5.0
+
+    def test_user_ammount_without_users_allotment(self):
+        """Test user_ammount returns None when users_allotment is None."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=None,
+            other_allotments=[],
+        )
+        assert allocation.user_amount == 0
+
+    def test_user_allotment_amount_with_users_allotment_tb(self):
+        """Test user_allotment_amount returns normalized TB amount."""
+        users_allotment = BillingQuota(amount=3.0, unit=StorageUnit.TB)
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=users_allotment,
+            other_allotments=[],
+        )
+        assert allocation.user_allotment_amount == 3.0
+
+    def test_user_allotment_amount_with_users_allotment_gb(self):
+        """Test user_allotment_amount returns normalized amount for GB (converts to TB)."""
+        users_allotment = BillingQuota(amount=1000.0, unit=StorageUnit.GB)
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=users_allotment,
+            other_allotments=[],
+        )
+        assert allocation.user_allotment_amount == 1.0
+
+    def test_user_allotment_amount_without_users_allotment(self):
+        """Test user_allotment_amount returns 0 when users_allotment is None."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=None,
+            other_allotments=[],
+        )
+        assert allocation.user_allotment_amount == 0
+
+    def test_other_allotments_amount_empty(self):
+        """Test other_allotments_amount returns 0 when no other allotments."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=BillingQuota(amount=2.0, unit=StorageUnit.TB),
+            other_allotments=[],
+        )
+        assert allocation.other_allotments_amount == 0
+
+    def test_other_allotments_amount_single(self):
+        """Test other_allotments_amount sums single allotment."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=None,
+            other_allotments=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
+        )
+        assert allocation.other_allotments_amount == 3.0
+
+    def test_other_allotments_amount_multiple_mixed_units(self):
+        """Test other_allotments_amount sums multiple allotments with mixed units."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=None,
+            other_allotments=[
+                BillingQuota(amount=2.0, unit=StorageUnit.TB),
+                BillingQuota(amount=1000.0, unit=StorageUnit.GB),  # 1 TB
+            ],
+        )
+        assert allocation.other_allotments_amount == 3.0
+
+    def test_max_possible_allocation_allocation_amount_none(self):
+        """Test max_possible_allocation when allocation_amount is None returns remaining + user allotment."""
+        users_allotment = BillingQuota(amount=2.0, unit=StorageUnit.TB)
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=None,
+            users_allotment=users_allotment,
+            other_allotments=[],
+        )
+        result = allocation.max_possible_allocation(remaining_quota=5.0, quota_unit='TB', min_increment=1.0)
+        assert result == 7.0  # 5 + 2
+
+    def test_max_possible_allocation_limit_from_quota(self):
+        """Test max_possible_allocation when allocation_amount is set and limits result."""
+        users_allotment = BillingQuota(amount=1.0, unit=StorageUnit.TB)
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=10.0,
+            users_allotment=users_allotment,
+            other_allotments=[
+                BillingQuota(amount=2.0, unit=StorageUnit.TB),
+                BillingQuota(amount=1000.0, unit=StorageUnit.GB),  # 1 TB
+            ],
+        )
+        # remaining_quota=5 + 1 (existing user_allotment) = 6 TB possible from quota
+        # allocation_available = 10 - 3 (from other users) = 7 TB
+        # min(6, 7) = 6, floor(6/1)*1 = 6
+        result = allocation.max_possible_allocation(remaining_quota=5.0, quota_unit='TB', min_increment=1.0)
+        assert result == 6.0
+
+    def test_max_possible_allocation_limit_from_allocation(self):
+        """Test max_possible_allocation when allocation limit is lower than quota."""
+        users_allotment = BillingQuota(amount=5.0, unit=StorageUnit.TB)
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=8.0,
+            users_allotment=users_allotment,
+            other_allotments=[BillingQuota(amount=6.0, unit=StorageUnit.TB)],
+        )
+        # remaining_quota=10 + 5 (existing user_allotment) = 15 TB
+        # allocation_available = 8 - 6 = 2 TB
+        # min(15, 2) = 2, floor(2/1)*1 = 2
+        result = allocation.max_possible_allocation(remaining_quota=10.0, quota_unit='TB', min_increment=1.0)
+        assert result == 2.0
+
+    def test_max_possible_allocation_allocation_amount_none_rounds_to_two_decimals(self):
+        """Test max_possible_allocation when allocation_amount is None rounds to 2 decimal places."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=None,
+            users_allotment=BillingQuota(amount=1.333, unit=StorageUnit.TB),
+            other_allotments=[],
+        )
+        result = allocation.max_possible_allocation(remaining_quota=2.666, quota_unit='TB', min_increment=0.1)
+        assert result == 4.0  # 2.666 + 1.333 = 3.999 -> round(4.0, 2) = 4.0
+
+    def test_max_possible_allocation_floors_to_min_increment(self):
+        """Test max_possible_allocation floors result to nearest min_increment when allocation_amount is set."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=5.0,
+            users_allotment=None,
+            other_allotments=[BillingQuota(amount=2.0, unit=StorageUnit.TB)],
+        )
+        # allocation_available = 5 - 2 = 3 TB, remaining_quota=2.95 -> max_possible = min(2.95, 3) = 2.95
+        # floor(2.95 / 0.1) * 0.1 = 2.9
+        result = allocation.max_possible_allocation(remaining_quota=2.95, quota_unit='TB', min_increment=0.1)
+        assert result == 2.9
+
+    def test_max_possible_allocation_other_allotments_exceed_allocation(self):
+        """Test max_possible_allocation when other allotments exceed allocation_amount."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=5.0,
+            users_allotment=None,
+            other_allotments=[BillingQuota(amount=10.0, unit=StorageUnit.TB)],
+        )
+        # allocation_available_tb = max(0, 5 - 10) = 0
+        result = allocation.max_possible_allocation(remaining_quota=5.0, quota_unit='TB', min_increment=1.0)
+        assert result == 0.0
+
+    def test_max_possible_allocation_quota_unit_gb_no_allotments(self):
+        """Test max_possible_allocation with GB quota unit without existing allotment."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=1.0,  # 1 TB
+            users_allotment=None,
+            other_allotments=[],
+        )
+        # allocation_available = 1 TB = 1000 GB, min(500, 1000) = 500
+        result = allocation.max_possible_allocation(remaining_quota=500.0, quota_unit='GB', min_increment=1.0)
+        assert result == 500.0
+
+    def test_max_possible_allocation_quota_unit_gb_with_allotments(self):
+        """Test max_possible_allocation with GB quota unit with existing allotment."""
+        allocation = NoCostQuotaAllocation(
+            user_id=1,
+            allocation_amount=2.0,  # 1 TB
+            users_allotment=BillingQuota(amount=500, unit=StorageUnit.GB),
+            other_allotments=[],
+        )
+        # allocation_available = 2 TB = 2000 GB, min(500 + 500, 2000) = 1000
+        result = allocation.max_possible_allocation(remaining_quota=500.0, quota_unit='GB', min_increment=1.0)
+        assert result == 1000.0
+
+    def test_create_with_user_in_allotments(self):
+        """Test create extracts user allotment for matching user_id."""
+        allotments = [
+            self._create_mock_allotment(amount=2.0, units='TB', user_id=1),
+            self._create_mock_allotment(amount=3.0, units='TB', user_id=2),
+        ]
+        result = NoCostQuotaAllocation.create(user_id=1, allocation_amount=10.0, allotments=allotments)
+
+        assert result.user_id == 1
+        assert result.allocation_amount == 10.0
+        assert result.users_allotment is not None
+        assert result.users_allotment.amount == 2.0
+        assert result.users_allotment.unit == StorageUnit.TB
+        assert len(result.other_allotments) == 1
+        assert result.other_allotments[0].amount == 3.0
+
+    def test_create_without_user_in_allotments(self):
+        """Test create sets users_allotment to None when user not in allotments."""
+        allotments = [
+            self._create_mock_allotment(amount=2.0, units='TB', user_id=2),
+            self._create_mock_allotment(amount=3.0, units='TB', user_id=3),
+        ]
+        result = NoCostQuotaAllocation.create(user_id=1, allocation_amount=10.0, allotments=allotments)
+
+        assert result.users_allotment is None
+        assert len(result.other_allotments) == 2
+
+    def test_create_with_empty_allotments(self):
+        """Test create with empty allotments."""
+        result = NoCostQuotaAllocation.create(user_id=1, allocation_amount=10.0, allotments=[])
+
+        assert result.users_allotment is None
+        assert result.other_allotments == []
+
+    def test_create_with_gb_units(self):
+        """Test create correctly parses GB units."""
+        allotments = [
+            self._create_mock_allotment(amount=1000.0, units='GB', user_id=1),
+        ]
+        result = NoCostQuotaAllocation.create(user_id=1, allocation_amount=5.0, allotments=allotments)
+
+        assert result.users_allotment.amount == 1000.0
+        assert result.users_allotment.unit == StorageUnit.GB
+        assert result.users_allotment.normalized_amount == 1.0
