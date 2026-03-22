@@ -14,7 +14,8 @@ Assign No-Cost Quota
     Assign a portion of {% if request.user.is_superuser %}the selected user's{% else %}your{% endif %}
     <strong>{{ quota.quota_type }}</strong>
     quota ({{ quota_remaining|floatformat:-2 }} {{ quota.units }} remaining)
-    to an allocation. Select an allocation to create a new allotment.
+    to an allocation.
+    <br>Select an allocation to create a new allotment or update/delete an existing one.
 </p>
 
 <strong>Eligible Allocations: {{ allocation_list|length }}</strong>
