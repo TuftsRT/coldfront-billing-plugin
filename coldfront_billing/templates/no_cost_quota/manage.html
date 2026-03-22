@@ -48,7 +48,7 @@ Manage No-Cost Quotas
                 <td>
                     {{ quota.remaining|floatformat:-2 }} {{ quota.units }}
                     {% if quota.has_inactive %}
-                    <span class="text-danger" data-bs-toggle="tooltip" title="Amount in inactive allocation">
+                    <span class="text-danger" data-bs-toggle="tooltip" title="Amount in inactive allocations">
                          + {{ quota.used_inactive|floatformat:-2 }} {{ quota.units }}
                     </span>
                     {% endif %}
