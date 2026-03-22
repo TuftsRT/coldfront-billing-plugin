@@ -103,15 +103,20 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             except (TypeError, ValueError):
                 allocation_size = None
 
+            user_allotment = next((a for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
+            if allocation.status.name != 'Active' and (user_allotment is None or user_allotment.amount == 0):
+                continue  # skip inactive allocations without user allotment
+
+            user_allotment_pk = user_allotment.pk if user_allotment else None
+
             ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation_size, all_allotments)
 
             other_total_quota = ncq_allocation.other_allotments_amount
             max_possible = ncq_allocation.max_possible_allocation(
                 quota_remaining, quota_units, self.quota.minimum_increment
             )
-            user_amount = ncq_allocation.user_ammount
+            user_amount = ncq_allocation.user_amount
             first_resource = next(iter(allocation.resources.all()), None)
-            user_allotment = next((a.pk for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
 
             allocations.append(
                 {
@@ -123,7 +128,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                     'existing_amount': f'{user_amount:g}' if user_amount else '',
                     'max_possible': max_possible,
                     'minimum_increment': self.quota.minimum_increment,
-                    'allotment_id': user_allotment or '',
+                    'allotment_id': user_allotment_pk or '',
                     'inactive': allocation.status.name != 'Active',
                 }
             )

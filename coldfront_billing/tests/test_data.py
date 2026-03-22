@@ -604,7 +604,7 @@ class TestNoCostQuotaAllocation:
             users_allotment=users_allotment,
             other_allotments=[],
         )
-        assert allocation.user_ammount == 5.0
+        assert allocation.user_amount == 5.0
 
     def test_user_ammount_without_users_allotment(self):
         """Test user_ammount returns None when users_allotment is None."""
@@ -614,7 +614,7 @@ class TestNoCostQuotaAllocation:
             users_allotment=None,
             other_allotments=[],
         )
-        assert allocation.user_ammount == 0
+        assert allocation.user_amount == 0
 
     def test_user_allotment_amount_with_users_allotment_tb(self):
         """Test user_allotment_amount returns normalized TB amount."""
