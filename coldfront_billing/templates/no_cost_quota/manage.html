@@ -45,7 +45,14 @@ Manage No-Cost Quotas
                 <td>{{ quota.quota_type }}</td>
                 <td>{{ quota.description|default:quota.quota_type }}</td>
                 <td>{{ quota.amount|floatformat:-2 }} {{ quota.units }}</td>
-                <td>{{ quota.remaining|floatformat:-2 }} {{ quota.units }}</td>
+                <td>
+                    {{ quota.remaining|floatformat:-2 }} {{ quota.units }}
+                    {% if quota.has_inactive %}
+                    <span class="text-danger" data-bs-toggle="tooltip" title="Amount in inactive allocation">
+                         + {{ quota.used_inactive|floatformat:-2 }} {{ quota.units }}
+                    </span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
             </tbody>

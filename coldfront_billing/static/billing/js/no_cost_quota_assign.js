@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var amountInput = document.getElementById('assignQuotaAmount');
     var units = form ? form.getAttribute('data-units') || 'TB' : 'TB';
     var deleteButton = document.getElementById('deleteQuotaButton')
+    var assignButton = document.getElementById('assignQuotaButton');
+    var modalTitle = document.getElementById('assignQuotaModalLabel');
 
     document.querySelectorAll('[data-target="#assignQuotaModal"], [data-bs-target="#assignQuotaModal"]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -16,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var existingAmount = (this.getAttribute('data-existing-amount') || '').replace(',', '.');
             var maxAmount = this.getAttribute('data-max-amount');
             var increment = this.getAttribute('data-increment');
+            var inactive = this.getAttribute('data-inactive') === 'True'; // python bool in string
+
             allocationIdInput.value = allocationId || '';
             allotmentIdInput.value = allotmentId
             allocationDisplayEl.textContent = allocationDisplay || '';
@@ -31,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 deleteButton.classList.remove('d-none');
             }
+            assignButton.disabled = inactive
+            var modalText = inactive ?'Allocation is inactive - delete No-Cost Quota' : 'Assign No-Cost Quota';
+            if (modalTitle) modalTitle.textContent = modalText
         });
     });
 

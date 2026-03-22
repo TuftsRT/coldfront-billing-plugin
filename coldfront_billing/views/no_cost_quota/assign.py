@@ -19,7 +19,7 @@ from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
-from coldfront_billing.views.no_cost_quota.common import remaining_quota
+from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
 class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
@@ -32,7 +32,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             messages.error(request, 'Please select a No Cost Quota first.')
             return redirect('manage_no_cost_quota')
         self.quota = get_object_or_404(
-            remaining_quota,
+            quota_with_remaining,
             pk=selected_quota,
         )
         if not request.user.is_superuser and self.quota.user_id != request.user.id:
@@ -53,7 +53,6 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
             resources__requires_payment=True,
             resources__resourceattribute__resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME,
             resources__resourceattribute__value=quota_type,
-            status__name='Active',
             project__in=Project.objects.filter(
                 Q(pi=quota_owner)
                 | Q(
@@ -118,7 +117,6 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                 {
                     'allocation': allocation,
                     'resource_name': first_resource.name if first_resource else '-',
-                    'status_name': allocation.status.name,
                     'quota_amount': allocation_size or '-',
                     'other_applications': f'{other_total_quota:g} TB',
                     'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
@@ -126,6 +124,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                     'max_possible': max_possible,
                     'minimum_increment': self.quota.minimum_increment,
                     'allotment_id': user_allotment or '',
+                    'inactive': allocation.status.name != 'Active',
                 }
             )
 
