@@ -14,7 +14,8 @@ Assign No-Cost Quota
     Assign a portion of {% if request.user.is_superuser %}the selected user's{% else %}your{% endif %}
     <strong>{{ quota.quota_type }}</strong>
     quota ({{ quota_remaining|floatformat:-2 }} {{ quota.units }} remaining)
-    to an allocation. Select an allocation to create a new allotment.
+    to an allocation.
+    <br>Select an allocation to create a new allotment or update/delete an existing one.
 </p>
 
 <strong>Eligible Allocations: {{ allocation_list|length }}</strong>
@@ -40,7 +41,7 @@ Assign No-Cost Quota
         <tbody>
         {% for row in allocations %}
         {% with allocation=row.allocation %}
-        <tr>
+        <tr class="{% if row.inactive %}table-secondary{% endif %}">
             <td><a href="/allocation/{{ allocation.id }}/">{{ allocation.id }}</a></td>
             <td>
                 <a href="{% url 'billing_details' project_id=allocation.project_id %}">
@@ -48,7 +49,11 @@ Assign No-Cost Quota
             </td>
             <td>{{ allocation.project.pi.username }}</td>
             <td>{{ row.resource_name }}</td>
-            <td>{{ row.status_name }}</td>
+            <td>
+                <span {% if allocation.status.name != "Active" %} class="text-danger" {% endif %}>
+                    {{ allocation.status.name }}
+                </span>
+            </td>
             <td>{{ row.quota_amount }}</td>
             <td>{{ quota.quota_type }}</td>
             <td>{{ row.other_applications }}</td>
@@ -63,6 +68,7 @@ Assign No-Cost Quota
                         data-max-amount="{{ row.max_possible|floatformat:-2 }}"
                         data-increment="{{ row.minimum_increment|floatformat:-2 }}"
                         data-allotment-id="{{ row.allotment_id }}"
+                        data-inactive="{{ row.inactive }}"
                         title="Assign quota">
                     <i class="fas fa-arrows-alt-h" aria-hidden="true"></i>
                 </button>
@@ -124,6 +130,7 @@ Assign No-Cost Quota
                     <button type="submit"
                             class="btn btn-primary"
                             name="action"
+                            id="assignQuotaButton"
                             value="assign">
                         Assign
                     </button>
