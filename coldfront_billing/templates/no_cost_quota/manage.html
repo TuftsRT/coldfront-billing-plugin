@@ -10,6 +10,7 @@ Manage No-Cost Quotas
 {% block content %}
 <h2>Manage No-Cost Quotas</h2>
 <hr>
+
 {% if expand_accordion == "show" or quota_list %}
 <div class="mb-3" id="accordion">
     <div class="card">
@@ -51,11 +52,7 @@ Manage No-Cost Quotas
 
 {% if quota_list %}
 <form method="get" action="{% url 'assign_no_cost_quota' %}">
-    {% for key, value in request.GET.lists %}
-        {% for v in value %}
-            <input type="hidden" name="{{ key }}" value="{{ v }}">
-        {% endfor %}
-    {% endfor %}
+    <input type="hidden" name="back" value="{{ return_params }}">
     <div class="table-responsive">
         <table class="table table-sm">
             <thead>
@@ -63,28 +60,58 @@ Manage No-Cost Quotas
                 <th scope="col"></th>
                 <th scope="col" class="text-nowrap">
                     Owner
-                    <a href="?order_by=owner&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Owner asc</span></a>
-                    <a href="?order_by=owner&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Owner desc</span></a>
+                    <a href="?order_by=owner&direction=asc&{{filter_parameters}}">
+                        <i class="fas fa-sort-up" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Owner asc</span>
+                    </a>
+                    <a href="?order_by=owner&direction=des&{{filter_parameters}}">
+                        <i class="fas fa-sort-down" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Owner desc</span>
+                    </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Quota type
-                    <a href="?order_by=quota_type&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Quota type asc</span></a>
-                    <a href="?order_by=quota_type&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Quota type desc</span></a>
+                    <a href="?order_by=quota_type&direction=asc&{{filter_parameters}}">
+                        <i class="fas fa-sort-up" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Quota type asc</span>
+                    </a>
+                    <a href="?order_by=quota_type&direction=des&{{filter_parameters}}">
+                        <i class="fas fa-sort-down" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Quota type desc</span>
+                    </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Description
-                    <a href="?order_by=description&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Description asc</span></a>
-                    <a href="?order_by=description&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Description desc</span></a>
+                    <a href="?order_by=description&direction=asc&{{filter_parameters}}">
+                        <i class="fas fa-sort-up" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Description asc</span>
+                    </a>
+                    <a href="?order_by=description&direction=des&{{filter_parameters}}">
+                        <i class="fas fa-sort-down" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Description desc</span>
+                    </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Total amount
-                    <a href="?order_by=amount&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Total amount asc</span></a>
-                    <a href="?order_by=amount&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Total amount desc</span></a>
+                    <a href="?order_by=amount&direction=asc&{{filter_parameters}}">
+                        <i class="fas fa-sort-up" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Total amount asc</span>
+                    </a>
+                    <a href="?order_by=amount&direction=des&{{filter_parameters}}">
+                        <i class="fas fa-sort-down" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Total amount desc</span>
+                    </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Remaining amount
-                    <a href="?order_by=remaining&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Remaining amount asc</span></a>
-                    <a href="?order_by=remaining&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Remaining amount desc</span></a>
+                    <a href="?order_by=remaining&direction=asc&{{filter_parameters}}">
+                        <i class="fas fa-sort-up" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Remaining amount asc</span>
+                    </a>
+                    <a href="?order_by=remaining&direction=des&{{filter_parameters}}">
+                        <i class="fas fa-sort-down" aria-hidden="true"></i>
+                        <span class="sr-only">Sort Remaining amount desc</span>
+                    </a>
                 </th>
             </tr>
             </thead>

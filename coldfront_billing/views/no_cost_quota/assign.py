@@ -32,9 +32,18 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
     def filtered_allocations(self) -> QuerySet[Allocation]:
         search_form = AllocationSearchForm(self.request.GET)
         allocations = self.get_queryset()
-        if search_form.is_valid() and (project := search_form.cleaned_data.get('project')):
-            project_lower = project.lower()
-            allocations = [a for a in allocations if project_lower in (a.project.title or '').lower()]
+        if search_form.is_valid():
+            if project := search_form.cleaned_data.get('project'):
+                allocations = [a for a in allocations if project.lower() in (a.project.title or '').lower()]
+
+            status = search_form.cleaned_data.get('status')
+            match status:
+                case 'active':
+                    allocations = [a for a in allocations if a.status.name == 'Active']
+                case 'inactive':
+                    allocations = [a for a in allocations if a.status.name != 'Active']
+                case _:
+                    pass
 
         return allocations
 

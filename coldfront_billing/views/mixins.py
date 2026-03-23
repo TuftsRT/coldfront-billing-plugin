@@ -98,6 +98,7 @@ class ListViewStateMixin(ABC):
     request: HttpRequest
     paginate_by = PAGINATE_BY
     db_order_map = {}
+    filter_params_exclude = ((),)
 
     @property
     def request_get(self):
@@ -108,7 +109,7 @@ class ListViewStateMixin(ABC):
         all_params.pop('page', None)
 
         filter_params = all_params.copy()
-        for key in ('order_by', 'direction'):
+        for key in ('order_by', 'direction') + self.filter_params_exclude:
             filter_params.pop(key, None)
 
         return {
@@ -122,11 +123,13 @@ class ListViewStateMixin(ABC):
         paginator = Paginator(allocations, self.paginate_by)
         page_number = self.request_get.get('page', 1)
         page_obj = paginator.get_page(page_number)
+        is_paginated = page_obj.has_other_pages()
 
         return self.get_pagination_params() | {
             'allocations': page_obj.object_list,
             'page_obj': page_obj,
-            'is_paginated': page_obj.has_other_pages(),
+            'is_paginated': is_paginated,
+            'allocations_count': paginator.count if is_paginated else len(allocations),
         }
 
     def get_ordering(self) -> str:
@@ -213,7 +216,7 @@ class NoCostQuotaStateMixin(ListViewStateMixin):
                     return (row.get('resource_name') or '').lower()
                 case 'amount':
                     v = row.get('quota_amount', 0.0)
-                    return float(v)
+                    return float(v) if v != '-' else 0.0
                 case _:
                     return allocation.id
 
@@ -221,6 +224,8 @@ class NoCostQuotaStateMixin(ListViewStateMixin):
 
 
 class NoCostQuotaAssignViewMixin(NoCostQuotaStateMixin):
+    filter_params_exclude = ('selected_quota', 'back')
+
     def get_pagination_params(self) -> dict:
         pagination_params = super().get_pagination_params()
         # Exclude selected_quota from return_params

@@ -38,7 +38,10 @@ class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaStateMixin, ListView
             if quota.used_inactive != 0:
                 quota.has_inactive = True
 
-        return context | self.get_pagination_params()
-        | {
-            'search_form': NoCostQuotaSearchForm(self.request.GET),
-        }
+        return (
+            context
+            | self.get_pagination_params()
+            | {
+                'search_form': NoCostQuotaSearchForm(self.request.GET),
+            }
+        )
