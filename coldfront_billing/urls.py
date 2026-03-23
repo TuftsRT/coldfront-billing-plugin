@@ -4,8 +4,8 @@ from . import views
 from .views.allocation import UpdateAllocationDetailsView
 from .views.no_cost_quota import (
     AssignNoCostQuotasView,
-    CreateNoCostQuotaAllotmentView,
     ManageNoCostQuotasView,
+    NoCostQuotaAllotmentView,
 )
 
 urlpatterns = [
@@ -36,8 +36,8 @@ urlpatterns = [
         name='assign_no_cost_quota',
     ),
     path(
-        'no-cost-quota/allotment/create/',
-        CreateNoCostQuotaAllotmentView.as_view(),
-        name='create_no_cost_quota_allotment',
+        'no-cost-quota/allotment/',
+        NoCostQuotaAllotmentView.as_view(),
+        name='no_cost_quota_allotment',
     ),
 ]
