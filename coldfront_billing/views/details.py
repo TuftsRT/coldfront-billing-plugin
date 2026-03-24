@@ -10,6 +10,7 @@ from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
 
+from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.filters import get_allocation_ordering
 
 from .mixins import PAGINATE_BY, BillingAllocationPrefetchMixin
@@ -31,7 +32,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
         return (
             project.projectuser_set.filter(
                 user=user,
-                role__name='Billing',
+                role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
                 status__name='Active',
             ).exists()
             or project.pi_id == user.id
@@ -68,6 +69,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
             .prefetch_related(
                 self.get_quota_attr_prefetch(),
                 self.get_paid_storage_resources_prefetch(storage_type.id),
+                self.get_no_cost_quota_allotments_prefetch(),
             )
         )
         allocations = self.create_billing_allocations([a for a in allocation_objs])

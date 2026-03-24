@@ -1,8 +1,11 @@
 from coldfront.core.project.models import Project
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from .schemas import CostCenterSchema
+from coldfront_billing.schemas import CostCenterSchema
+
+User = get_user_model()
 
 
 class CostCenter(models.Model):

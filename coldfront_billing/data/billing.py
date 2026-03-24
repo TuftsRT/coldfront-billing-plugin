@@ -1,12 +1,16 @@
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
-from coldfront_billing.constants import COST_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
+from coldfront_billing.constants import (
+    COST_ATTRIBUTE_NAME,
+    NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
+    QUOTA_ATTRIBUTE_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME,
+)
+from coldfront_billing.utils import first_or_none
 
-
-def _first_or_none(sequence):
-    return sequence[0] if sequence else None
+from .quota import BillingQuota
 
 
 def _parse_float(value, default):
@@ -23,10 +27,13 @@ class BillingAllocation:
     quota_tb: int | float
     cost_per_tb: int | float
     extra: Dict[str, Any] = field(default_factory=dict)
+    no_cost_quotas: List[BillingQuota] = field(default_factory=list)
 
     @property
     def total_cost(self) -> int:
-        return int(math.ceil(self.quota_tb)) * int(round(self.cost_per_tb))
+        total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
+        final_quota = max(self.quota_tb - total_no_cost_quota, 0)
+        return int(math.ceil(final_quota)) * int(round(self.cost_per_tb))
 
     @classmethod
     def parse(
@@ -42,7 +49,7 @@ class BillingAllocation:
         else:
             quota_tb = default_quota
 
-        storage_resource = _first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
+        storage_resource = first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
 
         if storage_resource and (cost_attrs := getattr(storage_resource, COST_ATTRIBUTE_NAME, None)):
             float_cost = _parse_float(cost_attrs[0].value, default_cost)
@@ -65,6 +72,11 @@ class BillingAllocation:
         storage_resources = getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, [])
         resource_name = storage_resources[0].name if storage_resources else '-'
 
+        allotments = getattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, [])
+        no_cost_quotas = [
+            BillingQuota.create(allotment.amount, allotment.no_cost_quota.units) for allotment in allotments
+        ]
+
         return cls(
             allocation_id=allocation.id,
             project_id=allocation.project_id,
@@ -76,34 +88,5 @@ class BillingAllocation:
                 'status': allocation.status.name,
                 'end_date': getattr(allocation, 'end_date', None) or '-',
             },
+            no_cost_quotas=no_cost_quotas,
         )
-
-
-@dataclass
-class ApiErrorResponseDTO:
-    success: bool = False
-    error: Optional[str] = None
-    errors: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {'success': self.success}
-        if self.error:
-            result['error'] = self.error
-        if self.errors:
-            result['errors'] = self.errors
-        return result
-
-
-@dataclass
-class ApiSuccessResponseDTO:
-    success: bool = True
-    message: Optional[str] = None
-    assignments: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {'success': self.success}
-        if self.message:
-            result['message'] = self.message
-        if self.assignments:
-            result['assignments'] = self.assignments
-        return result

@@ -55,6 +55,22 @@ class TestCostCenterAssignmentUpdateView:
         assert response_data['success'] is False
         assert 'You do not have permission' in response_data['error']
 
+    def test_regular_user_with_manager_role_can_update(self, client, user, project_with_manager_user):
+        """Test that users with Manager role can update cost center assignments."""
+        from coldfront_billing.models import CostCenter
+
+        CostCenter.objects.create(dept_id='DEPT_MGR')
+
+        assignments_data = {'DEPT_MGR': 100}
+
+        response = self._post_cost_center_assignment(client, user, project_with_manager_user.id, assignments_data)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data['success'] is True
+        assert 'Cost center assignment updated successfully' in response_data['message']
+        assert response_data['assignments'] == assignments_data
+
     def test_update_existing_cost_center_assignment_success(self, client, superuser, project):
         """Test updating an existing cost center assignment."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
@@ -172,6 +188,29 @@ class TestCostCenterAssignmentUpdateView:
 
         CostCenter.objects.create(dept_id='DEPT013')
         assignments_data = {'DEPT013': 100}
+
+        response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
+
+        assert response.status_code == 403
+        response_data = response.json()
+        assert response_data['success'] is False
+        assert 'You do not have permission' in response_data['error']
+
+    def test_inactive_manager_user_forbidden(self, client, user, project, manager_role, project_user_status_inactive):
+        """Test that users with Inactive Manager role cannot update cost center assignments."""
+        from coldfront.core.project.models import ProjectUser
+
+        from coldfront_billing.models import CostCenter
+
+        ProjectUser.objects.create(
+            project=project,
+            user=user,
+            role=manager_role,
+            status=project_user_status_inactive,
+        )
+
+        CostCenter.objects.create(dept_id='DEPT_MGR_INACTIVE')
+        assignments_data = {'DEPT_MGR_INACTIVE': 100}
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
 

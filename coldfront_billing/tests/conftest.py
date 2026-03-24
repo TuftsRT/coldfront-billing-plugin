@@ -31,7 +31,13 @@ from django.contrib.auth.models import User
 from django.http import HttpRequest
 from django.test import override_settings
 
-from coldfront_billing.constants import COST_ATTR_NAME, QUOTA_ATTR_NAME
+from coldfront_billing.constants import (
+    BILLING_ROLE_NAME,
+    COST_ATTR_NAME,
+    MANAGER_ROLE_NAME,
+    NO_COST_QUOTA_TYPE_ATTR_NAME,
+    QUOTA_ATTR_NAME,
+)
 
 
 @pytest.fixture
@@ -87,16 +93,27 @@ def project_status_new(db) -> ProjectStatusChoice:
     return ProjectStatusChoice.objects.get_or_create(name='New')[0]
 
 
+def get_or_create_project_role(role_name: str) -> ProjectUserRoleChoice:
+    """Get or create a project user role by name."""
+    return ProjectUserRoleChoice.objects.get_or_create(name=role_name)[0]
+
+
 @pytest.fixture
 def billing_role_choice(db) -> ProjectUserRoleChoice:
     """Create the Billing role."""
-    return ProjectUserRoleChoice.objects.get_or_create(name='Billing')[0]
+    return get_or_create_project_role(BILLING_ROLE_NAME)
 
 
 @pytest.fixture
 def billing_role(billing_role_choice: ProjectUserRoleChoice) -> ProjectUserRoleChoice:
     """Alias for billing_role_choice for backward compatibility."""
     return billing_role_choice
+
+
+@pytest.fixture
+def manager_role(db) -> ProjectUserRoleChoice:
+    """Create the Manager role."""
+    return get_or_create_project_role(MANAGER_ROLE_NAME)
 
 
 @pytest.fixture
@@ -135,6 +152,35 @@ def project(pi_user: User, project_status_active: ProjectStatusChoice, field_of_
     )
 
 
+def _create_project_with_role_user(
+    project: Project,
+    user: User,
+    role: ProjectUserRoleChoice,
+    project_user_status_active: ProjectUserStatusChoice,
+    storage_resource_type: ResourceType,
+    allocation_status_active: AllocationStatusChoice,
+    cost_attribute_type: ResourceAttributeType,
+    quota_attribute_type: AllocationAttributeType,
+) -> Project:
+    """Create a project with a user having the given role and Storage allocation."""
+    ProjectUser.objects.create(
+        project=project,
+        user=user,
+        role=role,
+        status=project_user_status_active,
+    )
+
+    add_storage_allocation_to_project(
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    )
+
+    return project
+
+
 @pytest.fixture
 def project_with_billing_user(
     user: User,
@@ -148,22 +194,41 @@ def project_with_billing_user(
     db,
 ) -> Project:
     """Create a project with a user having Billing role and Storage allocation."""
-    ProjectUser.objects.create(
-        project=project,
-        user=user,
-        role=billing_role,
-        status=project_user_status_active,
-    )
-
-    add_storage_allocation_to_project(
+    return _create_project_with_role_user(
         project,
+        user,
+        billing_role,
+        project_user_status_active,
         storage_resource_type,
         allocation_status_active,
         cost_attribute_type,
         quota_attribute_type,
     )
 
-    return project
+
+@pytest.fixture
+def project_with_manager_user(
+    user: User,
+    project: Project,
+    manager_role: ProjectUserRoleChoice,
+    project_user_status_active: ProjectUserStatusChoice,
+    storage_resource_type: ResourceType,
+    allocation_status_active: AllocationStatusChoice,
+    cost_attribute_type: ResourceAttributeType,
+    quota_attribute_type: AllocationAttributeType,
+    db,
+) -> Project:
+    """Create a project with a user having Manager role and Storage allocation."""
+    return _create_project_with_role_user(
+        project,
+        user,
+        manager_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    )
 
 
 # ============================================================================
@@ -229,6 +294,31 @@ def quota_attribute_type(db) -> AllocationAttributeType:
     )[0]
 
 
+@pytest.fixture
+def no_cost_quota_type_attribute_type(db) -> ResourceAttributeType:
+    """Create a no_cost_quota_type attribute type for resources."""
+    text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name='Text')
+    return ResourceAttributeType.objects.get_or_create(
+        name=NO_COST_QUOTA_TYPE_ATTR_NAME,
+        defaults={'attribute_type': text_attr_type},
+    )[0]
+
+
+@pytest.fixture
+def no_cost_quota(user, db):
+    """Create a NoCostQuota for a user."""
+    from coldfront_billing.models import NoCostQuota
+
+    return NoCostQuota.objects.create(
+        user=user,
+        quota_type='tier_1',
+        description='Tier 1 storage',
+        amount=100.0,
+        units='TB',
+        minimum_increment=1.0,  # Use 1.0 to avoid float modulo issues in tests
+    )
+
+
 # ============================================================================
 # Storage Allocation Helpers & Fixtures
 # ============================================================================
@@ -272,6 +362,45 @@ def add_storage_allocation_to_project(
             value=quota_value,
         )
     return allocation, storage_resource
+
+
+def add_no_cost_quota_storage_allocation(
+    project: Project,
+    storage_resource_type: ResourceType,
+    allocation_status_active: AllocationStatusChoice,
+    cost_attribute_type: ResourceAttributeType,
+    quota_attribute_type: AllocationAttributeType,
+    no_cost_quota_type_attribute_type: ResourceAttributeType,
+    quota_type_value: str = 'tier_1',
+    resource_name: str = 'No-Cost Storage',
+    quota_value: str = '5',
+) -> tuple:
+    """Add a storage allocation with no_cost_quota_type attribute. Returns (allocation, storage_resource)."""
+    storage_resource = Resource.objects.create(
+        name=resource_name,
+        resource_type=storage_resource_type,
+        requires_payment=True,
+    )
+    ResourceAttribute.objects.create(
+        resource=storage_resource,
+        resource_attribute_type=cost_attribute_type,
+        value='100',
+    )
+    ResourceAttribute.objects.create(
+        resource=storage_resource,
+        resource_attribute_type=no_cost_quota_type_attribute_type,
+        value=quota_type_value,
+    )
+    return add_storage_allocation_to_project(
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        storage_resource=storage_resource,
+        resource_name=resource_name,
+        quota_value=quota_value,
+    )
 
 
 @pytest.fixture
@@ -336,11 +465,11 @@ def create_pi_user(username_suffix: str = '') -> User:
     return User.objects.create_user(username=username, email=email, password='pass')
 
 
-def create_project_with_billing_user(
+def create_project_with_role_user(
     user: User,
     pi_user: User,
     project_status: ProjectStatusChoice,
-    billing_role: ProjectUserRoleChoice,
+    role: ProjectUserRoleChoice,
     project_user_status: ProjectUserStatusChoice,
     title: str = 'Test Project',
     with_allocation: bool = False,
@@ -350,7 +479,7 @@ def create_project_with_billing_user(
     quota_attribute_type: Optional[AllocationAttributeType] = None,
     field_of_science: Optional[FieldOfScience] = None,
 ) -> Project:
-    """Helper function to create a project with a user having Billing role."""
+    """Helper function to create a project with a user having the given role (Billing or Manager)."""
     # Get or create field_of_science if not provided
     if field_of_science is None:
         field_of_science = FieldOfScience.objects.get_or_create(
@@ -366,7 +495,7 @@ def create_project_with_billing_user(
     ProjectUser.objects.create(
         project=project,
         user=user,
-        role=billing_role,
+        role=role,
         status=project_user_status,
     )
 
