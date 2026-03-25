@@ -5,25 +5,21 @@ from coldfront.core.project.models import Project
 from coldfront.core.resource.models import ResourceType
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
-from coldfront_billing.filters import get_allocation_ordering
-
-from .mixins import PAGINATE_BY, BillingAllocationPrefetchMixin
+from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
 
 
-class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, DetailView):
+class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingListViewStateMixin, DetailView):
     """Project billing details view showing all allocations for a project."""
 
     model = Project
     template_name = 'billing/billing_details.html'
     context_object_name = 'project'
     pk_url_kwarg = 'project_id'
-    paginate_by = PAGINATE_BY
 
     def check_permission(self, project: Project) -> bool:
         user = self.request.user
@@ -73,22 +69,13 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Det
             )
         )
         allocations = self.create_billing_allocations([a for a in allocation_objs])
-        key, reverse = get_allocation_ordering(self.request.GET)
+        key, reverse = self.get_object_ordering()
         allocations = sorted(allocations, key=key, reverse=reverse)
-
-        request_get = self.request.GET
-
-        paginator = Paginator(allocations, self.paginate_by)
-        page_number = request_get.get('page', 1)
-        page_obj = paginator.get_page(page_number)
 
         return (
             context
-            | self.get_view_params(request_get)
+            | self.get_extended_pagination_params(allocations)
             | {
                 'total_cost': sum(a.total_cost for a in allocations),
-                'allocations': page_obj.object_list,
-                'page_obj': page_obj,
-                'is_paginated': page_obj.has_other_pages(),
             }
         )

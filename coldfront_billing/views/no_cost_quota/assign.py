@@ -16,16 +16,36 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import NoCostQuotaAllocation
+from coldfront_billing.forms import AllocationSearchForm
 from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.utils import first_or_none
-from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin
+from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin, PrefetchPaginationMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
-class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin, ListView):
+class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCostQuotaAssignViewMixin, ListView):
     template_name = 'no_cost_quota/assign.html'
     context_object_name = 'allocation_list'
     model = Allocation
+
+    @property
+    def filtered_allocations(self) -> QuerySet[Allocation]:
+        search_form = AllocationSearchForm(self.request.GET)
+        allocations = self.get_queryset()
+        if search_form.is_valid():
+            if project := search_form.cleaned_data.get('project'):
+                allocations = [a for a in allocations if project.lower() in (a.project.title or '').lower()]
+
+            status = search_form.cleaned_data.get('status')
+            match status:
+                case 'active':
+                    allocations = [a for a in allocations if a.status.name == 'Active']
+                case 'inactive':
+                    allocations = [a for a in allocations if a.status.name != 'Active']
+                case _:
+                    pass
+
+        return allocations
 
     def get(self, request, *args, **kwargs):
         if not (selected_quota := request.GET.get('selected_quota')):
@@ -90,9 +110,10 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
         quota_remaining = round(self.quota.remaining, 2)
         quota_units = self.quota.units
 
+        allocation_objs = list(self.filtered_allocations)
         allocations = []
 
-        for allocation in context.get('allocation_list', []):
+        for allocation in allocation_objs:
             all_allotments = getattr(allocation, 'all_allotments', ())
 
             # Get quota attribute from allocation
@@ -133,8 +154,15 @@ class AssignNoCostQuotasView(LoginRequiredMixin, BillingAllocationPrefetchMixin,
                 }
             )
 
-        return context | {
-            'quota': self.quota,
-            'quota_remaining': quota_remaining,
-            'allocations': allocations,
-        }
+        key_func, reverse = self.get_object_ordering()
+        allocations = sorted(allocations, key=key_func, reverse=reverse)
+
+        return (
+            context
+            | {
+                'quota': self.quota,
+                'quota_remaining': quota_remaining,
+                'search_form': AllocationSearchForm(self.request.GET),
+            }
+            | self.get_extended_pagination_params(allocations)
+        )

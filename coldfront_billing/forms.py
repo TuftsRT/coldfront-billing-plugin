@@ -42,6 +42,34 @@ class BillingSearchForm(forms.Form):
     )
 
 
+class NoCostQuotaSearchForm(forms.Form):
+    USERNAME: ClassVar[str] = 'Owner name'
+
+    username = forms.CharField(label=USERNAME, max_length=100, required=False)
+
+
+class AllocationSearchForm(forms.Form):
+    PROJECT: ClassVar[str] = 'Project name'
+
+    STATUS_ALL = ''
+    STATUS_ACTIVE = 'active'
+    STATUS_INACTIVE = 'inactive'
+
+    STATUS_CHOICES = [
+        (STATUS_ALL, 'All allocations'),
+        (STATUS_ACTIVE, 'Only active allocations'),
+        (STATUS_INACTIVE, 'Only not active allocations'),
+    ]
+
+    project = forms.CharField(label=PROJECT, max_length=100, required=False)
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        required=False,
+        widget=forms.RadioSelect,
+        label='Allocation status',
+    )
+
+
 class CostCenterAssignmentForm(forms.Form):
     """Form for handling cost center assignment from modal via JSON."""
 

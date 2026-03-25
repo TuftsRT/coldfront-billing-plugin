@@ -26,7 +26,7 @@ Billing
             <div class="card-body">
                 <form id="filter_form" method="GET"
                       action="{% url 'billing_index' %}" autocomplete="off">
-                    {{ billing_search_form|crispy }}
+                    {{ search_form|crispy }}
                     <input type="submit" class="btn btn-primary" value="Search">
                     <a href="{% url 'billing_index' %}" class="btn btn-secondary">Reset</a>
                 </form>
