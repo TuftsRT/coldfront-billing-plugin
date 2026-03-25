@@ -13,12 +13,10 @@ from coldfront_billing.constants import (
     BILLING_ROLE_NAME,
     MANAGER_ROLE_NAME,
     NO_COST_QUOTA_TYPE_ATTR_NAME,
-    QUOTA_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.forms import AllocationSearchForm
 from coldfront_billing.models import NoCostQuotaAllotment
-from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin, PrefetchPaginationMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
@@ -99,6 +97,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
             allocations.select_related('project', 'project__pi', 'status')
             .prefetch_related(
                 'resources',
+                self.get_paid_storage_resources_prefetch(storage_type.id),
                 self.get_quota_attr_prefetch(),
                 allotments_prefetch,
             )
@@ -116,21 +115,13 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
         for allocation in allocation_objs:
             all_allotments = getattr(allocation, 'all_allotments', ())
 
-            # Get quota attribute from allocation
-            quota_attr_tb = first_or_none(getattr(allocation, QUOTA_ATTRIBUTE_NAME, None))
-            # Check if allocation has quota_in_terabyte set
-            try:
-                allocation_size = float(quota_attr_tb.value) if quota_attr_tb else None
-            except (TypeError, ValueError):
-                allocation_size = None
+            ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation)
 
             user_allotment = next((a for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
             if allocation.status.name != 'Active' and (user_allotment is None or user_allotment.amount == 0):
                 continue  # skip inactive allocations without user allotment
 
             user_allotment_pk = user_allotment.pk if user_allotment else None
-
-            ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation_size, all_allotments)
 
             other_total_quota = ncq_allocation.other_allotments_amount
             max_possible = ncq_allocation.max_possible_allocation(
@@ -143,7 +134,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
                 {
                     'allocation': allocation,
                     'resource_name': first_resource.name if first_resource else '-',
-                    'quota_amount': allocation_size or '-',
+                    'quota_amount': ncq_allocation.allocation_amount or '-',
                     'other_applications': f'{other_total_quota:g} TB',
                     'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
                     'existing_amount': f'{user_amount:g}' if user_amount else '',

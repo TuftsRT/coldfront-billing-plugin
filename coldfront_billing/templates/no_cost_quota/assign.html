@@ -46,6 +46,14 @@ Assign No-Cost Quota
     to an allocation.
     <br>Select an allocation to create a new allotment or update/delete an existing one.
 </p>
+<p class="mb-3">
+    <button type="button" class="btn btn-outline-primary" id="ncqAutoAssignOpen"
+            data-toggle="modal" data-target="#autoAssignQuotaModal"
+            data-quota-id="{{ quota.pk }}">
+        <i class="fas fa-magic" aria-hidden="true"></i> Auto-assign
+    </button>
+    <span class="text-muted small ml-2">Suggest optimal splits across eligible allocations (preview in a modal).</span>
+</p>
 
 <strong>Eligible Allocations: {{ allocations_count }}</strong>
 {% if allocations %}
@@ -207,6 +215,46 @@ Assign No-Cost Quota
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="autoAssignQuotaModal" tabindex="-1" role="dialog"
+     aria-labelledby="autoAssignQuotaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="autoAssignQuotaModalLabel">Auto-assign preview</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="ncqAutoAssignStatus" class="text-muted small mb-2"></p>
+                <div id="ncqAutoAssignError" class="alert alert-danger d-none" role="alert"></div>
+                <div id="ncqAutoAssignHint" class="alert alert-info small">
+                    Proposals are produced by <code>propose_auto_assignments</code> in
+                    <code>coldfront_billing/no_cost_quota_auto_assign.py</code>. The default returns none until you add your optimizer.
+                </div>
+                <div class="table-responsive d-none" id="ncqAutoAssignTableWrap">
+                    <table class="table table-sm">
+                        <thead>
+                        <tr>
+                            <th>Allocation</th>
+                            <th class="text-right">Amount</th>
+                            <th class="text-nowrap">Max</th>
+                        </tr>
+                        </thead>
+                        <tbody id="ncqAutoAssignTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="ncqAutoAssignAccept" disabled>
+                    Accept and apply
+                </button>
+            </div>
         </div>
     </div>
 </div>
