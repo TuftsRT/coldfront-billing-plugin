@@ -4,8 +4,8 @@ from .cost import CostCenterAssignmentUpdateView
 from .no_cost_quota import (
     AssignNoCostQuotasView,
     AutoAssignAllotmentsView,
+    ManageAllotmentView,
     ManageNoCostQuotasView,
-    NoCostQuotaAllotmentView,
 )
 
 __all__ = [
@@ -14,7 +14,7 @@ __all__ = [
     'BillingView',
     'BillingDetailsView',
     'CostCenterAssignmentUpdateView',
-    'NoCostQuotaAllotmentView',
+    'ManageAllotmentView',
     'ManageNoCostQuotasView',
     'UpdateAllocationDetailsView',
 ]

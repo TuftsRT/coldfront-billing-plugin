@@ -12,7 +12,7 @@ class TestNoCostQuotaEngine:
     @staticmethod
     def _raw_allocation(
         allocation_id: int,
-        quota_tb: float,
+        quota_tb: float | None,
         cost: str,
         *,
         allotments: tuple = (),
@@ -37,6 +37,13 @@ class TestNoCostQuotaEngine:
     def test_auto_assign_empty_returns_empty_list(self):
         engine = NoCostQuotaEngine(1, [])
         assert engine.auto_assign(10.0, 'TB', 1.0) == []
+
+    def test_auto_assign_no_amount_returns_empty_list(self):
+        a = self._raw_allocation(1, None, '50')
+        b = self._raw_allocation(2, None, '200')
+        engine = NoCostQuotaEngine(1, [a, b])
+        pairs = engine.auto_assign(15.0, 'TB', 1.0)
+        assert pairs == []
 
     def test_auto_assign_prioritizes_higher_cost_per_tb_first(self):
         low_cost = self._raw_allocation(1, 10.0, '50')

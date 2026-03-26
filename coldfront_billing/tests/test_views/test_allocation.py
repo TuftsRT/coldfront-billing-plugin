@@ -4,7 +4,7 @@ import pytest
 from django.test import override_settings
 from django.urls import reverse
 
-from .conftest import add_storage_allocation_to_project
+from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 
 
 @pytest.mark.django_db

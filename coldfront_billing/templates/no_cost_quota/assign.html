@@ -171,7 +171,7 @@ Assign No-Cost Quota
      aria-labelledby="assignQuotaModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form method="post" action="{% url 'no_cost_quota_allotment' %}" id="assignQuotaForm"
+            <form method="post" action="{% url 'no_cost_quota_manage_allotment' %}" id="assignQuotaForm"
                   data-units="{{ quota.units }}">
                 {% csrf_token %}
                 <input type="hidden" name="quota_id" value="{{ quota.pk }}">

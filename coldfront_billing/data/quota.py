@@ -144,7 +144,10 @@ class NoCostQuotaEngine:
         for allocation in sorted(self.allocations, key=lambda x: x.cost_per_tb, reverse=True):
             if remaining_quota == 0:
                 break
-            if allocation.allocation_amount == allocation.user_amount + allocation.other_allotments_amount:
+            if (
+                allocation.allocation_amount == allocation.user_amount + allocation.other_allotments_amount
+                or allocation.allocation_amount is None
+            ):
                 continue
             max_possible = allocation.max_possible_allocation(remaining_quota, quota_unit, min_increment)
             if max_possible > 0:
@@ -152,3 +155,36 @@ class NoCostQuotaEngine:
                 allocation_assignements.append(AllocationAssignement(allocation.allocation_id, max_possible))
 
         return allocation_assignements
+
+
+def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list[AllocationAssignement]:
+    allocation_ids = [a.strip() for a in allocation_ids]
+    amount_strs = [a.strip() for a in amount_strs]
+    if not allocation_ids:
+        raise Exception('No allocations provided')
+
+    if not amount_strs:
+        raise Exception('No amounts provided')
+
+    if len(allocation_ids) != len(amount_strs):
+        raise Exception('Invalid request: allocation and amount counts do not match.')
+
+    assignnements = []
+
+    for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
+        if not allocation_id_str:
+            raise Exception('Invalid request: missing allocation.')
+
+        try:
+            allocation_id = int(allocation_id_str)
+        except (ValueError, TypeError):
+            raise Exception('The allocation id is invalid.')
+
+        try:
+            amount = float(str(amount_str).replace(',', '.'))
+        except (ValueError, TypeError):
+            raise Exception('The amount of allocation is invalid.')
+
+        assignnements.append(AllocationAssignement(allocation_id, amount))
+
+    return assignnements

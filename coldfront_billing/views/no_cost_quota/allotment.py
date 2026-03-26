@@ -5,43 +5,11 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
 
+from coldfront_billing.data import parse_allocations
 from coldfront_billing.data.quota import AllocationAssignement
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
 REDIRECT = 'manage_no_cost_quota'
-
-
-def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list[AllocationAssignement]:
-    allocation_ids = [a.strip() for a in allocation_ids]
-    amount_strs = [a.strip() for a in amount_strs]
-    if not allocation_ids:
-        raise Exception('No allocations provided')
-
-    if not amount_strs:
-        raise Exception('No amounts provided')
-
-    if len(allocation_ids) != len(amount_strs):
-        raise Exception('Invalid request: allocation and amount counts do not match.')
-
-    assignnements = []
-
-    for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
-        if not allocation_id_str:
-            raise Exception('Invalid request: missing allocation.')
-
-        try:
-            allocation_id = int(allocation_id_str)
-        except (ValueError, TypeError):
-            raise Exception('The allocation id is invalid.')
-
-        try:
-            amount = float(str(amount_str).replace(',', '.'))
-        except (ValueError, TypeError):
-            raise Exception('The amount of allocation is invalid.')
-
-        assignnements.append(AllocationAssignement(allocation_id, amount))
-
-    return assignnements
 
 
 def create_or_update_allotment(allocation_id: int, amount: float, quota) -> str:
@@ -69,7 +37,7 @@ def create_or_update_allotment(allocation_id: int, amount: float, quota) -> str:
     return 'Assigned' if created else 'Updated'
 
 
-class NoCostQuotaAllotmentView(LoginRequiredMixin, View):
+class ManageAllotmentView(LoginRequiredMixin, View):
     """Create or update a NoCostQuotaAllotment and redirect to manage page."""
 
     def post(self, request):
@@ -144,7 +112,7 @@ class AutoAssignAllotmentsView(LoginRequiredMixin, View):
         amount_strs = post.getlist('amount')
 
         try:
-            assignnements = parse_allocations(allocation_ids, amount_strs)
+            assignnements: list[AllocationAssignement] = parse_allocations(allocation_ids, amount_strs)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(assign_url)
