@@ -5,9 +5,68 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
 
+from coldfront_billing.data.quota import AllocationAssignement
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
 REDIRECT = 'manage_no_cost_quota'
+
+
+def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list[AllocationAssignement]:
+    allocation_ids = [a.strip() for a in allocation_ids]
+    amount_strs = [a.strip() for a in amount_strs]
+    if not allocation_ids:
+        raise Exception('No allocations provided')
+
+    if not amount_strs:
+        raise Exception('No amounts provided')
+
+    if len(allocation_ids) != len(amount_strs):
+        raise Exception('Invalid request: allocation and amount counts do not match.')
+
+    assignnements = []
+
+    for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
+        if not allocation_id_str:
+            raise Exception('Invalid request: missing allocation.')
+
+        try:
+            allocation_id = int(allocation_id_str)
+        except (ValueError, TypeError):
+            raise Exception('The allocation id is invalid.')
+
+        try:
+            amount = float(str(amount_str).replace(',', '.'))
+        except (ValueError, TypeError):
+            raise Exception('The amount of allocation is invalid.')
+
+        assignnements.append(AllocationAssignement(allocation_id, amount))
+
+    return assignnements
+
+
+def create_or_update_allotment(allocation_id: int, amount: float, quota) -> str:
+    allocation = get_object_or_404(Allocation, pk=allocation_id)
+
+    allotment, created = NoCostQuotaAllotment.objects.get_or_create(
+        no_cost_quota=quota,
+        allocation=allocation,
+        defaults={'amount': amount},
+    )
+
+    if not created:
+        allotment.amount = amount
+
+    try:
+        allotment.full_clean()
+        allotment.save()
+    except Exception as e:
+        if hasattr(e, 'message_dict'):
+            msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
+        else:
+            msg = str(e)
+        raise Exception(f'Could not save allotment: {msg}')
+
+    return 'Assigned' if created else 'Updated'
 
 
 class NoCostQuotaAllotmentView(LoginRequiredMixin, View):
@@ -51,32 +110,15 @@ class NoCostQuotaAllotmentView(LoginRequiredMixin, View):
             messages.error(request, 'You do not have permission to assign this quota.')
             return redirect(REDIRECT)
 
-        allocation = get_object_or_404(Allocation, pk=allocation_id)
-
-        allotment, created = NoCostQuotaAllotment.objects.get_or_create(
-            no_cost_quota=quota,
-            allocation=allocation,
-            defaults={'amount': amount},
-        )
-
-        if not created:
-            allotment.amount = amount
-
         try:
-            allotment.full_clean()
-            allotment.save()
+            action = create_or_update_allotment(allocation_id, amount, quota)
         except Exception as e:
-            if hasattr(e, 'message_dict'):
-                msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
-            else:
-                msg = str(e)
-            messages.error(request, f'Could not save allotment: {msg}')
+            messages.error(request, str(e))
             return redirect(assign_url)
 
-        action = 'Assigned' if created else 'Updated'
         messages.success(
             request,
-            f'{action} {amount} {quota.units} for allocation {allocation.id}.',
+            f'{action} {amount} {quota.units} for allocation {allocation_id}.',
         )
         return redirect(REDIRECT)
 
@@ -101,50 +143,22 @@ class AutoAssignAllotmentsView(LoginRequiredMixin, View):
         allocation_ids = post.getlist('allocation_id')
         amount_strs = post.getlist('amount')
 
-        if not allocation_ids:
-            messages.error(request, 'No allocations to assign.')
-            return redirect(assign_url)
-
-        if len(allocation_ids) != len(amount_strs):
-            messages.error(request, 'Invalid request: allocation and amount counts do not match.')
+        try:
+            assignnements = parse_allocations(allocation_ids, amount_strs)
+        except Exception as e:
+            messages.error(request, str(e))
             return redirect(assign_url)
 
         total_amount = 0.0
 
-        for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
-            if not allocation_id_str:
-                messages.error(request, 'Invalid request: missing allocation.')
-                return redirect(assign_url)
-
+        for assignment in assignnements:
             try:
-                row_amount = float(str(amount_str).replace(',', '.'))
-            except (ValueError, TypeError):
-                messages.error(request, 'Please enter valid amounts for all allocations.')
-                return redirect(assign_url)
-
-            allocation = get_object_or_404(Allocation, pk=allocation_id_str)
-
-            allotment, created = NoCostQuotaAllotment.objects.get_or_create(
-                no_cost_quota=quota,
-                allocation=allocation,
-                defaults={'amount': row_amount},
-            )
-
-            if not created:
-                allotment.amount = row_amount
-
-            try:
-                allotment.full_clean()
-                allotment.save()
+                create_or_update_allotment(assignment.allocation_id, assignment.amount, quota)
             except Exception as e:
-                if hasattr(e, 'message_dict'):
-                    msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
-                else:
-                    msg = str(e)
-                messages.error(request, f'Could not save allotment: {msg}')
+                messages.error(request, str(e))
                 return redirect(assign_url)
 
-            total_amount += row_amount
+            total_amount += assignment.amount
 
         messages.success(
             request,

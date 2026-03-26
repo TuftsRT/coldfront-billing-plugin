@@ -45,6 +45,8 @@ Assign No-Cost Quota
     quota ({{ quota_remaining|floatformat:-2 }} {{ quota.units }} remaining)
     to an allocation.
     <br>Select an allocation to create a new allotment or update/delete an existing one.
+    <br>Use the auto-assign button to distribute quota among allocations on projects where
+    {% if request.user.is_superuser %}<strong>{{ quota.user.username }}</strong> is{% else %}you are{% endif %} the PI.
 </p>
 
 <strong>Eligible Allocations: {{ allocations_count }}</strong>
@@ -251,7 +253,7 @@ Assign No-Cost Quota
                             {% endfor %}
                         </ul>
                         {% else %}
-                        <p class="mb-0">No allocations have a positive suggested split for the remaining quota.</p>
+                        <p class="mb-0">No allocations are eligible to receive the remaining quota.</p>
                         {% endif %}
                     </div>
                     <div class="table-responsive d-none" id="ncqAutoAssignTableWrap">
