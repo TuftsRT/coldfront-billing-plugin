@@ -34,4 +34,9 @@ urlpatterns = [
         views.NoCostQuotaAllotmentView.as_view(),
         name='no_cost_quota_allotment',
     ),
+    path(
+        'no-cost-quota/allotment/auto/',
+        views.AutoAssignAllotmentsView.as_view(),
+        name='no_cost_quota_auto_allotment',
+    ),
 ]

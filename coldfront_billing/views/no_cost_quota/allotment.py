@@ -79,3 +79,75 @@ class NoCostQuotaAllotmentView(LoginRequiredMixin, View):
             f'{action} {amount} {quota.units} for allocation {allocation.id}.',
         )
         return redirect(REDIRECT)
+
+
+class AutoAssignAllotmentsView(LoginRequiredMixin, View):
+    """Create or update multiple NoCostQuotaAllotments and redirect to manage page."""
+
+    def post(self, request):
+        post = request.POST
+
+        if not (quota_id := post.get('quota_id')):
+            messages.error(request, 'Invalid request: missing quota.')
+            return redirect(REDIRECT)
+
+        assign_url = f'{reverse("assign_no_cost_quota")}?selected_quota={quota_id}'
+
+        quota = get_object_or_404(NoCostQuota, pk=quota_id)
+        if not request.user.is_superuser and quota.user_id != request.user.id:
+            messages.error(request, 'You do not have permission to assign this quota.')
+            return redirect(REDIRECT)
+
+        allocation_ids = post.getlist('allocation_id')
+        amount_strs = post.getlist('amount')
+
+        if not allocation_ids:
+            messages.error(request, 'No allocations to assign.')
+            return redirect(assign_url)
+
+        if len(allocation_ids) != len(amount_strs):
+            messages.error(request, 'Invalid request: allocation and amount counts do not match.')
+            return redirect(assign_url)
+
+        total_amount = 0.0
+
+        for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
+            if not allocation_id_str:
+                messages.error(request, 'Invalid request: missing allocation.')
+                return redirect(assign_url)
+
+            try:
+                row_amount = float(str(amount_str).replace(',', '.'))
+            except (ValueError, TypeError):
+                messages.error(request, 'Please enter valid amounts for all allocations.')
+                return redirect(assign_url)
+
+            allocation = get_object_or_404(Allocation, pk=allocation_id_str)
+
+            allotment, created = NoCostQuotaAllotment.objects.get_or_create(
+                no_cost_quota=quota,
+                allocation=allocation,
+                defaults={'amount': row_amount},
+            )
+
+            if not created:
+                allotment.amount = row_amount
+
+            try:
+                allotment.full_clean()
+                allotment.save()
+            except Exception as e:
+                if hasattr(e, 'message_dict'):
+                    msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
+                else:
+                    msg = str(e)
+                messages.error(request, f'Could not save allotment: {msg}')
+                return redirect(assign_url)
+
+            total_amount += row_amount
+
+        messages.success(
+            request,
+            f'{total_amount} {quota.units} of quota was distributed.',
+        )
+        return redirect(REDIRECT)
