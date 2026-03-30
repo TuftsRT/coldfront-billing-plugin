@@ -1,9 +1,10 @@
-from .allotment import NoCostQuotaAllotmentView
+from .allotment import AutoAssignAllotmentsView, ManageAllotmentView
 from .assign import AssignNoCostQuotasView
 from .manage import ManageNoCostQuotasView
 
 __all__ = [
     'AssignNoCostQuotasView',
-    'NoCostQuotaAllotmentView',
+    'AutoAssignAllotmentsView',
+    'ManageAllotmentView',
     'ManageNoCostQuotasView',
 ]

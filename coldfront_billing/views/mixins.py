@@ -38,21 +38,6 @@ class PrefetchPaginationMixin:
     """Mixin providing Prefetch configurations for billing queries."""
 
     @staticmethod
-    def get_quota_attr_prefetch() -> Prefetch:
-        """Return Prefetch for allocation quota attribute."""
-        return Prefetch(
-            'allocationattribute_set',
-            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
-                'allocation_id', 'value'
-            ),
-            to_attr=QUOTA_ATTRIBUTE_NAME,
-        )
-
-
-class BillingAllocationPrefetchMixin(PrefetchPaginationMixin):
-    """Mixin providing Prefetch configurations for billing allocation queries."""
-
-    @staticmethod
     def get_cost_attr_prefetch() -> Prefetch:
         """Return Prefetch for resource cost attribute."""
         return Prefetch(
@@ -73,6 +58,21 @@ class BillingAllocationPrefetchMixin(PrefetchPaginationMixin):
             ).prefetch_related(self.get_cost_attr_prefetch()),
             to_attr=STORAGE_RESOURCE_ATTRIBUTE_NAME,
         )
+
+    @staticmethod
+    def get_quota_attr_prefetch() -> Prefetch:
+        """Return Prefetch for allocation quota attribute."""
+        return Prefetch(
+            'allocationattribute_set',
+            queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
+                'allocation_id', 'value'
+            ),
+            to_attr=QUOTA_ATTRIBUTE_NAME,
+        )
+
+
+class BillingAllocationPrefetchMixin(PrefetchPaginationMixin):
+    """Mixin providing Prefetch configurations for billing allocation queries."""
 
     @staticmethod
     def get_no_cost_quota_allotments_prefetch() -> Prefetch:

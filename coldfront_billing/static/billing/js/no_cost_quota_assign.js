@@ -36,10 +36,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 deleteButton.classList.remove('d-none');
             }
             assignButton.disabled = inactive
-            var modalText = inactive ?'Allocation is not Active - delete No-Cost Quota' : 'Assign No-Cost Quota';
+            var modalText = inactive ? 'Allocation is not Active - delete No-Cost Quota' : 'Assign No-Cost Quota';
             if (modalTitle) modalTitle.textContent = modalText
         });
     });
+
+    document.getElementById('assignQuotaAmount')
+        .addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // stop default form submit
+                assignButton.click();
+            }
+        });
 
     if (form) {
         form.addEventListener('submit', function (e) {
