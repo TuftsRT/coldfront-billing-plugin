@@ -214,3 +214,6 @@ postgres_data/
 
 # IDE specific
 .DS_Store
+
+# cursor
+.cursorrules

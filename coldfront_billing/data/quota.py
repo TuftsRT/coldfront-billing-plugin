@@ -1,25 +1,12 @@
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Self
 
 from coldfront_billing.constants import QUOTA_ATTRIBUTE_NAME
 from coldfront_billing.data.common import get_cost_per_tb
+from coldfront_billing.enum import StorageUnit
 from coldfront_billing.utils import first_or_none
-
-
-class StorageUnit(str, Enum):
-    TB = 'TB'
-    GB = 'GB'
-
-    @staticmethod
-    def parse(units: str) -> 'StorageUnit':
-        try:
-            return StorageUnit(units)
-        except ValueError:
-            return StorageUnit.TB
-
 
 UNIT_TO_TB = {
     StorageUnit.TB: 1.0,
