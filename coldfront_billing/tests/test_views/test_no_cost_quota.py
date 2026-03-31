@@ -1,5 +1,7 @@
 """Unit tests for no_cost_quota views: manage, assign, single allotment, and bulk auto-assign."""
 
+from urllib.parse import urlencode
+
 import pytest
 from django.urls import reverse
 
@@ -103,6 +105,75 @@ class TestAssignNoCostQuotasView:
         response = get_assign_response(client, user, '')
         assert response.status_code == 302
         assert response.url == reverse('manage_no_cost_quota')
+
+    def test_assign_sort_preserves_selected_quota_back_and_accordion(
+        self,
+        client,
+        user,
+        no_cost_quota,
+        project_with_billing_user,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        """Sort links must keep selected_quota and back; filter accordion ignores nav params."""
+        add_no_cost_quota_storage_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            quota_type_value=no_cost_quota.quota_type,
+        )
+        manage_return = urlencode({'order_by': 'owner', 'direction': 'asc'})
+        query = urlencode(
+            {
+                'selected_quota': str(no_cost_quota.pk),
+                'back': manage_return,
+                'order_by': 'id',
+                'direction': 'asc',
+            }
+        )
+        client.force_login(user)
+        response = client.get(f'{reverse("assign_no_cost_quota")}?{query}')
+        assert response.status_code == 200
+        fp = response.context['filter_parameters']
+        assert f'selected_quota={no_cost_quota.pk}' in fp
+        assert 'back=' in fp
+        assert response.context['back'] == manage_return
+        assert response.context['expand_accordion'] == ''
+
+    def test_assign_filter_form_preserves_back_in_html(
+        self,
+        client,
+        user,
+        no_cost_quota,
+        project_with_billing_user,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        """Search form must resubmit back so manage return state survives filtering."""
+        add_no_cost_quota_storage_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            quota_type_value=no_cost_quota.quota_type,
+        )
+        manage_return = urlencode({'order_by': 'owner', 'direction': 'asc'})
+        query = urlencode({'selected_quota': str(no_cost_quota.pk), 'back': manage_return})
+        client.force_login(user)
+        response = client.get(f'{reverse("assign_no_cost_quota")}?{query}')
+        assert response.status_code == 200
+        assert b'name="back"' in response.content
 
     def test_nonexistent_quota_returns_404(self, client, user):
         """Test that nonexistent quota returns 404."""

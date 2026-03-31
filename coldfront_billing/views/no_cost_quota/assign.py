@@ -173,6 +173,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
                 'search_form': AllocationSearchForm(self.request.GET),
                 'auto_assign_preview': auto_assign_preview,
                 'assignements': assignements,
+                'back': self.request.GET.get('back', ''),
             }
             | self.get_extended_pagination_params(allocations)
         )

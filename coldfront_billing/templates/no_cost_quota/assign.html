@@ -28,9 +28,12 @@ Assign No-Cost Quota
                 <form id="filter_form" method="GET"
                       action="{% url 'assign_no_cost_quota' %}" autocomplete="off">
                     <input type="hidden" name="selected_quota" value="{{ quota.pk }}">
+                    {% if back %}
+                    <input type="hidden" name="back" value="{{ back }}">
+                    {% endif %}
                     {{ search_form|crispy }}
                     <input type="submit" class="btn btn-primary" value="Search">
-                    <a href="{% url 'assign_no_cost_quota' %}?selected_quota={{ quota.pk }}" class="btn btn-secondary">Reset</a>
+                    <a href="{% url 'assign_no_cost_quota' %}?selected_quota={{ quota.pk }}{% if back %}&back={{ back|urlencode }}{% endif %}" class="btn btn-secondary">Reset</a>
                 </form>
             </div>
         </div>
@@ -158,7 +161,7 @@ Assign No-Cost Quota
 {% endif %}
 
 <div class="d-flex align-items-center flex-wrap mt-3 mb-3">
-    <a href="{% url 'manage_no_cost_quota' %}{% if request.GET.back %}?{{ request.GET.back }}{% endif %}"
+    <a href="{% url 'manage_no_cost_quota' %}{% if back %}?{{ back }}{% endif %}"
        class="btn btn-secondary">Back</a>
     <button type="button" class="btn btn-outline-primary ml-auto" id="ncqAutoAssignOpen"
             data-toggle="modal" data-target="#autoAssignQuotaModal"
