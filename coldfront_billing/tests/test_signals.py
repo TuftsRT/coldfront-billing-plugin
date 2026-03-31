@@ -3,7 +3,9 @@
 import pytest
 from django.contrib.auth.models import Group
 
-from coldfront_billing.models import NoCostQuota, NoCostQuotaGroup
+from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
+from coldfront_billing.tests.conftest import add_no_cost_quota_storage_allocation, create_project_with_role_user
 
 
 @pytest.fixture
@@ -125,3 +127,195 @@ class TestUserGroupsChangedSignal:
         user.groups.add(group)  # Should not raise
 
         assert not NoCostQuota.objects.filter(user=user).exists()
+
+
+@pytest.mark.django_db
+class TestProjectArchivedSignal:
+    """Tests for project_archived (pre_save on Project): drop no-cost allotments when project is archived."""
+
+    def _make_allotment(
+        self,
+        project,
+        no_cost_quota,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+        *,
+        resource_name: str = 'No-Cost Storage',
+    ):
+        allocation, _ = add_no_cost_quota_storage_allocation(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            quota_type_value=no_cost_quota.quota_type,
+            resource_name=resource_name,
+        )
+        return NoCostQuotaAllotment.objects.create(
+            no_cost_quota=no_cost_quota,
+            allocation=allocation,
+            amount=5.0,
+        )
+
+    def test_transition_active_to_archived_deletes_allotments_for_project(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        project_status_archived,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        allotment = self._make_allotment(
+            project_with_billing_user,
+            no_cost_quota,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+        )
+        project_with_billing_user.status = project_status_archived
+        project_with_billing_user.save()
+
+        assert not NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
+
+    def test_saving_active_project_does_not_delete_allotments(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        allotment = self._make_allotment(
+            project_with_billing_user,
+            no_cost_quota,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+        )
+        project_with_billing_user.title = 'Updated title'
+        project_with_billing_user.save()
+
+        assert NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
+
+    def test_second_save_while_archived_does_not_error(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        project_status_archived,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        self._make_allotment(
+            project_with_billing_user,
+            no_cost_quota,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+        )
+        project_with_billing_user.status = project_status_archived
+        project_with_billing_user.save()
+
+        project_with_billing_user.title = 'Still archived'
+        project_with_billing_user.save()
+
+        assert project_with_billing_user.status.name == ProjectStatus.ARCHIVED
+
+    def test_archiving_one_project_does_not_remove_allotments_on_other_projects(
+        self,
+        user,
+        pi_user,
+        billing_role,
+        project_user_status_active,
+        project_status_active,
+        project_status_archived,
+        project_with_billing_user,
+        no_cost_quota,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        allotment_a = self._make_allotment(
+            project_with_billing_user,
+            no_cost_quota,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            resource_name='No-Cost Storage A',
+        )
+        project_b = create_project_with_role_user(
+            user=user,
+            pi_user=pi_user,
+            project_status=project_status_active,
+            role=billing_role,
+            project_user_status=project_user_status_active,
+            title='Other project',
+        )
+        allotment_b = self._make_allotment(
+            project_b,
+            no_cost_quota,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            resource_name='No-Cost Storage B',
+        )
+
+        project_with_billing_user.status = project_status_archived
+        project_with_billing_user.save()
+
+        assert not NoCostQuotaAllotment.objects.filter(pk=allotment_a.pk).exists()
+        assert NoCostQuotaAllotment.objects.filter(pk=allotment_b.pk).exists()
+
+    def test_transition_new_to_archived_deletes_allotments(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        project_status_new,
+        project_status_archived,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        """Any non-archived prior status to Archived triggers cleanup (not only Active)."""
+        project_with_billing_user.status = project_status_new
+        project_with_billing_user.save(update_fields=['status'])
+
+        allotment = self._make_allotment(
+            project_with_billing_user,
+            no_cost_quota,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+        )
+
+        project_with_billing_user.status = project_status_archived
+        project_with_billing_user.save()
+
+        assert not NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()

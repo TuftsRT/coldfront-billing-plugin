@@ -11,6 +11,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTR_NAME,
 )
 from coldfront_billing.data import BillingQuota
+from coldfront_billing.enum import ProjectStatus
 from coldfront_billing.models.common import QuotaBase
 
 User = get_user_model()
@@ -90,7 +91,7 @@ class NoCostQuotaAllotment(models.Model):
                 project=project,
                 user=user,
                 role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
-                status__name='Active',
+                status__name=ProjectStatus.ACTIVE,
             ).exists()
             if not (is_pi or has_billing_role):
                 raise ValidationError(

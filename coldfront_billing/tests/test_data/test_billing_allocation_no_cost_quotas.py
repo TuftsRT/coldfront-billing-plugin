@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
-from coldfront_billing.data import BillingAllocation, BillingQuota, StorageUnit
+from coldfront_billing.data import BillingAllocation, BillingQuota
+from coldfront_billing.enum import StorageUnit
 
 from .allocation_mocks import (
     create_mock_allocation,

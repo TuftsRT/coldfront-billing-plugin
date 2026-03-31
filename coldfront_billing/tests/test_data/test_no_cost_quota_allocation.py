@@ -1,7 +1,8 @@
 from unittest.mock import Mock
 
 from coldfront_billing.constants import QUOTA_ATTRIBUTE_NAME
-from coldfront_billing.data import BillingQuota, NoCostQuotaAllocation, StorageUnit
+from coldfront_billing.data import BillingQuota, NoCostQuotaAllocation
+from coldfront_billing.enum import StorageUnit
 
 
 class TestNoCostQuotaAllocation:
