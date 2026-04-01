@@ -98,7 +98,6 @@ class ListViewStateMixin(ABC):
     request: HttpRequest
     paginate_by = PAGINATE_BY
     db_order_map = {}
-    filter_params_exclude = ((),)
 
     @property
     def request_get(self):
@@ -109,7 +108,7 @@ class ListViewStateMixin(ABC):
         all_params.pop('page', None)
 
         filter_params = all_params.copy()
-        for key in ('order_by', 'direction') + self.filter_params_exclude:
+        for key in ('order_by', 'direction'):
             filter_params.pop(key, None)
 
         return {
@@ -224,14 +223,13 @@ class NoCostQuotaStateMixin(ListViewStateMixin):
 
 
 class NoCostQuotaAssignViewMixin(NoCostQuotaStateMixin):
-    filter_params_exclude = ('selected_quota', 'back')
-
     def get_pagination_params(self) -> dict:
         pagination_params = super().get_pagination_params()
-        # Exclude selected_quota from return_params
 
-        request_get = self.request_get.copy()
-        request_get.pop('selected_quota', None)
-        pagination_params['return_params'] = request_get.urlencode()
+        # selected_quota and back must stay in filter_parameters so sort/pagination
+        # links keep the assign view and manage return state. Kinda W/A rather than good solution
+        has_allocation_search = bool(self.request_get.get('project') or self.request_get.get('status'))
+        # Accordion should reflect only allocation search fields (not navigation params)
+        pagination_params['expand_accordion'] = 'show' if has_allocation_search else ''
 
         return pagination_params
