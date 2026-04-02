@@ -13,12 +13,11 @@ from coldfront_billing.constants import (
     BILLING_ROLE_NAME,
     MANAGER_ROLE_NAME,
     NO_COST_QUOTA_TYPE_ATTR_NAME,
-    QUOTA_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import NoCostQuotaAllocation
+from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.forms import AllocationSearchForm
 from coldfront_billing.models import NoCostQuotaAllotment
-from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin, PrefetchPaginationMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
@@ -99,6 +98,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
             allocations.select_related('project', 'project__pi', 'status')
             .prefetch_related(
                 'resources',
+                self.get_paid_storage_resources_prefetch(storage_type.id),
                 self.get_quota_attr_prefetch(),
                 allotments_prefetch,
             )
@@ -110,27 +110,30 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
         quota_remaining = round(self.quota.remaining, 2)
         quota_units = self.quota.units
 
+        auto_assign_allocations = self.get_queryset().filter(
+            project__in=Project.objects.filter(Q(pi=self.quota.user)),
+        )
+
+        ncq_engine = NoCostQuotaEngine(self.quota.user_id, auto_assign_allocations)
+        assignements = ncq_engine.auto_assign(
+            quota_remaining,
+            quota_units,
+            self.quota.minimum_increment,
+        )
+
         allocation_objs = list(self.filtered_allocations)
         allocations = []
 
         for allocation in allocation_objs:
             all_allotments = getattr(allocation, 'all_allotments', ())
 
-            # Get quota attribute from allocation
-            quota_attr_tb = first_or_none(getattr(allocation, QUOTA_ATTRIBUTE_NAME, None))
-            # Check if allocation has quota_in_terabyte set
-            try:
-                allocation_size = float(quota_attr_tb.value) if quota_attr_tb else None
-            except (TypeError, ValueError):
-                allocation_size = None
+            ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation)
 
             user_allotment = next((a for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
             if allocation.status.name != 'Active' and (user_allotment is None or user_allotment.amount == 0):
                 continue  # skip inactive allocations without user allotment
 
             user_allotment_pk = user_allotment.pk if user_allotment else None
-
-            ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation_size, all_allotments)
 
             other_total_quota = ncq_allocation.other_allotments_amount
             max_possible = ncq_allocation.max_possible_allocation(
@@ -139,11 +142,14 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
             user_amount = ncq_allocation.user_amount
             first_resource = next(iter(allocation.resources.all()), None)
 
+            auto_assign_allocation = next((a for a in assignements if a.allocation_id == allocation.id), None)
+            auto_assign_amount = auto_assign_allocation.amount if auto_assign_allocation else 0
+
             allocations.append(
                 {
                     'allocation': allocation,
                     'resource_name': first_resource.name if first_resource else '-',
-                    'quota_amount': allocation_size or '-',
+                    'quota_amount': ncq_allocation.allocation_amount or '-',
                     'other_applications': f'{other_total_quota:g} TB',
                     'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
                     'existing_amount': f'{user_amount:g}' if user_amount else '',
@@ -151,11 +157,13 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
                     'minimum_increment': self.quota.minimum_increment,
                     'allotment_id': user_allotment_pk or '',
                     'inactive': allocation.status.name != 'Active',
+                    'auto_assign_amount': auto_assign_amount,
                 }
             )
 
         key_func, reverse = self.get_object_ordering()
         allocations = sorted(allocations, key=key_func, reverse=reverse)
+        auto_assign_preview = [row for row in allocations if row['auto_assign_amount'] > 0]
 
         return (
             context
@@ -163,6 +171,9 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
                 'quota': self.quota,
                 'quota_remaining': quota_remaining,
                 'search_form': AllocationSearchForm(self.request.GET),
+                'auto_assign_preview': auto_assign_preview,
+                'assignements': assignements,
+                'back': self.request.GET.get('back', ''),
             }
             | self.get_extended_pagination_params(allocations)
         )

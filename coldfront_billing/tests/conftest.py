@@ -38,6 +38,7 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
 )
+from coldfront_billing.enum import ProjectStatus
 
 
 @pytest.fixture
@@ -84,7 +85,7 @@ def project_status_active(db) -> ProjectStatusChoice:
 @pytest.fixture
 def project_status_archived(db) -> ProjectStatusChoice:
     """Create an Archived project status."""
-    return ProjectStatusChoice.objects.get_or_create(name='Archived')[0]
+    return ProjectStatusChoice.objects.get_or_create(name=ProjectStatus.ARCHIVED)[0]
 
 
 @pytest.fixture

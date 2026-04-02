@@ -3,21 +3,14 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from coldfront_billing.constants import (
-    COST_ATTRIBUTE_NAME,
     NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.utils import first_or_none
+from coldfront_billing.utils import parse_float
 
+from .common import get_cost_per_tb
 from .quota import BillingQuota
-
-
-def _parse_float(value, default):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
 
 
 @dataclass
@@ -44,18 +37,13 @@ class BillingAllocation:
     ) -> 'BillingAllocation':
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
-            float_quota = _parse_float(quota_raw, default_quota)
+            float_quota = parse_float(quota_raw, default_quota)
             quota_tb = float_quota if float_quota >= 0 else default_quota
         else:
             quota_tb = default_quota
 
-        storage_resource = first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
+        cost_per_tb = get_cost_per_tb(allocation, default_cost)
 
-        if storage_resource and (cost_attrs := getattr(storage_resource, COST_ATTRIBUTE_NAME, None)):
-            float_cost = _parse_float(cost_attrs[0].value, default_cost)
-            cost_per_tb = float_cost if float_cost >= 0 else default_cost
-        else:
-            cost_per_tb = default_cost
         if (project := getattr(allocation, 'project', None)) is not None:
             project_title = getattr(project, 'title', '-')
             pi = getattr(project, 'pi', None)

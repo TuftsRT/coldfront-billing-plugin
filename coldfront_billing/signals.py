@@ -1,8 +1,10 @@
+from coldfront.core.project.models import Project
 from django.contrib.auth import get_user_model
-from django.db.models.signals import m2m_changed
+from django.db.models.signals import m2m_changed, pre_save
 from django.dispatch import receiver
 
-from coldfront_billing.models import NoCostQuota, NoCostQuotaGroup
+from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
 
 User = get_user_model()
 
@@ -31,3 +33,18 @@ def user_groups_changed(sender, instance: User, action, reverse, model, pk_set, 
                 'minimum_increment': group.minimum_increment,
             },
         )
+
+
+@receiver(pre_save, sender=Project)
+def project_archived(sender, instance: Project, **kwargs):
+    # New object, nothing to compare yet
+    if not instance.pk:
+        return
+    try:
+        old_project = Project.objects.select_related('status').get(pk=instance.pk)
+    except Project.DoesNotExist:
+        return
+
+    # Handle only transition from Active to Archived
+    if old_project.status.name != ProjectStatus.ARCHIVED and instance.status.name == ProjectStatus.ARCHIVED:
+        NoCostQuotaAllotment.objects.filter(allocation__project=instance).delete()

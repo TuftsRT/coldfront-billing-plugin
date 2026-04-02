@@ -15,6 +15,7 @@ def create_billing_attributes(apps, schema_editor):
             'attribute_type': float_attr_type,
             'has_usage': True,
             'is_changeable': True,
+            'is_unique': True,
         },
     )
 
