@@ -1,6 +1,7 @@
 const toastDurationMs = 3000;
 const maxCostCenters = 4;
 const BILLING_SUCCESS_KEY = 'billing_assignment_success';
+const DEBOUNCE_TIME_MS = 250;
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
         sessionStorage.removeItem(BILLING_SUCCESS_KEY);
         showFloatingMessage(storedMessage, toastDurationMs);
     }
+    var costCenterBody = $('#cost-center-body');
 
     // Helper: Calculate Cost for a specific row
     function calculateRowCost(row) {
@@ -43,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         $('#cost-center-body tr').each(function () {
             var row = $(this);
-            var deptId = row.find('.dept-select').val();
+            var deptId = (row.find('.dept-autocomplete-input').val() || '').trim();
             var percentage = parseInt(row.find('.percent-input').val(), 10);
             var cost = parseFloat(row.find('.cost-input').val()) || 0;
 
@@ -146,11 +148,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var newRow = $('<tr>').html(rowHtml);
 
         // Append to table
-        $('#cost-center-body').append(newRow);
+        costCenterBody.append(newRow);
 
         // If data exists (from JSON), fill the fields
         if (data) {
-            newRow.find('.dept-select').val(data.dept_id);
+            newRow.find('.dept-autocomplete-input').val(data.dept_id);
             newRow.find('.percent-input').val(data.percentage);
             // Trigger calculation for this row after a brief delay to ensure values are set
             setTimeout(function () {
@@ -196,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#cost-center-validation-error').addClass('d-none');
 
         // 4. Clear and Fill Table
-        $('#cost-center-body').empty();
+        costCenterBody.empty();
 
         if (assignmentsArray.length > 0) {
             assignmentsArray.forEach(function (item) {
@@ -221,19 +223,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // 3. Remove Row Button
-    $('#cost-center-body').on('click', '.remove-row-btn', function () {
+    costCenterBody.on('click', '.remove-row-btn', function () {
         $(this).closest('tr').remove();
         updateTotals(); // Update totals after removing row
     });
 
     // 4. Live Calculation and Validation on Input Change
-    $('#cost-center-body').on('keypress', '.percent-input', function (e) {
+    costCenterBody.on('keypress', '.percent-input', function (e) {
         var key = e.which || e.keyCode;
         if (key !== 8 && (key < 48 || key > 57)) {
             e.preventDefault();
         }
     });
-    $('#cost-center-body').on('input blur', '.percent-input', function () {
+    costCenterBody.on('input blur', '.percent-input', function () {
         var input = $(this);
         var val = input.val().replace(/\D/g, '').slice(0, 3);
         if (val !== input.val()) {
@@ -244,10 +246,94 @@ document.addEventListener('DOMContentLoaded', function () {
         calculateRowCost(row);
     });
 
-    $('#cost-center-body').on('change', '.dept-select', function () {
+    costCenterBody.on('input change', '.dept-autocomplete-input', function () {
         var row = $(this).closest('tr');
         calculateRowCost(row);
     });
+
+    // Department autocomplete (CostCenterAutocompleteView: GET ?q=, min 3 chars, JSON { results: string[] })
+    (function initDeptAutocomplete() {
+        var autocompleteUrl = $('#costCentersModal').data('autocomplete-url');
+        if (!autocompleteUrl) {
+            return;
+        }
+
+        function hideResults(list) {
+            list.addClass('d-none').empty();
+        }
+
+        function bumpSeq(input) {
+            var n = (input.data('ac-seq') || 0) + 1;
+            input.data('ac-seq', n);
+            return n;
+        }
+
+        costCenterBody.on('input', '.dept-autocomplete-input', function () {
+            var input = $(this);
+            var wrapper = input.closest('.autocomplete-wrapper');
+            var list = wrapper.find('.dept-autocomplete-results');
+            clearTimeout(input.data('ac-debounce'));
+
+            var q = input.val().trim();
+            if (q.length < 3) {
+                hideResults(list);
+                return;
+            }
+
+            input.data('ac-debounce', setTimeout(function () {
+                var seq = bumpSeq(input);
+                $.getJSON(autocompleteUrl, {q: q})
+                    .done(function (data) {
+                        if (input.data('ac-seq') !== seq) {
+                            return;
+                        }
+                        list.empty();
+                        var results = data.results || [];
+                        results.forEach(function (dept) {
+                            $('<li>')
+                                .addClass('list-group-item list-group-item-action py-1 px-2 text-left')
+                                .attr('role', 'option')
+                                .text(dept)
+                                .appendTo(list);
+                        });
+                        if (results.length) {
+                            list.removeClass('d-none');
+                        } else {
+                            hideResults(list);
+                        }
+                    })
+                    .fail(function () {
+                        if (input.data('ac-seq') === seq) {
+                            hideResults(list);
+                        }
+                    });
+            }, DEBOUNCE_TIME_MS));
+        });
+
+        costCenterBody.on('mousedown', '.dept-autocomplete-results li', function (e) {
+            e.preventDefault();
+            var li = $(this);
+            var list = li.parent();
+            var input = list.siblings('.dept-autocomplete-input');
+            input.val(li.text().trim());
+            hideResults(list);
+            input.trigger('change');
+        });
+
+        costCenterBody.on('blur', '.dept-autocomplete-input', function () {
+            var input = $(this);
+            var list = input.siblings('.dept-autocomplete-results');
+            setTimeout(function () {
+                hideResults(list);
+            }, 200);
+        });
+
+        costCenterBody.on('keydown', '.dept-autocomplete-input', function (e) {
+            if (e.key === 'Escape') {
+                hideResults($(this).siblings('.dept-autocomplete-results'));
+            }
+        });
+    })();
 
     // 5. Save Changes Button Handler
     $('#save-changes-btn').on('click', function () {
@@ -262,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var hasDuplicate = false;
         var hasMissingPercent = false;
         rows.each(function () {
-            var deptId = $(this).find('.dept-select').val();
+            var deptId = (($(this).find('.dept-autocomplete-input').val()) || '').trim();
             var percentage = parseInt($(this).find('.percent-input').val());
 
             if (deptId && !isNaN(percentage)) {
