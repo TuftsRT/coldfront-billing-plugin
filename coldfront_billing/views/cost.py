@@ -9,7 +9,7 @@ from django.views import View
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO
 from coldfront_billing.forms import CostCenterAssignmentForm
-from coldfront_billing.models import CostCenterAssignment
+from coldfront_billing.models import CostCenter, CostCenterAssignment
 
 logger = logging.getLogger('CostCenterView')
 
@@ -59,3 +59,20 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             logger.error(f'Error updating cost center assignment: {str(cause)}')
             error_response = ApiErrorResponseDTO(error='An error occurred while updating the cost center assignment.')
             return JsonResponse(error_response.to_dict(), status=400)
+
+
+class CostCenterAutocompleteView(LoginRequiredMixin, View):
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+
+        if len(query) < 3:
+            return JsonResponse({'results': []})
+
+        results = list(
+            CostCenter.objects.filter(dept_id__istartswith=query)
+            .values_list('dept_id', flat=True)
+            .distinct()
+            .order_by('dept_id')[:10]
+        )
+
+        return JsonResponse({'results': results})

@@ -11,7 +11,6 @@ from django.views.generic import ListView
 
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.forms import BillingSearchForm
-from coldfront_billing.models import CostCenter
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
 
 
@@ -105,13 +104,10 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
                 project.all_cost_centers = '-'
                 project.assignments_json = '{}'
 
-        departments = sorted([cc.dept_id for cc in CostCenter.objects.all()])
-
         return (
             context
             | self.get_pagination_params()
             | {
                 'search_form': BillingSearchForm(self.request.GET),
-                'departments': departments,
             }
         )
