@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -21,12 +21,12 @@ class ApiErrorResponseDTO:
 class ApiSuccessResponseDTO:
     success: bool = True
     message: Optional[str] = None
-    assignments: Optional[Dict[str, Any]] = None
+    assignments: Optional[List[Dict[str, Any]]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result = {'success': self.success}
         if self.message:
             result['message'] = self.message
-        if self.assignments:
+        if self.assignments is not None:
             result['assignments'] = self.assignments
         return result

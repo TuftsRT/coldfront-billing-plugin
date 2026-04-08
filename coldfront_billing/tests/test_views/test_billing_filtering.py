@@ -328,7 +328,7 @@ class TestBillingViewSearchFilters:
         CostCenter.objects.create(dept_id='DEPT001')
         CostCenterAssignment.objects.create(
             project=project_with_assignment,
-            assignments={'DEPT001': 100},
+            assignments=[{'department': 'DEPT001', 'percentage': 100}],
         )
 
         create_project_with_role_user(
