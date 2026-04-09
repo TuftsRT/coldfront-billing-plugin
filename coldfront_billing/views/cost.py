@@ -43,10 +43,11 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
                 return JsonResponse(error_response.to_dict(), status=403)
 
             cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
-                project=project, defaults={'assignments': {}}
+                project=project,
+                defaults={'assignments': []},
             )
 
-            cost_center_assignment.assignments = dict(assignments_data)
+            cost_center_assignment.assignments = assignments_data
 
             cost_center_assignment.save()
 

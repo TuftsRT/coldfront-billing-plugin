@@ -30,7 +30,7 @@ class TestCostCenterAssignmentUpdateView:
 
         CostCenter.objects.create(dept_id='DEPT001')
 
-        assignments_data = {'DEPT001': 100}
+        assignments_data = [{'department': 'DEPT001', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 
@@ -46,7 +46,7 @@ class TestCostCenterAssignmentUpdateView:
 
         CostCenter.objects.create(dept_id='DEPT003')
 
-        assignments_data = {'DEPT003': 75}
+        assignments_data = [{'department': 'DEPT003', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
 
@@ -61,7 +61,7 @@ class TestCostCenterAssignmentUpdateView:
 
         CostCenter.objects.create(dept_id='DEPT_MGR')
 
-        assignments_data = {'DEPT_MGR': 100}
+        assignments_data = [{'department': 'DEPT_MGR', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, user, project_with_manager_user.id, assignments_data)
 
@@ -78,12 +78,13 @@ class TestCostCenterAssignmentUpdateView:
         CostCenter.objects.create(dept_id='DEPT004')
         CostCenter.objects.create(dept_id='DEPT005')
 
-        # Create initial assignment
-        initial_assignments = {'DEPT004': 100}
+        initial_assignments = [{'department': 'DEPT004', 'percentage': 100}]
         CostCenterAssignment.objects.create(project=project, assignments=initial_assignments)
 
-        # Update with new assignments
-        new_assignments = {'DEPT004': 60, 'DEPT005': 40}
+        new_assignments = [
+            {'department': 'DEPT004', 'percentage': 60},
+            {'department': 'DEPT005', 'percentage': 40},
+        ]
 
         response = self._post_cost_center_assignment(client, superuser, project.id, new_assignments)
 
@@ -113,8 +114,7 @@ class TestCostCenterAssignmentUpdateView:
 
     def test_nonexistent_cost_center_returns_error(self, client, superuser, project):
         """Test that referencing nonexistent cost center returns validation error."""
-        # Don't create the cost center - it should not exist
-        assignments_data = {'NONEXISTENT': 100}
+        assignments_data = [{'department': 'NONEXISTENT', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 
@@ -132,7 +132,7 @@ class TestCostCenterAssignmentUpdateView:
         url = reverse('update_cost_center_assignment')
 
         # Missing project_id field
-        data = {'assignments': json.dumps({'DEPT008': 100})}
+        data = {'assignments': json.dumps([{'department': 'DEPT008', 'percentage': 100}])}
 
         response = client.post(url, data=data)
 
@@ -163,7 +163,11 @@ class TestCostCenterAssignmentUpdateView:
         for dept_id in ('DEPT009', 'DEPT010', 'DEPT011'):
             CostCenter.objects.create(dept_id=dept_id)
 
-        assignments_data = {'DEPT009': 50, 'DEPT010': 30, 'DEPT011': 20}
+        assignments_data = [
+            {'department': 'DEPT009', 'percentage': 50},
+            {'department': 'DEPT010', 'percentage': 30},
+            {'department': 'DEPT011', 'percentage': 20},
+        ]
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 
@@ -187,7 +191,7 @@ class TestCostCenterAssignmentUpdateView:
         )
 
         CostCenter.objects.create(dept_id='DEPT013')
-        assignments_data = {'DEPT013': 100}
+        assignments_data = [{'department': 'DEPT013', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
 
@@ -210,7 +214,7 @@ class TestCostCenterAssignmentUpdateView:
         )
 
         CostCenter.objects.create(dept_id='DEPT_MGR_INACTIVE')
-        assignments_data = {'DEPT_MGR_INACTIVE': 100}
+        assignments_data = [{'department': 'DEPT_MGR_INACTIVE', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
 
@@ -219,13 +223,12 @@ class TestCostCenterAssignmentUpdateView:
         assert response_data['success'] is False
         assert 'You do not have permission' in response_data['error']
 
-    def test_assignments_non_dict_format_returns_error(self, client, superuser, project):
-        """Test that assignments in non-dictionary format returns validation error."""
+    def test_assignments_non_list_format_returns_error(self, client, superuser, project):
+        """Test that assignments as a JSON object instead of a list returns validation error."""
         client.force_login(superuser)
         url = reverse('update_cost_center_assignment')
 
-        # Send assignments as a list instead of dictionary
-        data = {'project_id': project.id, 'assignments': json.dumps([{'dept_id': 'DEPT014', 'percentage': 100}])}
+        data = {'project_id': project.id, 'assignments': json.dumps({'DEPT014': 100})}
 
         response = client.post(url, data=data)
 
@@ -252,7 +255,7 @@ class TestCostCenterAssignmentUpdateView:
         assert not CostCenterAssignment.objects.filter(project=project).exists()
 
         CostCenter.objects.create(dept_id='DEPT015')
-        assignments_data = {'DEPT015': 100}
+        assignments_data = [{'department': 'DEPT015', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
 

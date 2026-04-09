@@ -99,9 +99,17 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
 
             if cost_center is not None:
                 cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
-                    project=self.allocation.project, defaults={'assignments': {}}
+                    project=self.allocation.project,
+                    defaults={'assignments': []},
                 )
-                cost_center_assignment.assignments = {cost_center.dept_id: 100}
+
+                cost_center_assignment.assignments = [
+                    {
+                        'department': cost_center.dept_id,
+                        'percentage': 100,
+                    }
+                ]
+
                 cost_center_assignment.save()
         except AllocationAttributeType.DoesNotExist:
             messages.error(

@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // If data exists (from JSON), fill the fields
         if (data) {
-            newRow.find('.dept-autocomplete-input').val(data.dept_id);
+            newRow.find('.dept-autocomplete-input').val(data.department);
             newRow.find('.percent-input').val(data.percentage);
             // Trigger calculation for this row after a brief delay to ensure values are set
             setTimeout(function () {
@@ -175,20 +175,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var rawAssignments = button.data('assignments');
         var assignmentsArray = [];
 
-        if (rawAssignments) {
-            // If it's already an object (jQuery parsed it automatically)
-            if (typeof rawAssignments === 'object' && !Array.isArray(rawAssignments)) {
-                // CONVERT MAP TO ARRAY: {"105": 50} -> [{dept_id: "105", percentage: 50}]
-                Object.keys(rawAssignments).forEach(function (key) {
-                    assignmentsArray.push({
-                        dept_id: key, percentage: rawAssignments[key]
-                    });
-                });
-            }
-            // If it's already an array (rare case based on your code)
-            else if (Array.isArray(rawAssignments)) {
-                assignmentsArray = rawAssignments;
-            }
+        if (Array.isArray(rawAssignments) && rawAssignments.length > 0) {
+            assignmentsArray = rawAssignments;
         }
 
         var modal = $(this);
@@ -341,7 +329,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var projectId = $('#id_project_id').val();
         var csrfToken = $('[name=csrfmiddlewaretoken]').val();
         var rows = $('#cost-center-body tr');
-        var assignmentsMap = {}; // Object to store our "Dept : Percent" map
+        var assignmentsPayload = [];
+        var seenDepts = {};
         var totalPercentage = 0;
 
         // --- VALIDATION & DATA GATHERING ---
@@ -349,13 +338,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var hasMissingPercent = false;
         rows.each(function () {
             var deptId = (($(this).find('.dept-autocomplete-input').val()) || '').trim();
-            var percentage = parseInt($(this).find('.percent-input').val());
+            var percentage = parseInt($(this).find('.percent-input').val(), 10);
 
             if (deptId && !isNaN(percentage)) {
-                if (assignmentsMap.hasOwnProperty(deptId)) {
+                if (seenDepts.hasOwnProperty(deptId)) {
                     hasDuplicate = true;
                 } else {
-                    assignmentsMap[deptId] = percentage;
+                    seenDepts[deptId] = true;
+                    assignmentsPayload.push({department: deptId, percentage: percentage});
                     totalPercentage += percentage;
                 }
             } else if (deptId && isNaN(percentage)) {
@@ -391,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function () {
             dataType: 'json',
             data: {
                 project_id: projectId,
-                assignments: JSON.stringify(assignmentsMap)
+                assignments: JSON.stringify(assignmentsPayload)
             },
             headers: {'X-CSRFToken': csrfToken}, // Django-friendly
         })
