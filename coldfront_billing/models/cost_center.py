@@ -10,10 +10,16 @@ User = get_user_model()
 
 
 class CostCenter(models.Model):
-    dept_id = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
+    name = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
+    cost_center_type = models.CharField(
+        max_length=16,
+        choices={'department': 'department', 'grant': 'grant'},
+        default='department',
+        help_text='Cost center type (department or grant)',
+    )
 
     def __str__(self):
-        return self.dept_id
+        return self.name
 
 
 class CostCenterAssignment(models.Model):
@@ -49,8 +55,8 @@ class CostCenterAssignment(models.Model):
         except PydanticValidationError as e:
             raise ValidationError({'assignments': e.errors()})
 
-        # normalization
-        self.assignments = validated.model_dump(mode='json')['assignments']
+        # normalization (omit optional keys that are null, e.g. grant)
+        self.assignments = validated.model_dump(mode='json', exclude_none=True)['assignments']
 
     def save(self, *args, **kwargs):
         self.full_clean()

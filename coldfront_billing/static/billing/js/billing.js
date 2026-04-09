@@ -153,6 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // If data exists (from JSON), fill the fields
         if (data) {
             newRow.find('.dept-autocomplete-input').val(data.department);
+            newRow.find('.grant-autocomplete-input').val(data.grant || '');
             newRow.find('.percent-input').val(data.percentage);
             // Trigger calculation for this row after a brief delay to ensure values are set
             setTimeout(function () {
@@ -239,15 +240,50 @@ document.addEventListener('DOMContentLoaded', function () {
         calculateRowCost(row);
     });
 
-    // Department autocomplete (CostCenterAutocompleteView: GET ?q=, min 3 chars, JSON { results: string[] })
-    (function initDeptAutocomplete() {
+    // Cost center autocomplete (CostCenterAutocompleteView: GET ?q= & type=, min 3 chars, { results: string[] })
+    (function initCostCenterAutocomplete() {
         var autocompleteUrl = $('#costCentersModal').data('autocomplete-url');
         if (!autocompleteUrl) {
             return;
         }
 
-        function hideResults(list) {
+        var AC_HIGHLIGHT_CLASS = 'active';
+
+        function hideResults(list, input) {
             list.addClass('d-none').empty();
+            if (input && input.length) {
+                input.removeData('ac-highlight-idx');
+            }
+        }
+
+        function clearResultHighlight(list) {
+            list.find('li').removeClass(AC_HIGHLIGHT_CLASS);
+        }
+
+        function setResultHighlight(input, list, index) {
+            var items = list.find('li');
+            clearResultHighlight(list);
+            input.data('ac-highlight-idx', index);
+            if (index >= 0 && index < items.length) {
+                var el = items.eq(index);
+                el.addClass(AC_HIGHLIGHT_CLASS);
+                var dom = el.get(0);
+                if (dom && dom.scrollIntoView) {
+                    dom.scrollIntoView({ block: 'nearest' });
+                }
+            }
+        }
+
+        function applyAutocompleteChoice(input, list, li, triggerChangeOnSelect) {
+            input.val(li.text().trim());
+            hideResults(list, input);
+            if (triggerChangeOnSelect) {
+                input.trigger('change');
+            }
+        }
+
+        function resultsListForInput(input, resultsSelector) {
+            return input.closest('.autocomplete-wrapper').find(resultsSelector);
         }
 
         function bumpSeq(input) {
@@ -256,70 +292,141 @@ document.addEventListener('DOMContentLoaded', function () {
             return n;
         }
 
-        costCenterBody.on('input', '.dept-autocomplete-input', function () {
-            var input = $(this);
-            var wrapper = input.closest('.autocomplete-wrapper');
-            var list = wrapper.find('.dept-autocomplete-results');
-            clearTimeout(input.data('ac-debounce'));
-
-            var q = input.val().trim();
-            if (q.length < 3) {
-                hideResults(list);
-                return;
+        function abortPending(input) {
+            var xhr = input.data('ac-xhr');
+            if (xhr && typeof xhr.abort === 'function') {
+                xhr.abort();
             }
+        }
 
-            input.data('ac-debounce', setTimeout(function () {
-                var seq = bumpSeq(input);
-                $.getJSON(autocompleteUrl, {q: q})
-                    .done(function (data) {
-                        if (input.data('ac-seq') !== seq) {
-                            return;
-                        }
-                        list.empty();
-                        var results = data.results || [];
-                        results.forEach(function (dept) {
-                            $('<li>')
-                                .addClass('list-group-item list-group-item-action py-1 px-2 text-left')
-                                .attr('role', 'option')
-                                .text(dept)
-                                .appendTo(list);
+        function bindAutocomplete(config) {
+            var inputSel = config.inputSelector;
+            var resultsSel = config.resultsSelector;
+            var typeParam = config.typeParam;
+            var triggerChangeOnSelect = !!config.triggerChangeOnSelect;
+
+            costCenterBody.on('input', inputSel, function () {
+                var input = $(this);
+                var list = resultsListForInput(input, resultsSel);
+                clearTimeout(input.data('ac-debounce'));
+
+                var q = input.val().trim();
+                if (q.length < 3) {
+                    abortPending(input);
+                    hideResults(list, input);
+                    return;
+                }
+
+                input.data('ac-debounce', setTimeout(function () {
+                    var seq = bumpSeq(input);
+                    abortPending(input);
+
+                    var xhr = $.getJSON(autocompleteUrl, {q: q, type: typeParam})
+                        .done(function (data) {
+                            if (input.data('ac-seq') !== seq) {
+                                return;
+                            }
+                            list.empty();
+                            var results = data.results || [];
+                            results.forEach(function (name) {
+                                $('<li>')
+                                    .addClass('list-group-item list-group-item-action py-1 px-2 text-left')
+                                    .attr('role', 'option')
+                                    .text(name)
+                                    .appendTo(list);
+                            });
+                            input.data('ac-highlight-idx', -1);
+                            if (results.length) {
+                                list.removeClass('d-none');
+                            } else {
+                                hideResults(list, input);
+                            }
+                        })
+                        .fail(function (jqXHR, textStatus) {
+                            if (textStatus === 'abort') {
+                                return;
+                            }
+                            if (input.data('ac-seq') === seq) {
+                                hideResults(list, input);
+                            }
                         });
-                        if (results.length) {
-                            list.removeClass('d-none');
-                        } else {
-                            hideResults(list);
-                        }
-                    })
-                    .fail(function () {
-                        if (input.data('ac-seq') === seq) {
-                            hideResults(list);
-                        }
-                    });
-            }, DEBOUNCE_TIME_MS));
-        });
+                    input.data('ac-xhr', xhr);
+                }, DEBOUNCE_TIME_MS));
+            });
 
-        costCenterBody.on('mousedown', '.dept-autocomplete-results li', function (e) {
-            e.preventDefault();
-            var li = $(this);
-            var list = li.parent();
-            var input = list.siblings('.dept-autocomplete-input');
-            input.val(li.text().trim());
-            hideResults(list);
-            input.trigger('change');
-        });
+            costCenterBody.on('mousedown', resultsSel + ' li', function (e) {
+                e.preventDefault();
+                var li = $(this);
+                var list = li.parent();
+                var input = list.closest('.autocomplete-wrapper').find(inputSel);
+                applyAutocompleteChoice(input, list, li, triggerChangeOnSelect);
+            });
 
-        costCenterBody.on('blur', '.dept-autocomplete-input', function () {
-            var input = $(this);
-            var list = input.siblings('.dept-autocomplete-results');
-            setTimeout(function () {
-                hideResults(list);
-            }, 200);
-        });
+            costCenterBody.on('blur', inputSel, function () {
+                var input = $(this);
+                var list = resultsListForInput(input, resultsSel);
+                setTimeout(function () {
+                    hideResults(list, input);
+                }, 200);
+            });
 
-        costCenterBody.on('keydown', '.dept-autocomplete-input', function (e) {
-            if (e.key === 'Escape') {
-                hideResults($(this).siblings('.dept-autocomplete-results'));
-            }
+            costCenterBody.on('keydown', inputSel, function (e) {
+                var input = $(this);
+                var list = resultsListForInput(input, resultsSel);
+                var items = list.find('li');
+                var open = !list.hasClass('d-none') && items.length > 0;
+
+                if (e.key === 'Escape') {
+                    if (open) {
+                        e.preventDefault();
+                        hideResults(list, input);
+                    }
+                    return;
+                }
+
+                if (!open) {
+                    return;
+                }
+
+                var idx = input.data('ac-highlight-idx');
+                if (typeof idx !== 'number' || idx < -1) {
+                    idx = -1;
+                }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    idx = idx < 0 ? 0 : Math.min(idx + 1, items.length - 1);
+                    setResultHighlight(input, list, idx);
+                    return;
+                }
+
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    idx = idx <= 0 ? -1 : idx - 1;
+                    setResultHighlight(input, list, idx);
+                    return;
+                }
+
+                if (e.key === 'Enter') {
+                    if (idx >= 0 && idx < items.length) {
+                        e.preventDefault();
+                        applyAutocompleteChoice(input, list, items.eq(idx), triggerChangeOnSelect);
+                    }
+                }
+            });
+        }
+
+        bindAutocomplete({
+            inputSelector: '.dept-autocomplete-input',
+            resultsSelector: '.dept-autocomplete-results',
+            typeParam: 'department',
+            triggerChangeOnSelect: true
+        });
+        bindAutocomplete({
+            inputSelector: '.grant-autocomplete-input',
+            resultsSelector: '.grant-autocomplete-results',
+            typeParam: 'grant',
+            triggerChangeOnSelect: false
         });
     })();
 
@@ -338,6 +445,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var hasMissingPercent = false;
         rows.each(function () {
             var deptId = (($(this).find('.dept-autocomplete-input').val()) || '').trim();
+            var grantId = (($(this).find('.grant-autocomplete-input').val()) || '').trim();
             var percentage = parseInt($(this).find('.percent-input').val(), 10);
 
             if (deptId && !isNaN(percentage)) {
@@ -345,7 +453,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     hasDuplicate = true;
                 } else {
                     seenDepts[deptId] = true;
-                    assignmentsPayload.push({department: deptId, percentage: percentage});
+                    var payload = {department: deptId, percentage: percentage};
+                    if (grantId) {
+                        payload.grant = grantId;
+                    }
+                    assignmentsPayload.push(payload);
                     totalPercentage += percentage;
                 }
             } else if (deptId && isNaN(percentage)) {

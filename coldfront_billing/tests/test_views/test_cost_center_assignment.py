@@ -28,7 +28,7 @@ class TestCostCenterAssignmentUpdateView:
         """Test that superusers can update cost center assignments for any project."""
         from coldfront_billing.models import CostCenter
 
-        CostCenter.objects.create(dept_id='DEPT001')
+        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
 
         assignments_data = [{'department': 'DEPT001', 'percentage': 100}]
 
@@ -44,7 +44,7 @@ class TestCostCenterAssignmentUpdateView:
         """Test that users without Billing role cannot update cost center assignments."""
         from coldfront_billing.models import CostCenter
 
-        CostCenter.objects.create(dept_id='DEPT003')
+        CostCenter.objects.create(name='DEPT003', cost_center_type='department')
 
         assignments_data = [{'department': 'DEPT003', 'percentage': 100}]
 
@@ -59,7 +59,7 @@ class TestCostCenterAssignmentUpdateView:
         """Test that users with Manager role can update cost center assignments."""
         from coldfront_billing.models import CostCenter
 
-        CostCenter.objects.create(dept_id='DEPT_MGR')
+        CostCenter.objects.create(name='DEPT_MGR', cost_center_type='department')
 
         assignments_data = [{'department': 'DEPT_MGR', 'percentage': 100}]
 
@@ -75,8 +75,8 @@ class TestCostCenterAssignmentUpdateView:
         """Test updating an existing cost center assignment."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-        CostCenter.objects.create(dept_id='DEPT004')
-        CostCenter.objects.create(dept_id='DEPT005')
+        CostCenter.objects.create(name='DEPT004', cost_center_type='department')
+        CostCenter.objects.create(name='DEPT005', cost_center_type='department')
 
         initial_assignments = [{'department': 'DEPT004', 'percentage': 100}]
         CostCenterAssignment.objects.create(project=project, assignments=initial_assignments)
@@ -93,7 +93,6 @@ class TestCostCenterAssignmentUpdateView:
         assert response_data['success'] is True
         assert response_data['assignments'] == new_assignments
 
-        # Verify in database
         assignment = CostCenterAssignment.objects.get(project=project)
         assert assignment.assignments == new_assignments
 
@@ -127,7 +126,7 @@ class TestCostCenterAssignmentUpdateView:
         """Test that missing project_id field returns validation error."""
         from coldfront_billing.models import CostCenter
 
-        CostCenter.objects.create(dept_id='DEPT008')
+        CostCenter.objects.create(name='DEPT008', cost_center_type='department')
         client.force_login(superuser)
         url = reverse('update_cost_center_assignment')
 
@@ -161,7 +160,7 @@ class TestCostCenterAssignmentUpdateView:
         from coldfront_billing.models import CostCenter
 
         for dept_id in ('DEPT009', 'DEPT010', 'DEPT011'):
-            CostCenter.objects.create(dept_id=dept_id)
+            CostCenter.objects.create(name=dept_id, cost_center_type='department')
 
         assignments_data = [
             {'department': 'DEPT009', 'percentage': 50},
@@ -190,7 +189,7 @@ class TestCostCenterAssignmentUpdateView:
             status=project_user_status_inactive,  # Inactive status
         )
 
-        CostCenter.objects.create(dept_id='DEPT013')
+        CostCenter.objects.create(name='DEPT013', cost_center_type='department')
         assignments_data = [{'department': 'DEPT013', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
@@ -213,7 +212,7 @@ class TestCostCenterAssignmentUpdateView:
             status=project_user_status_inactive,
         )
 
-        CostCenter.objects.create(dept_id='DEPT_MGR_INACTIVE')
+        CostCenter.objects.create(name='DEPT_MGR_INACTIVE', cost_center_type='department')
         assignments_data = [{'department': 'DEPT_MGR_INACTIVE', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, user, project.id, assignments_data)
@@ -223,12 +222,12 @@ class TestCostCenterAssignmentUpdateView:
         assert response_data['success'] is False
         assert 'You do not have permission' in response_data['error']
 
-    def test_assignments_non_list_format_returns_error(self, client, superuser, project):
-        """Test that assignments as a JSON object instead of a list returns validation error."""
+    def test_assignments_invalid_top_level_type_returns_error(self, client, superuser, project):
+        """Test that assignments JSON must be a list or legacy object map."""
         client.force_login(superuser)
         url = reverse('update_cost_center_assignment')
 
-        data = {'project_id': project.id, 'assignments': json.dumps({'DEPT014': 100})}
+        data = {'project_id': project.id, 'assignments': json.dumps(42)}
 
         response = client.post(url, data=data)
 
@@ -254,7 +253,7 @@ class TestCostCenterAssignmentUpdateView:
         # Ensure no assignment exists initially
         assert not CostCenterAssignment.objects.filter(project=project).exists()
 
-        CostCenter.objects.create(dept_id='DEPT015')
+        CostCenter.objects.create(name='DEPT015', cost_center_type='department')
         assignments_data = [{'department': 'DEPT015', 'percentage': 100}]
 
         response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
@@ -263,7 +262,134 @@ class TestCostCenterAssignmentUpdateView:
         response_data = response.json()
         assert response_data['success'] is True
 
-        # Verify assignment was created
         assert CostCenterAssignment.objects.filter(project=project).exists()
         assignment = CostCenterAssignment.objects.get(project=project)
         assert assignment.assignments == assignments_data
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures('configure_urls')
+class TestGrantFieldInCostCenterAssignments:
+    """Grant is optional per row; empty values must not appear in stored JSON."""
+
+    @staticmethod
+    def _post_cost_center_assignment(client, user, project_id, assignments_data):
+        client.force_login(user)
+        url = reverse('update_cost_center_assignment')
+        data = {'project_id': project_id, 'assignments': json.dumps(assignments_data)}
+        return client.post(url, data=data)
+
+    def test_update_with_grant_succeeds(self, client, superuser, project):
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        CostCenter.objects.create(name='DEPT_GRANT_A', cost_center_type='department')
+        CostCenter.objects.create(name='GRANT-XYZ', cost_center_type='grant')
+
+        assignments_data = [{'department': 'DEPT_GRANT_A', 'percentage': 100, 'grant': 'GRANT-XYZ'}]
+
+        response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data['success'] is True
+        assert response_data['assignments'] == assignments_data
+
+        assignment = CostCenterAssignment.objects.get(project=project)
+        assert assignment.assignments == assignments_data
+        assert 'grant' in assignment.assignments[0]
+
+    def test_split_assignment_grant_only_on_one_row(self, client, superuser, project):
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        for name, ctype in (
+            ('DEPT_G1', 'department'),
+            ('DEPT_G2', 'department'),
+            ('GRANT-SPLIT', 'grant'),
+        ):
+            CostCenter.objects.create(name=name, cost_center_type=ctype)
+
+        expected = [
+            {'department': 'DEPT_G1', 'percentage': 60, 'grant': 'GRANT-SPLIT'},
+            {'department': 'DEPT_G2', 'percentage': 40},
+        ]
+
+        response = self._post_cost_center_assignment(client, superuser, project.id, expected)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data['assignments'] == expected
+
+        stored = CostCenterAssignment.objects.get(project=project).assignments
+        assert stored == expected
+        assert 'grant' in stored[0]
+        assert 'grant' not in stored[1]
+
+    def test_empty_grant_string_omitted_from_stored_json(self, client, superuser, project):
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        CostCenter.objects.create(name='DEPT_NO_GRANT', cost_center_type='department')
+
+        payload = [{'department': 'DEPT_NO_GRANT', 'percentage': 100, 'grant': ''}]
+        expected_stored = [{'department': 'DEPT_NO_GRANT', 'percentage': 100}]
+
+        response = self._post_cost_center_assignment(client, superuser, project.id, payload)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data['assignments'] == expected_stored
+
+        assignment = CostCenterAssignment.objects.get(project=project)
+        assert assignment.assignments == expected_stored
+        assert 'grant' not in assignment.assignments[0]
+
+    def test_null_grant_in_json_omitted_from_stored_json(self, client, superuser, project):
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        CostCenter.objects.create(name='DEPT_NULL_GRANT', cost_center_type='department')
+
+        payload = [{'department': 'DEPT_NULL_GRANT', 'percentage': 100, 'grant': None}]
+        expected_stored = [{'department': 'DEPT_NULL_GRANT', 'percentage': 100}]
+
+        response = self._post_cost_center_assignment(client, superuser, project.id, payload)
+
+        assert response.status_code == 200
+        assert response.json()['assignments'] == expected_stored
+        assert 'grant' not in CostCenterAssignment.objects.get(project=project).assignments[0]
+
+    def test_unknown_grant_returns_validation_error(self, client, superuser, project):
+        from coldfront_billing.models import CostCenter
+
+        CostCenter.objects.create(name='DEPT_OK', cost_center_type='department')
+
+        assignments_data = [{'department': 'DEPT_OK', 'percentage': 100, 'grant': 'UNKNOWN_GRANT_CODE'}]
+
+        response = self._post_cost_center_assignment(client, superuser, project.id, assignments_data)
+
+        assert response.status_code == 400
+        response_data = response.json()
+        assert response_data['success'] is False
+        assert 'errors' in response_data
+        assert 'Unknown grant' in str(response_data['errors'])
+
+    def test_grant_autocomplete_short_query_returns_empty(self, client, superuser):
+        from coldfront_billing.models import CostCenter
+
+        CostCenter.objects.create(name='GRANT-SHORT', cost_center_type='grant')
+        client.force_login(superuser)
+        url = reverse('autocomplete_cost_center')
+        response = client.get(url, {'q': 'GR', 'type': 'grant'})
+        assert response.status_code == 200
+        assert response.json()['results'] == []
+
+    def test_grant_autocomplete_lists_only_grant_type_cost_centers(self, client, superuser):
+        from coldfront_billing.models import CostCenter
+
+        CostCenter.objects.create(name='GRANT-FUND-001', cost_center_type='grant')
+        CostCenter.objects.create(name='GRANT-FUND-002', cost_center_type='grant')
+        CostCenter.objects.create(name='GRANT-LIKE-DEPT', cost_center_type='department')
+
+        client.force_login(superuser)
+        url = reverse('autocomplete_cost_center')
+        response = client.get(url, {'q': 'GRA', 'type': 'grant'})
+        assert response.status_code == 200
+        assert response.json()['results'] == ['GRANT-FUND-001', 'GRANT-FUND-002']

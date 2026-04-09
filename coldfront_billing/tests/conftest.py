@@ -242,7 +242,7 @@ def cost_center(db):
     """Create a test CostCenter."""
     from coldfront_billing.models import CostCenter
 
-    return CostCenter.objects.create(dept_id='TEST_DEPT')
+    return CostCenter.objects.create(name='TEST_DEPT', cost_center_type='department')
 
 
 @pytest.fixture
@@ -250,10 +250,9 @@ def cost_center_assignment(project, db):
     """Create a test CostCenterAssignment."""
     from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-    CostCenter.objects.create(dept_id='ASSIGN_DEPT')
+    CostCenter.objects.create(name='ASSIGN_DEPT', cost_center_type='department')
     return CostCenterAssignment.objects.create(
-        project=project,
-        assignments=[{'department': 'ASSIGN_DEPT', 'percentage': 100}],
+        project=project, assignments=[{'department': 'ASSIGN_DEPT', 'percentage': 100}]
     )
 
 

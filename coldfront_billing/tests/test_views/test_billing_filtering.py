@@ -325,7 +325,7 @@ class TestBillingViewSearchFilters:
             quota_attribute_type=quota_attribute_type,
             field_of_science=field_of_science,
         )
-        CostCenter.objects.create(dept_id='DEPT001')
+        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
         CostCenterAssignment.objects.create(
             project=project_with_assignment,
             assignments=[{'department': 'DEPT001', 'percentage': 100}],

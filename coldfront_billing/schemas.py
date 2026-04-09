@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 
 class AssignmentSchema(BaseModel):
     department: str = Field(..., description='Department name')
+    grant: Optional[str] = Field(default=None, description='Grant name')
     percentage: int = Field(..., ge=0, le=100, description='Percentage of the allocation')
 
 
@@ -13,7 +14,7 @@ class CostCenterSchema(BaseModel):
         ...,
         min_length=1,
         max_length=4,
-        description='Cost center assignments: department and percentage per entry',
+        description='Cost center assignments: department, optional grant, and percentage per entry',
     )
 
     @model_validator(mode='after')

@@ -22,8 +22,8 @@ class AllocationDetailsForm(forms.Form):
         help_text='Specify the storage quota in terabytes for your allocation.',
     )
     cost_center = forms.ModelChoiceField(
-        queryset=CostCenter.objects.all().order_by('dept_id'),
-        to_field_name='dept_id',
+        queryset=CostCenter.objects.all().order_by('name'),
+        to_field_name='name',
         label='Cost Center',
         required=False,
         empty_label='Select cost center...',
@@ -108,6 +108,7 @@ class CostCenterAssignmentForm(forms.Form):
                 raise forms.ValidationError(f'Assignment {i} must be a JSON object.')
 
             dept = row.get('department')
+            grant = row.get('grant')
             pct = row.get('percentage')
 
             if not isinstance(dept, str) or not dept.strip():
@@ -116,19 +117,20 @@ class CostCenterAssignmentForm(forms.Form):
             if type(pct) is not int:
                 raise forms.ValidationError(f'Percentage for {dept!r} must be an integer.')
 
-            assignements.append(
-                {
-                    'department': dept,
-                    'percentage': pct,
-                }
+            assignements.append({'department': dept, 'percentage': pct, **({'grant': grant} if grant else {})})
+
+        for cost_center in ('department', 'grant'):
+            values_set = {item.get(cost_center) for item in assignements if item.get(cost_center) is not None}
+
+            valid_values = set(
+                CostCenter.objects.filter(name__in=values_set, cost_center_type=cost_center).values_list(
+                    'name', flat=True
+                )
             )
 
-        departments_set = {item['department'] for item in assignements}
-        valid_departmens = set(CostCenter.objects.filter(dept_id__in=departments_set).values_list('dept_id', flat=True))
-
-        if invalid_departments := departments_set - valid_departmens:
-            invalid_list = ', '.join(sorted(invalid_departments))
-            raise forms.ValidationError(f'Unknown cost center(s): {invalid_list}.')
+            if invalid := values_set - valid_values:
+                invalid_list = ', '.join(sorted(invalid))
+                raise forms.ValidationError(f'Unknown {cost_center}(s): {invalid_list}.')
 
         try:
             validated = CostCenterSchema.model_validate({'assignments': assignements})
@@ -137,4 +139,4 @@ class CostCenterAssignmentForm(forms.Form):
             msg = first.get('msg', 'Invalid assignments.') if first else 'Invalid assignments.'
             raise ValidationError(msg)
 
-        return [a.model_dump(mode='json') for a in validated.assignments]
+        return [a.model_dump(mode='json', exclude_none=True) for a in validated.assignments]
