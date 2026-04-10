@@ -15,6 +15,11 @@ urlpatterns = [
         name='update_cost_center_assignment',
     ),
     path(
+        'cost-center-autocomplete',
+        views.CostCenterAutocompleteView.as_view(),
+        name='autocomplete_cost_center',
+    ),
+    path(
         'allocation/<int:pk>/update-allocation-details/',
         views.UpdateAllocationDetailsView.as_view(),
         name='update_allocation_details',

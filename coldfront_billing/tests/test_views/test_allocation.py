@@ -201,7 +201,7 @@ class TestUpdateAllocationDetailsView:
         """Test that POST with cost center creates CostCenterAssignment."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-        CostCenter.objects.create(dept_id='DEPT001')
+        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
         allocation, _ = add_storage_allocation_to_project(
             project,
             storage_resource_type,
@@ -216,7 +216,7 @@ class TestUpdateAllocationDetailsView:
 
         assert response.status_code == 302
         assignment = CostCenterAssignment.objects.get(project=project)
-        assert assignment.assignments == {'DEPT001': 100}
+        assert assignment.assignments == [{'department': 'DEPT001', 'percentage': 100}]
 
     def test_cost_center_field_hidden_when_project_has_assignment(
         self,
@@ -231,8 +231,8 @@ class TestUpdateAllocationDetailsView:
         """Test that cost_center field is hidden when project already has cost center."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-        CostCenter.objects.create(dept_id='DEPT001')
-        CostCenterAssignment.objects.create(project=project, assignments={'DEPT001': 100})
+        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
+        CostCenterAssignment.objects.create(project=project, assignments=[{'department': 'DEPT001', 'percentage': 100}])
         allocation, _ = add_storage_allocation_to_project(
             project,
             storage_resource_type,

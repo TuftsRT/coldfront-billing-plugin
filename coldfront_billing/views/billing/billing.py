@@ -11,7 +11,6 @@ from django.views.generic import ListView
 
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.forms import BillingSearchForm
-from coldfront_billing.models import CostCenter
 from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
 
 
@@ -93,25 +92,23 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
             # 2. Handle Cost Center & JSON Serialization safely
             try:
                 assignment_obj = project.cost_center_assignment
-                assignments = dict(sorted((assignment_obj.assignments or {}).items()))
-
-                items = [f'{dept_id}: {pct}%' for dept_id, pct in assignments.items()]
-
+                assignments_list = sorted(
+                    assignment_obj.assignments or [],
+                    key=lambda x: (x.get('department') or ''),
+                )
+                items = [f"{row['department']}: {row['percentage']}%" for row in assignments_list]
                 project.cost_centers = ', '.join(items[:2]) + ' ...' if len(items) > 2 else ', '.join(items)
                 project.all_cost_centers = '\n'.join(items) if items else ''
-                project.assignments_json = json.dumps(assignments)
+                project.assignments_json = json.dumps(assignments_list)
             except ObjectDoesNotExist:
                 project.cost_centers = '-'
                 project.all_cost_centers = '-'
-                project.assignments_json = '{}'
-
-        departments = sorted([cc.dept_id for cc in CostCenter.objects.all()])
+                project.assignments_json = '[]'
 
         return (
             context
             | self.get_pagination_params()
             | {
                 'search_form': BillingSearchForm(self.request.GET),
-                'departments': departments,
             }
         )

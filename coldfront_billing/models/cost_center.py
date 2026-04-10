@@ -2,6 +2,7 @@ from coldfront.core.project.models import Project
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
+from pydantic import ValidationError as PydanticValidationError
 
 from coldfront_billing.schemas import CostCenterSchema
 
@@ -9,10 +10,16 @@ User = get_user_model()
 
 
 class CostCenter(models.Model):
-    dept_id = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
+    name = models.CharField(max_length=60, unique=True, help_text='Unique identifier for the cost center')
+    cost_center_type = models.CharField(
+        max_length=16,
+        choices={'department': 'department', 'grant': 'grant'},
+        default='department',
+        help_text='Cost center type (department or grant)',
+    )
 
     def __str__(self):
-        return self.dept_id
+        return self.name
 
 
 class CostCenterAssignment(models.Model):
@@ -22,7 +29,11 @@ class CostCenterAssignment(models.Model):
         related_name='cost_center_assignment',
         help_text='Project associated with this cost center assignment',
     )
-    assignments = models.JSONField(blank=True, help_text='JSON field storing cost center assignments with percentages')
+    assignments = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='JSON field storing cost center assignments with percentages',
+    )
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
@@ -34,12 +45,18 @@ class CostCenterAssignment(models.Model):
         return f'Cost Center Assignment for {self.project.title}'
 
     def clean(self):
-        """Validate the JSON field using Pydantic schema."""
-        if self.assignments:
-            try:
-                CostCenterSchema(assignments=self.assignments)
-            except Exception as e:
-                raise ValidationError(f'Invalid cost center assignments: {e}')
+        super().clean()
+
+        if not self.assignments:
+            return
+
+        try:
+            validated = CostCenterSchema.model_validate({'assignments': self.assignments})
+        except PydanticValidationError as e:
+            raise ValidationError({'assignments': e.errors()})
+
+        # normalization (omit optional keys that are null, e.g. grant)
+        self.assignments = validated.model_dump(mode='json', exclude_none=True)['assignments']
 
     def save(self, *args, **kwargs):
         self.full_clean()
