@@ -4,13 +4,15 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
-from coldfront.core.resource.models import Resource, ResourceAttribute
+from coldfront.core.project.models import Project
+from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.http import HttpRequest
 
 from coldfront_billing.constants import (
+    BILLING_ATTRIBUTE_NAME,
     COST_ATTR_NAME,
     COST_ATTRIBUTE_NAME,
     NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
@@ -20,6 +22,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data import BillingAllocation
 from coldfront_billing.models import NoCostQuotaAllotment
+from coldfront_billing.utils import NoStorageException
 
 default_quota = getattr(
     settings,
@@ -86,6 +89,33 @@ class BillingAllocationPrefetchMixin(PrefetchPaginationMixin):
             ),
             to_attr=NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
         )
+
+    def get_projects_prefetch(self, projects: QuerySet[Project]) -> QuerySet[Project, Project]:
+        if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
+            raise NoStorageException()
+
+        # Restrict to only projects that actually have paid Storage allocations
+        projects = projects.filter(
+            allocation__resources__resource_type_id=storage_type.id,
+            allocation__resources__requires_payment=True,
+        ).distinct()
+
+        allocations_prefetch = Prefetch(
+            'allocation_set',
+            queryset=Allocation.objects.filter(
+                resources__resource_type_id=storage_type.id,
+                resources__requires_payment=True,
+                status__name='Active',
+            )
+            .distinct()
+            .prefetch_related(
+                self.get_quota_attr_prefetch(),
+                self.get_paid_storage_resources_prefetch(storage_type.id),
+                self.get_no_cost_quota_allotments_prefetch(),
+            ),
+            to_attr=BILLING_ATTRIBUTE_NAME,
+        )
+        return projects.select_related('pi', 'status').prefetch_related(allocations_prefetch, 'cost_center_assignment')
 
     @staticmethod
     def create_billing_allocations(allocation_objs: list[Allocation]) -> list[BillingAllocation]:
