@@ -65,15 +65,16 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
 class CostCenterAutocompleteView(LoginRequiredMixin, View):
     def get(self, request):
         query = request.GET.get('q', '').strip()
+        cc_type = request.GET.get('type', 'department')
 
         if len(query) < 3:
             return JsonResponse({'results': []})
 
         results = list(
-            CostCenter.objects.filter(dept_id__istartswith=query)
-            .values_list('dept_id', flat=True)
+            CostCenter.objects.filter(name__istartswith=query, cost_center_type=cc_type)
+            .values_list('name', flat=True)
             .distinct()
-            .order_by('dept_id')[:10]
+            .order_by('name')[:10]
         )
 
         return JsonResponse({'results': results})

@@ -5,9 +5,9 @@ from .models import CostCenter, CostCenterAssignment, NoCostQuota, NoCostQuotaAl
 
 @admin.register(CostCenter)
 class CostCenterAdmin(admin.ModelAdmin):
-    list_display = ['dept_id']
-    search_fields = ['dept_id']
-    ordering = ['dept_id']
+    list_display = ['name', 'cost_center_type']
+    search_fields = ['name', 'cost_center_type']
+    ordering = ['name', 'cost_center_type']
 
 
 @admin.register(CostCenterAssignment)

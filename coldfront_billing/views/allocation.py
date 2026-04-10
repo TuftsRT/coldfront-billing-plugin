@@ -105,7 +105,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
 
                 cost_center_assignment.assignments = [
                     {
-                        'department': cost_center.dept_id,
+                        'department': cost_center.name,
                         'percentage': 100,
                     }
                 ]
@@ -121,7 +121,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
             if cost_center is not None:
                 msg = (
                     f'Storage quota of {quota} TB has been set with 100% cost assigned to '
-                    f'{cost_center.dept_id}. Your allocation request is complete.'
+                    f'{cost_center.name}. Your allocation request is complete.'
                 )
             else:
                 msg = f'Storage quota of {quota} TB has been set. Your allocation request is complete.'
