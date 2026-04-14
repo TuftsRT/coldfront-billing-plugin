@@ -7,6 +7,7 @@ from .no_cost_quota import (
     ManageAllotmentView,
     ManageNoCostQuotasView,
 )
+from .reports import ExportBillingReportView
 
 __all__ = [
     'AssignNoCostQuotasView',
@@ -15,6 +16,7 @@ __all__ = [
     'BillingDetailsView',
     'CostCenterAssignmentUpdateView',
     'CostCenterAutocompleteView',
+    'ExportBillingReportView',
     'ManageAllotmentView',
     'ManageNoCostQuotasView',
     'UpdateAllocationDetailsView',
