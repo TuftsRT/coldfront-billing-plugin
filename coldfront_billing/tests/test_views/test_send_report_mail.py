@@ -9,24 +9,26 @@ from django.urls import reverse
 from coldfront_billing.utils import NoStorageException
 from coldfront_billing.views.reports.mail import SendReportView
 
+REVERSE = 'reports_send'
+
 
 @pytest.mark.django_db
 @pytest.mark.usefixtures('configure_urls')
 class TestSendReportView:
     def test_anonymous_forbidden(self, client):
-        response = client.get(reverse('manage_reports'))
+        response = client.get(reverse(REVERSE))
         assert response.status_code == 403
 
     def test_regular_user_forbidden(self, client, user):
         client.force_login(user)
-        response = client.get(reverse('manage_reports'))
+        response = client.get(reverse(REVERSE))
         assert response.status_code == 403
         assert b'not allowed' in response.content.lower()
 
     @patch('coldfront_billing.views.reports.mail.EMAIL_TO', 'bad@@example.com')
     def test_invalid_recipients_message(self, client, superuser):
         client.force_login(superuser)
-        response = client.get(reverse('manage_reports'))
+        response = client.get(reverse(REVERSE))
         assert response.status_code == 200
         assert b'Invalid email addresses' in response.content
         assert b'bad@@example.com' in response.content
@@ -34,7 +36,7 @@ class TestSendReportView:
     @patch('coldfront_billing.views.reports.mail.EMAIL_TO', '  ;  ,  ')
     def test_no_valid_recipients_message(self, client, superuser):
         client.force_login(superuser)
-        response = client.get(reverse('manage_reports'))
+        response = client.get(reverse(REVERSE))
         assert response.status_code == 200
         assert response.content == b'No valid email addresses found'
 
@@ -52,7 +54,7 @@ class TestSendReportView:
                 side_effect=NoStorageException(),
             ),
         ):
-            response = client.get(reverse('manage_reports'))
+            response = client.get(reverse(REVERSE))
         assert response.status_code == 404
         assert response.content == b'No storage resource found'
 
@@ -73,7 +75,7 @@ class TestSendReportView:
             patch('coldfront_billing.views.reports.mail.EmailMessage') as mock_email_class,
         ):
             mock_email_class.return_value = mock_msg
-            response = client.get(reverse('manage_reports'))
+            response = client.get(reverse(REVERSE))
 
         assert response.status_code == 200
         assert response.content == b'Email with attachment sent!'
