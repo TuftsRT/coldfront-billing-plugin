@@ -1,13 +1,11 @@
-import re
-
 from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.mail import EmailMessage
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotFound
+from django.http import JsonResponse
 from django.views import View
-from email_validator import EmailNotValidError, validate_email
 
-from coldfront_billing.utils import NoStorageException
+from coldfront_billing.models import BillingScheduleSettings
+from coldfront_billing.utils import NoStorageException, get_month_abbr, validate_emails
 from coldfront_billing.views.reports.create import CreateReportMixin
 
 EMAIL_FROM = getattr(
@@ -18,7 +16,6 @@ EMAIL_FROM = getattr(
 
 EMAIL_SUBJECT = 'Billing monthly report'
 EMAIL_BODY = 'Attached is the latest CSV report.'
-EMAIL_TO = 'mh@tufts.com;admin@tufts.com'
 
 
 class SendReportView(UserPassesTestMixin, CreateReportMixin, View):
@@ -26,37 +23,62 @@ class SendReportView(UserPassesTestMixin, CreateReportMixin, View):
         return self.request.user.is_superuser
 
     def handle_no_permission(self):
-        return HttpResponseForbidden('You are not allowed to access this resource.')
+        return JsonResponse(
+            {
+                'success': False,
+                'message': 'You are not allowed to access this resource.',
+            },
+            status=403,
+        )
 
-    def get(self, request, *args, **kwargs):
-        email_to = re.split(r'[;,]', EMAIL_TO)
+    def get(self, *_, **__):
+        billing_settings = BillingScheduleSettings.objects.first()
 
-        valid_recipients = []
-        invalid_recipients = []
+        if not billing_settings or not billing_settings.notification_email:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': 'No email address configured',
+                },
+                status=400,
+            )
 
-        for email in email_to:
-            email = email.strip()
-            if not email:
-                continue
-            try:
-                valid = validate_email(email)
-                valid_recipients.append(valid.normalized)
-            except EmailNotValidError:
-                invalid_recipients.append(email)
+        valid_recipients, invalid_recipients = validate_emails(billing_settings.notification_email)
 
         if invalid_recipients:
-            return HttpResponse(f'Invalid email addresses: {", ".join(invalid_recipients)}')
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': f'Invalid email addresses: {", ".join(invalid_recipients)}',
+                },
+                status=400,
+            )
         if not valid_recipients:
-            return HttpResponse('No valid email addresses found')
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': 'No valid email addresses found',
+                },
+                status=400,
+            )
 
         try:
             filename, csv_content = self.create_report()
         except NoStorageException:
-            return HttpResponseNotFound('No storage resource found')
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': 'No storage resource found',
+                },
+                status=404,
+            )
+
+        subject = (billing_settings.email_subject or '').strip() or EMAIL_SUBJECT
+        body = (billing_settings.email_content or '').strip() or EMAIL_BODY
 
         email = EmailMessage(
-            subject=EMAIL_SUBJECT,
-            body=EMAIL_BODY,
+            subject=subject + f' [{get_month_abbr()}]',
+            body=body,
             from_email=EMAIL_FROM,
             to=valid_recipients,
         )
@@ -64,4 +86,9 @@ class SendReportView(UserPassesTestMixin, CreateReportMixin, View):
         email.attach(filename, csv_content, 'text/csv')
         email.send()
 
-        return HttpResponse('Email with attachment sent!')
+        return JsonResponse(
+            {
+                'success': True,
+                'message': 'Email with attachment sent!',
+            }
+        )

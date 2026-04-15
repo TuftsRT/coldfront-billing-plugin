@@ -5,11 +5,28 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
+from coldfront_billing.models import BillingScheduleSettings
 from coldfront_billing.utils import NoStorageException
-from coldfront_billing.views.reports.mail import SendReportView
+from coldfront_billing.views.reports.mail import EMAIL_SUBJECT, SendReportView
 
 REVERSE = 'reports_send'
+
+
+def _schedule_settings(**overrides):
+    defaults = {
+        'scheduling_enabled': True,
+        'schedule_type': BillingScheduleSettings.SCHEDULE_MONTHLY,
+        'start_date': timezone.localdate(),
+        'notification_email': 'noreply@test.local',
+        'email_subject': '',
+        'email_content': '',
+        'autoassign_no_cost_quota': False,
+    }
+    defaults.update(overrides)
+    BillingScheduleSettings.objects.all().delete()
+    return BillingScheduleSettings.objects.create(**defaults)
 
 
 @pytest.mark.django_db
@@ -25,27 +42,32 @@ class TestSendReportView:
         assert response.status_code == 403
         assert b'not allowed' in response.content.lower()
 
-    @patch('coldfront_billing.views.reports.mail.EMAIL_TO', 'bad@@example.com')
     def test_invalid_recipients_message(self, client, superuser):
+        _schedule_settings(notification_email='bad@@example.com')
         client.force_login(superuser)
         response = client.get(reverse(REVERSE))
-        assert response.status_code == 200
-        assert b'Invalid email addresses' in response.content
-        assert b'bad@@example.com' in response.content
+        assert response.status_code == 400
+        data = response.json()
+        assert data['success'] is False
+        assert 'Invalid email addresses' in data['message']
+        assert 'bad@@example.com' in data['message']
 
-    @patch('coldfront_billing.views.reports.mail.EMAIL_TO', '  ;  ,  ')
     def test_no_valid_recipients_message(self, client, superuser):
+        _schedule_settings(notification_email='  ;  ,  ')
         client.force_login(superuser)
         response = client.get(reverse(REVERSE))
-        assert response.status_code == 200
-        assert response.content == b'No valid email addresses found'
+        assert response.status_code == 400
+        assert response.json() == {
+            'success': False,
+            'message': 'No valid email addresses found',
+        }
 
     def test_superuser_no_storage_returns_404(self, client, superuser):
+        _schedule_settings()
         client.force_login(superuser)
         with (
-            patch('coldfront_billing.views.reports.mail.EMAIL_TO', 'noreply@test.local'),
             patch(
-                'coldfront_billing.views.reports.mail.validate_email',
+                'coldfront_billing.utils.validate_email',
                 return_value=SimpleNamespace(normalized='noreply@test.local'),
             ),
             patch.object(
@@ -56,15 +78,18 @@ class TestSendReportView:
         ):
             response = client.get(reverse(REVERSE))
         assert response.status_code == 404
-        assert response.content == b'No storage resource found'
+        assert response.json() == {
+            'success': False,
+            'message': 'No storage resource found',
+        }
 
     def test_superuser_sends_email_with_attachment(self, client, superuser):
+        _schedule_settings()
         client.force_login(superuser)
         mock_msg = MagicMock()
         with (
-            patch('coldfront_billing.views.reports.mail.EMAIL_TO', 'noreply@test.local'),
             patch(
-                'coldfront_billing.views.reports.mail.validate_email',
+                'coldfront_billing.utils.validate_email',
                 return_value=SimpleNamespace(normalized='noreply@test.local'),
             ),
             patch.object(
@@ -72,17 +97,55 @@ class TestSendReportView:
                 'create_report',
                 return_value=('billing.csv', 'h1,h2\n1,2\n'),
             ),
+            patch(
+                'coldfront_billing.views.reports.mail.get_month_abbr',
+                return_value='APR',
+            ),
             patch('coldfront_billing.views.reports.mail.EmailMessage') as mock_email_class,
         ):
             mock_email_class.return_value = mock_msg
             response = client.get(reverse(REVERSE))
 
         assert response.status_code == 200
-        assert response.content == b'Email with attachment sent!'
+        assert response.json() == {
+            'success': True,
+            'message': 'Email with attachment sent!',
+        }
         mock_email_class.assert_called_once()
         kwargs = mock_email_class.call_args.kwargs
-        assert kwargs['subject'] == 'Billing monthly report'
+        assert kwargs['subject'] == f'{EMAIL_SUBJECT} [APR]'
         assert kwargs['body'] == 'Attached is the latest CSV report.'
         assert kwargs['to'] == ['noreply@test.local']
         mock_msg.attach.assert_called_once_with('billing.csv', 'h1,h2\n1,2\n', 'text/csv')
         mock_msg.send.assert_called_once()
+
+    def test_custom_subject_and_body_from_settings(self, client, superuser):
+        _schedule_settings(
+            email_subject='Custom subject',
+            email_content='Custom body line 1\nline 2',
+        )
+        client.force_login(superuser)
+        mock_msg = MagicMock()
+        with (
+            patch(
+                'coldfront_billing.utils.validate_email',
+                return_value=SimpleNamespace(normalized='noreply@test.local'),
+            ),
+            patch.object(
+                SendReportView,
+                'create_report',
+                return_value=('billing.csv', 'x'),
+            ),
+            patch(
+                'coldfront_billing.views.reports.mail.get_month_abbr',
+                return_value='APR',
+            ),
+            patch('coldfront_billing.views.reports.mail.EmailMessage') as mock_email_class,
+        ):
+            mock_email_class.return_value = mock_msg
+            response = client.get(reverse(REVERSE))
+
+        assert response.status_code == 200
+        kwargs = mock_email_class.call_args.kwargs
+        assert kwargs['subject'] == 'Custom subject [APR]'
+        assert kwargs['body'] == 'Custom body line 1\nline 2'

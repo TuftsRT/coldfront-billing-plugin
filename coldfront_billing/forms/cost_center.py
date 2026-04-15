@@ -1,76 +1,13 @@
 import json
-from typing import Any, ClassVar, List
+from typing import Any, List
 
 from coldfront.core.project.models import Project
 from django import forms
 from django.core.exceptions import ValidationError
 from pydantic import ValidationError as PydanticValidationError
 
+from coldfront_billing.models import CostCenter
 from coldfront_billing.schemas import CostCenterSchema
-
-from .models import CostCenter
-
-
-class AllocationDetailsForm(forms.Form):
-    """Form for specifying storage quota when completing a storage allocation request."""
-
-    quota_in_terabyte = forms.FloatField(
-        label='Storage Quota (TB)',
-        required=True,
-        min_value=0,
-        widget=forms.NumberInput(attrs={'step': '1.0', 'min': '0', 'class': 'form-control'}),
-        help_text='Specify the storage quota in terabytes for your allocation.',
-    )
-    cost_center = forms.ModelChoiceField(
-        queryset=CostCenter.objects.all().order_by('name'),
-        to_field_name='name',
-        label='Cost Center',
-        required=False,
-        empty_label='Select cost center...',
-        widget=forms.Select(attrs={'class': 'form-control custom-select'}),
-        help_text='Select the cost center where the project cost will be initially assigned. '
-        'To update the value or split the cost between multiple Cost Centers, '
-        'visit the "Billing" page under the "Project" menu after the request has been approved.'
-        'If you are not sure about the cost center - leave it blank',
-    )
-
-
-class BillingSearchForm(forms.Form):
-    USERNAME: ClassVar[str] = 'PI name'
-
-    username = forms.CharField(label=USERNAME, max_length=100, required=False)
-    no_cost_center = forms.BooleanField(
-        label='Only projects without any cost center assigned',
-        required=False,
-    )
-
-
-class NoCostQuotaSearchForm(forms.Form):
-    USERNAME: ClassVar[str] = 'Owner name'
-
-    username = forms.CharField(label=USERNAME, max_length=100, required=False)
-
-
-class AllocationSearchForm(forms.Form):
-    PROJECT: ClassVar[str] = 'Project name'
-
-    STATUS_ALL = ''
-    STATUS_ACTIVE = 'active'
-    STATUS_INACTIVE = 'inactive'
-
-    STATUS_CHOICES = [
-        (STATUS_ALL, 'All allocations'),
-        (STATUS_ACTIVE, 'Only active allocations'),
-        (STATUS_INACTIVE, 'Only not active allocations'),
-    ]
-
-    project = forms.CharField(label=PROJECT, max_length=100, required=False)
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        required=False,
-        widget=forms.RadioSelect,
-        label='Allocation status',
-    )
 
 
 class CostCenterAssignmentForm(forms.Form):
