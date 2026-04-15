@@ -70,11 +70,11 @@ class TestExportBillingReportView:
         )
 
         client.force_login(superuser)
-        csv_mod = 'coldfront_billing.views.reports.csv'
+        create_mod = 'coldfront_billing.views.reports.create'
         with (
-            patch(f'{csv_mod}.get_month_abbr', return_value='MAR'),
-            patch(f'{csv_mod}.ACCOUNT_NAME', 'ACC1'),
-            patch(f'{csv_mod}.DESCRIPTION_PREFIX', 'PRE'),
+            patch(f'{create_mod}.get_month_abbr', return_value='MAR'),
+            patch(f'{create_mod}.ACCOUNT_NAME', 'ACC1'),
+            patch(f'{create_mod}.DESCRIPTION_PREFIX', 'PRE'),
         ):
             response = client.get(reverse('reports_export'))
 
@@ -87,7 +87,7 @@ class TestExportBillingReportView:
         assert rows[1] == ['ACC1', 'DEPT_A', 'DEPT_X', '$300.0', desc]
         assert rows[2] == ['ACC1', 'DEPT_B', '', '$200.0', desc]
 
-    @patch('coldfront_billing.views.reports.csv.get_month_abbr', return_value='MAR')
+    @patch('coldfront_billing.views.reports.create.get_month_abbr', return_value='MAR')
     def test_skips_project_without_cost_center_assignment(
         self,
         _mock_month,
@@ -115,7 +115,7 @@ class TestExportBillingReportView:
         assert len(rows) == 1
         assert rows[0][0] == 'Account'
 
-    @patch('coldfront_billing.views.reports.csv.get_month_abbr', return_value='MAR')
+    @patch('coldfront_billing.views.reports.create.get_month_abbr', return_value='MAR')
     def test_skips_project_with_zero_total_cost(
         self,
         _mock_month,
