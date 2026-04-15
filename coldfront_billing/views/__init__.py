@@ -7,7 +7,7 @@ from .no_cost_quota import (
     ManageAllotmentView,
     ManageNoCostQuotasView,
 )
-from .reports import ExportBillingReportView, SendReportView
+from .reports import ExportBillingReportView, ManageReportsView, SendReportView
 
 __all__ = [
     'AssignNoCostQuotasView',
@@ -19,6 +19,7 @@ __all__ = [
     'ExportBillingReportView',
     'ManageAllotmentView',
     'ManageNoCostQuotasView',
+    'ManageReportsView',
     'SendReportView',
     'UpdateAllocationDetailsView',
 ]

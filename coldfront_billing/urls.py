@@ -45,5 +45,6 @@ urlpatterns = [
         name='no_cost_quota_auto_allotment',
     ),
     path('billing/reports/export', views.ExportBillingReportView.as_view(), name='reports_export'),
+    path('billing/reports/manage', views.ManageReportsView.as_view(), name='reports_manage'),
     path('billing/reports/send', views.SendReportView.as_view(), name='reports_send'),
 ]
