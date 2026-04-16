@@ -10,7 +10,6 @@ from django.urls import reverse
 from coldfront_billing.models import CostCenterAssignment
 from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 from coldfront_billing.utils import NoStorageException
-from coldfront_billing.views.reports.csv import ExportBillingReportView
 
 
 def _csv_rows(response):
@@ -32,9 +31,8 @@ class TestExportBillingReportView:
 
     def test_superuser_no_storage_returns_404(self, client, superuser):
         client.force_login(superuser)
-        with patch.object(
-            ExportBillingReportView,
-            'get_projects_prefetch',
+        with patch(
+            'coldfront_billing.prefetch.get_projects_prefetch',
             side_effect=NoStorageException(),
         ):
             response = client.get(reverse('reports_export'))
@@ -70,7 +68,7 @@ class TestExportBillingReportView:
         )
 
         client.force_login(superuser)
-        create_mod = 'coldfront_billing.views.reports.create'
+        create_mod = 'coldfront_billing.reports.csv'
         with (
             patch(f'{create_mod}.get_month_abbr', return_value='MAR'),
             patch(f'{create_mod}.ACCOUNT_NAME', 'ACC1'),
@@ -87,7 +85,7 @@ class TestExportBillingReportView:
         assert rows[1] == ['ACC1', 'DEPT_A', 'DEPT_X', '$300.0', desc]
         assert rows[2] == ['ACC1', 'DEPT_B', '', '$200.0', desc]
 
-    @patch('coldfront_billing.views.reports.create.get_month_abbr', return_value='MAR')
+    @patch('coldfront_billing.reports.csv.get_month_abbr', return_value='MAR')
     def test_skips_project_without_cost_center_assignment(
         self,
         _mock_month,
@@ -115,7 +113,7 @@ class TestExportBillingReportView:
         assert len(rows) == 1
         assert rows[0][0] == 'Account'
 
-    @patch('coldfront_billing.views.reports.create.get_month_abbr', return_value='MAR')
+    @patch('coldfront_billing.reports.csv.get_month_abbr', return_value='MAR')
     def test_skips_project_with_zero_total_cost(
         self,
         _mock_month,

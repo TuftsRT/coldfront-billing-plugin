@@ -18,11 +18,12 @@ from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.forms import AllocationSearchForm
 from coldfront_billing.models import NoCostQuotaAllotment
-from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin, PrefetchPaginationMixin
+from coldfront_billing.prefetch import get_paid_storage_resources_prefetch, get_quota_attr_prefetch
+from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
-class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCostQuotaAssignViewMixin, ListView):
+class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, ListView):
     template_name = 'no_cost_quota/assign.html'
     context_object_name = 'allocation_list'
     model = Allocation
@@ -98,8 +99,8 @@ class AssignNoCostQuotasView(LoginRequiredMixin, PrefetchPaginationMixin, NoCost
             allocations.select_related('project', 'project__pi', 'status')
             .prefetch_related(
                 'resources',
-                self.get_paid_storage_resources_prefetch(storage_type.id),
-                self.get_quota_attr_prefetch(),
+                get_paid_storage_resources_prefetch(storage_type.id),
+                get_quota_attr_prefetch(),
                 allotments_prefetch,
             )
             .order_by('project__title', 'pk')

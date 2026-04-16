@@ -7,13 +7,15 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, QuerySet
 from django.views.generic import ListView
 
+from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.forms import BillingSearchForm
+from coldfront_billing.prefetch import get_projects_prefetch
 from coldfront_billing.utils import NoStorageException
-from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
+from coldfront_billing.views.mixins import BillingListViewStateMixin
 
 
-class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingListViewStateMixin, ListView):
+class BillingView(LoginRequiredMixin, BillingListViewStateMixin, ListView):
     model = Project
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
@@ -47,7 +49,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
             ).distinct()
 
         try:
-            return self.get_projects_prefetch(projects).order_by(ordering)
+            return get_projects_prefetch(projects).order_by(ordering)
         except NoStorageException:
             return projects.select_related('pi', 'status').order_by(ordering)
 
@@ -57,9 +59,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
         context['projects_count'] = len(context['project_list'])
 
         for project in context.get('project_list', []):
-            billing_allocations = self.create_billing_allocations(
-                [a for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])]
-            )
+            billing_allocations = create_billing_allocations([a for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])])
             project_cost = sum(b.total_cost for b in billing_allocations)
             project.cost = f'${project_cost}'
 
