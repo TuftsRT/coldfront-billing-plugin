@@ -202,7 +202,7 @@
             inputSelector: '.grant-autocomplete-input',
             resultsSelector: '.grant-autocomplete-results',
             typeParam: 'grant',
-            triggerChangeOnSelect: false,
+            triggerChangeOnSelect: true,
         });
         }
 

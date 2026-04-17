@@ -40,13 +40,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var totalCost = 0;
         var hasDeptWithoutPercent = false;
         var hasDuplicateDepts = false;
-        var seenDepts = {};
+        var seenDeptGrantPairs = {};
         var errorRows = [];
         var rowsWithDeptCount = 0;
 
         $('#cost-center-body tr').each(function () {
             var row = $(this);
             var deptId = (row.find('.dept-autocomplete-input').val() || '').trim();
+            var grant = (row.find('.grant-autocomplete-input').val() || '').trim();
             var percentage = parseInt(row.find('.percent-input').val(), 10);
             var cost = parseFloat(row.find('.cost-input').val()) || 0;
 
@@ -54,12 +55,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 hasDeptWithoutPercent = true;
             }
             if (deptId) {
+
+                const pairKey = deptId + '||' + grant;
+
                 rowsWithDeptCount++;
-                if (!seenDepts[deptId]) {
-                    seenDepts[deptId] = [];
+                if (!seenDeptGrantPairs[pairKey]) {
+                    seenDeptGrantPairs[pairKey] = [];
                 }
-                seenDepts[deptId].push(row);
-                if (seenDepts[deptId].length > 1) {
+                seenDeptGrantPairs[pairKey].push(row);
+                if (seenDeptGrantPairs[pairKey].length > 1) {
                     hasDuplicateDepts = true;
                 }
             }
@@ -69,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Collect duplicate rows
         if (hasDuplicateDepts) {
-            $.each(seenDepts, function (deptId, rows) {
+            $.each(seenDeptGrantPairs, function (pairKey, rows) {
                 if (rows.length > 1) {
                     errorRows = errorRows.concat(rows);
                 }
@@ -97,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (hasDuplicateDepts) {
             saveBtn.prop('disabled', true);
-            errorEl.removeClass('d-none').text('Each department can only be selected once.');
+            errorEl.removeClass('d-none').text('Each pair department/grant can only be selected once.');
         } else if (hasDeptWithoutPercent) {
             saveBtn.prop('disabled', true);
             errorEl.removeClass('d-none').text('Please enter percentage for all rows with a selected department.');
@@ -241,6 +245,11 @@ document.addEventListener('DOMContentLoaded', function () {
         calculateRowCost(row);
     });
 
+    costCenterBody.on('input change', '.grant-autocomplete-input', function () {
+        var row = $(this).closest('tr');
+        calculateRowCost(row);
+    });
+
     if (typeof window.initColdfrontCostCenterAutocomplete === 'function') {
         var billingAutocompleteUrl = $('#costCentersModal').data('autocomplete-url');
         if (billingAutocompleteUrl) {
@@ -258,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var csrfToken = $('[name=csrfmiddlewaretoken]').val();
         var rows = $('#cost-center-body tr');
         var assignmentsPayload = [];
-        var seenDepts = {};
+        var seenDeptGrantPairs = {};
         var totalPercentage = 0;
 
         // --- VALIDATION & DATA GATHERING ---
@@ -270,10 +279,12 @@ document.addEventListener('DOMContentLoaded', function () {
             var percentage = parseInt($(this).find('.percent-input').val(), 10);
 
             if (deptId && !isNaN(percentage)) {
-                if (seenDepts.hasOwnProperty(deptId)) {
+                const pairKey = deptId + '||' + grantId;
+
+                if (seenDeptGrantPairs.hasOwnProperty(pairKey)) {
                     hasDuplicate = true;
                 } else {
-                    seenDepts[deptId] = true;
+                    seenDeptGrantPairs[pairKey] = true;
                     var payload = {department: deptId, percentage: percentage};
                     if (grantId) {
                         payload.grant = grantId;
@@ -287,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (hasDuplicate) {
-            showFormError('Each department can only be selected once.');
+            showFormError('Each department/grant pair can only be selected once.');
             return;
         }
         if (hasMissingPercent) {
