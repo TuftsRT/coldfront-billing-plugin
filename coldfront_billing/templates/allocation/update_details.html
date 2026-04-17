@@ -75,14 +75,14 @@ Complete Storage Allocation
                     </div>
                 </div>
             {% endif %}
-            <button class="btn btn-primary" type="submit">Complete Request</button>
             <a class="btn btn-secondary" href="{% url 'allocation-detail' allocation.pk %}" role="button">Back to
                 Allocation</a>
+            <button class="btn btn-primary" type="submit">Complete Request</button>
         </form>
     </div>
 </div>
 {% if show_cost_center %}
-<script src="{% static 'coldfront_billing/js/cost_center_autocomplete.js' %}"></script>
-<script src="{% static 'coldfront_billing/js/update_allocation_details.js' %}"></script>
+<script src="{% static 'billing/js/cost_center_autocomplete.js' %}"></script>
+<script src="{% static 'billing/js/update_allocation_details.js' %}"></script>
 {% endif %}
 {% endblock %}

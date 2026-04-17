@@ -56,8 +56,10 @@ class AllocationDetailsForm(forms.Form):
 
 class BillingSearchForm(forms.Form):
     USERNAME: ClassVar[str] = 'PI name'
+    TITLE: ClassVar[str] = 'Project title'
 
     username = forms.CharField(label=USERNAME, max_length=100, required=False)
+    project_title = forms.CharField(label=TITLE, max_length=100, required=False)
     no_cost_center = forms.BooleanField(
         label='Only projects without any cost center assigned',
         required=False,

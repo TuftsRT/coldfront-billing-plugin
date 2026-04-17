@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $("#navbar-main > ul > li.active").removeClass("active");
     $("#navbar-project-menu").addClass("active");
     $("#navbar-project").addClass("active");
+    $('[data-toggle="popover"]').popover();
 
     // Show success toast if we just reloaded after a save
     var storedMessage = sessionStorage.getItem(BILLING_SUCCESS_KEY);

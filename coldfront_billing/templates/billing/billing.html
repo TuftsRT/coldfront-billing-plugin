@@ -111,12 +111,20 @@ Billing
                         <span class="text-body" style="font-size: 0.9rem;">
                             {{ project.cost_centers }}
                         </span>
+                        <a href="#"
+                           data-toggle="popover"
+                           data-trigger="hover"
+                            data-content="Edit cost centers">
                         <i class="fas fa-edit text-dark"
                            style="font-size: 1.2rem;"></i>
                         {% else %}
                         <span></span>
-                        <i class="fas fa-plus-circle text-dark"
-                           style="font-size: 1.2rem;"></i>
+                        <a href="#"
+                           data-toggle="popover"
+                           data-trigger="hover"
+                            data-content="Add cost centers">
+                          <i class="fas fa-plus-circle text-dark" style="font-size: 1.2rem;"></i>
+                        </a>
                         {% endif %}
                     </button>
                 </span>
@@ -263,6 +271,6 @@ Billing
         </div>
     </div>
 </div>
-<script src="{% static 'coldfront_billing/js/cost_center_autocomplete.js' %}"></script>
+<script src="{% static 'billing/js/cost_center_autocomplete.js' %}"></script>
 <script src="{% static 'billing/js/billing.js' %}"></script>
 {% endblock %}
