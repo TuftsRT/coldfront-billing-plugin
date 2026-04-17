@@ -82,32 +82,32 @@ Assign No-Cost Quota
             </th>
             <th scope="col" class="text-nowrap">PI</th>
             <th scope="col" class="text-nowrap">
-                Resource Name
+                Resource name
                 <a href="?order_by=resource_name&direction=asc&{{filter_parameters}}">
                     <i class="fas fa-sort-up" aria-hidden="true"></i>
-                    <span class="sr-only">Sort Resource Name asc</span>
+                    <span class="sr-only">Sort Resource name asc</span>
                 </a>
                 <a href="?order_by=resource_name&direction=des&{{filter_parameters}}">
                     <i class="fas fa-sort-down" aria-hidden="true"></i>
-                    <span class="sr-only">Sort Resource Name desc</span>
+                    <span class="sr-only">Sort Resource name desc</span>
                 </a>
             </th>
             <th scope="col" class="text-nowrap">Status</th>
             <th scope="col" class="text-nowrap">
-                Amount
+                Quota
                 <a href="?order_by=amount&direction=asc&{{filter_parameters}}">
                     <i class="fas fa-sort-up" aria-hidden="true"></i>
-                    <span class="sr-only">Sort Amount asc</span>
+                    <span class="sr-only">Sort Quota asc</span>
                 </a>
                 <a href="?order_by=amount&direction=des&{{filter_parameters}}">
                     <i class="fas fa-sort-down" aria-hidden="true"></i>
-                    <span class="sr-only">Sort Amount desc</span>
+                    <span class="sr-only">Sort Quota desc</span>
                 </a>
             </th>
-            <th scope="col" class="text-nowrap">Quota Type</th>
-            <th scope="col" class="text-nowrap">Other Applications</th>
+            <th scope="col" class="text-nowrap">Type</th>
+            <th scope="col" class="text-nowrap">Assigned by others</th>
             <th scope="col" class="text-nowrap">
-                {% if request.user.is_superuser %}User{% else %}My{% endif %} Applications
+                Assigned by {% if request.user.is_superuser %}user{% else %}me{% endif %}
             </th>
             <th scope="col" class="text-nowrap"></th>
         </tr>
@@ -163,7 +163,9 @@ Assign No-Cost Quota
 <div class="d-flex align-items-center flex-wrap mt-3 mb-3">
     <a href="{% url 'manage_no_cost_quota' %}{% if back %}?{{ back }}{% endif %}"
        class="btn btn-secondary">Back</a>
-    <button type="button" class="btn btn-outline-primary ml-auto" id="ncqAutoAssignOpen"
+    <button type="button"
+            class="btn btn-outline-primary ml-auto {% if not show_auto_assign %}d-none{% endif %}"
+            id="ncqAutoAssignOpen"
             data-toggle="modal" data-target="#autoAssignQuotaModal"
             data-quota-id="{{ quota.pk }}">
         <i class="fas fa-magic" aria-hidden="true"></i> Auto-assign
