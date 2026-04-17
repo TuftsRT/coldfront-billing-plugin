@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var modal = $(this);
-        modal.find('.modal-title').text('Assign IDs to Project: ' + projectName + ' (' + projectId + ')');
+        modal.find('.modal-title').text('Assign cost for project: ' + projectName + ' (' + projectId + ')');
         modal.find('#id_project_id').val(projectId);
         modal.find('#id_total_project_cost').val(projectCost);
         $('#cost-center-validation-error').addClass('d-none');

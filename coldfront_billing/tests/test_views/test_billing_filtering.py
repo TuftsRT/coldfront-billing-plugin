@@ -292,6 +292,61 @@ class TestBillingViewSearchFilters:
         assert len(response.context['project_list']) == 1
         assert response.context['project_list'][0].title == 'Specific Project'
 
+    def test_search_by_project_title_partial_match(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+    ):
+        pi_user = create_pi_user('_pi')
+        billing_user = create_pi_user('_billing')
+        create_project_with_role_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Alpha Genomics Core',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        create_project_with_role_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Beta unrelated work',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        response = get_billing_response(client, superuser, '?project_title=genomics')
+        assert response.status_code == 200
+        titles = [p.title for p in response.context['project_list']]
+        assert 'Alpha Genomics Core' in titles
+        assert 'Beta unrelated work' not in titles
+
+        response = get_billing_response(client, superuser, '?project_title=GENOMICS')
+        assert response.status_code == 200
+        titles = [p.title for p in response.context['project_list']]
+        assert titles == ['Alpha Genomics Core']
+
     def test_no_cost_center_filter_includes_only_projects_without_assignment(
         self,
         client,
@@ -357,3 +412,105 @@ class TestBillingViewSearchFilters:
         project_titles = [p.title for p in response.context['project_list']]
         assert 'Project With Cost Center' not in project_titles
         assert 'Project Without Cost Center' in project_titles
+
+    def test_search_by_cost_center_contains_partial_department(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+    ):
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        pi_user = create_pi_user('_pi')
+        billing_user = create_pi_user('_billing')
+        CostCenter.objects.create(name='ENG_BIOLOGY_01', cost_center_type='department')
+
+        with_cc = create_project_with_role_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project Alpha CC',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        CostCenterAssignment.objects.create(
+            project=with_cc,
+            assignments=[{'department': 'ENG_BIOLOGY_01', 'percentage': 100}],
+        )
+
+        create_project_with_role_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project Beta No Match',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+
+        response = get_billing_response(client, superuser, '?cost_center=bio')
+        assert response.status_code == 200
+        titles = [p.title for p in response.context['project_list']]
+        assert 'Project Alpha CC' in titles
+        assert 'Project Beta No Match' not in titles
+
+    def test_search_by_cost_center_contains_grant_name(
+        self,
+        client,
+        superuser,
+        project_status_active,
+        billing_role,
+        project_user_status_active,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        field_of_science,
+    ):
+        from coldfront_billing.models import CostCenter, CostCenterAssignment
+
+        pi_user = create_pi_user('_pi')
+        billing_user = create_pi_user('_billing')
+        CostCenter.objects.create(name='DEPT_GRANT', cost_center_type='department')
+        CostCenter.objects.create(name='NIH_R01_ABC', cost_center_type='grant')
+
+        proj = create_project_with_role_user(
+            billing_user,
+            pi_user,
+            project_status_active,
+            billing_role,
+            project_user_status_active,
+            'Project With Grant',
+            with_allocation=True,
+            storage_resource_type=storage_resource_type,
+            allocation_status_active=allocation_status_active,
+            cost_attribute_type=cost_attribute_type,
+            quota_attribute_type=quota_attribute_type,
+            field_of_science=field_of_science,
+        )
+        CostCenterAssignment.objects.create(
+            project=proj,
+            assignments=[{'department': 'DEPT_GRANT', 'grant': 'NIH_R01_ABC', 'percentage': 100}],
+        )
+
+        response = get_billing_response(client, superuser, '?cost_center_contains=r01')
+        assert response.status_code == 200
+        assert [p.title for p in response.context['project_list']] == ['Project With Grant']

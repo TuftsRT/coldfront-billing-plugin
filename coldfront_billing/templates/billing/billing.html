@@ -113,7 +113,7 @@ Billing
                           data-trigger="hover"
                           data-placement="top"
                           data-container="body"
-                          data-content="{% if project.cost_centers == '' %}Edit cost centers{% else %}Add cost centers{% endif %}">
+                          data-content="{% if project.cost_centers != '' %}Edit{% else %}Add{% endif %} cost centers">
                         <button type="button"
                                 class="btn btn-link p-0"
                                 data-toggle="modal"
@@ -122,7 +122,7 @@ Billing
                                 data-project-name="{{ project.title|escape }}"
                                 data-project-cost="{{ project.cost }}"
                                 data-assignments="{{ project.assignments_json|escape }}">
-                            <i class="fas {% if project.cost_centers == '' %}fa-edit{% else %}fa-plus-circle{% endif %} text-dark"
+                            <i class="fas {% if project.cost_centers != '' %}fa-edit{% else %}fa-plus-circle{% endif %} text-dark"
                                style="font-size: 1.2rem;"></i>
                         </button>
                     </span>

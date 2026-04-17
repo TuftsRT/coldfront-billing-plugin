@@ -60,6 +60,12 @@ class BillingSearchForm(forms.Form):
 
     username = forms.CharField(label=USERNAME, max_length=100, required=False)
     project_title = forms.CharField(label=TITLE, max_length=100, required=False)
+    cost_center = forms.CharField(
+        label='Cost center',
+        max_length=200,
+        required=False,
+        help_text='Matches any part of assigned department or grant names (case-insensitive).',
+    )
     no_cost_center = forms.BooleanField(
         label='Only projects without any cost center assigned',
         required=False,
