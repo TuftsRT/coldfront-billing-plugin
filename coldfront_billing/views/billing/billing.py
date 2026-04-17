@@ -103,11 +103,11 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
                     for row in assignments_list
                 ]
                 project.cost_centers = ', '.join(items[:2]) + ' ...' if len(items) > 2 else ', '.join(items)
-                project.all_cost_centers = '\n'.join(items) if items else ''
+                project.all_cost_centers = '<br>'.join(items) if items else ''
                 project.assignments_json = json.dumps(assignments_list)
             except ObjectDoesNotExist:
-                project.cost_centers = '-'
-                project.all_cost_centers = '-'
+                project.cost_centers = ''
+                project.all_cost_centers = ''
                 project.assignments_json = '[]'
 
         return (
