@@ -78,8 +78,8 @@ Billing
                         class="fas fa-sort-down" aria-hidden="true"></i><span
                         class="sr-only">Sort Status desc</span></a>
             </th>
-            <th scope="col" class="text-nowrap">Cost</th>
-            <th scope="col" class="text-nowrap">Cost Centers</th>
+            <th scope="col" class="text-nowrap">Monthly cost</th>
+            <th scope="col" class="text-nowrap">Cost centers</th>
             <th scope="col" class="text-nowrap"></th>
         </tr>
         </thead>
@@ -184,7 +184,7 @@ Billing
 
                 <button type="button" class="btn btn-sm btn-primary"
                         id="add-row-btn">
-                    <i class="fas fa-plus"></i> Add Row
+                    <i class="fas fa-plus"></i> Add cost assignmnent
                 </button>
 
                 <!-- Total Calculations -->
@@ -252,7 +252,7 @@ Billing
                         {# Clean Red Minus Icon #}
                         <button type="button"
                                 class="btn btn-link text-danger p-0 remove-row-btn"
-                                title="Remove Row">
+                                title="Remove cost assignment">
                             <i class="fas fa-minus-circle"
                                style="font-size: 1.2rem;"></i>
                         </button>
@@ -263,5 +263,6 @@ Billing
         </div>
     </div>
 </div>
+<script src="{% static 'coldfront_billing/js/cost_center_autocomplete.js' %}"></script>
 <script src="{% static 'billing/js/billing.js' %}"></script>
 {% endblock %}

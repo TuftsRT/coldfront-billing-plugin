@@ -77,6 +77,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
         form = super().get_form(form_class)
         if self.has_cost_center:
             del form.fields['cost_center']
+            del form.fields['grant']
         return form
 
     def get_context_data(self, **kwargs):
@@ -89,6 +90,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
     def form_valid(self, form):
         quota = form.cleaned_data['quota_in_terabyte']
         cost_center = form.cleaned_data.get('cost_center')
+        grant = form.cleaned_data.get('grant')
 
         try:
             attr_type = AllocationAttributeType.objects.get(name=QUOTA_ATTR_NAME)
@@ -103,12 +105,15 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
                     defaults={'assignments': []},
                 )
 
-                cost_center_assignment.assignments = [
-                    {
-                        'department': cost_center.name,
-                        'percentage': 100,
-                    }
-                ]
+                assignment = {
+                    'department': cost_center.name,
+                    'percentage': 100,
+                }
+
+                if grant:
+                    assignment.update({'grant': grant.name})
+
+                cost_center_assignment.assignments = [assignment]
 
                 cost_center_assignment.save()
         except AllocationAttributeType.DoesNotExist:
@@ -119,9 +124,10 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
             return redirect('allocation-detail', pk=self.allocation.pk)
         else:
             if cost_center is not None:
+                partial = f'.{grant}' if grant else ''
                 msg = (
                     f'Storage quota of {quota} TB has been set with 100% cost assigned to '
-                    f'{cost_center.name}. Your allocation request is complete.'
+                    f'{cost_center.name}{partial}. Your allocation request is complete.'
                 )
             else:
                 msg = f'Storage quota of {quota} TB has been set. Your allocation request is complete.'
