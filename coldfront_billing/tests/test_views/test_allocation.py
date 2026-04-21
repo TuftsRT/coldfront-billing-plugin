@@ -218,6 +218,36 @@ class TestUpdateAllocationDetailsView:
         assignment = CostCenterAssignment.objects.get(project=project)
         assert assignment.assignments == [{'department': 'DEPT001', 'percentage': 100}]
 
+    def test_post_grant_without_cost_center_shows_form_error(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Grant cannot be submitted without a cost center."""
+        from coldfront_billing.models import CostCenter
+
+        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
+        CostCenter.objects.create(name='GRANT001', cost_center_type='grant')
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        data = {'quota_in_terabyte': 5.0, 'grant': 'GRANT001'}
+
+        response = self._post_update_allocation_details(client, superuser, allocation.pk, data)
+
+        assert response.status_code == 200
+        assert 'grant' in response.context['form'].errors
+
     def test_cost_center_field_hidden_when_project_has_assignment(
         self,
         client,
