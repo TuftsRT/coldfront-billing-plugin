@@ -6,7 +6,8 @@ from coldfront.core.project.models import Project
 from coldfront.core.resource.models import ResourceType
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import Prefetch, Q, QuerySet, TextField
+from django.db.models.functions import Cast
 from django.views.generic import ListView
 
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
@@ -29,6 +30,15 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
                     Q(pi__username__icontains=username)
                     | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
                 )
+            if project_title := search_form.cleaned_data.get('project_title'):
+                projects = projects.filter(Q(title__icontains=project_title))
+            if cc_part := (search_form.cleaned_data.get('cost_center') or '').strip():
+                projects = projects.annotate(
+                    _cost_center_assignments_as_text=Cast(
+                        'cost_center_assignment__assignments',
+                        TextField(),
+                    ),
+                ).filter(_cost_center_assignments_as_text__icontains=cc_part)
             if search_form.cleaned_data.get('no_cost_center'):
                 projects = projects.filter(cost_center_assignment__isnull=True)
         return projects
@@ -96,13 +106,16 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
                     assignment_obj.assignments or [],
                     key=lambda x: (x.get('department') or ''),
                 )
-                items = [f"{row['department']}: {row['percentage']}%" for row in assignments_list]
+                items = [
+                    f'{row["department"]}{"." + grant if (grant := row.get("grant")) else ""}: {row["percentage"]}%'
+                    for row in assignments_list
+                ]
                 project.cost_centers = ', '.join(items[:2]) + ' ...' if len(items) > 2 else ', '.join(items)
-                project.all_cost_centers = '\n'.join(items) if items else ''
+                project.all_cost_centers = '<br>'.join(items) if items else ''
                 project.assignments_json = json.dumps(assignments_list)
             except ObjectDoesNotExist:
-                project.cost_centers = '-'
-                project.all_cost_centers = '-'
+                project.cost_centers = ''
+                project.all_cost_centers = ''
                 project.assignments_json = '[]'
 
         return (

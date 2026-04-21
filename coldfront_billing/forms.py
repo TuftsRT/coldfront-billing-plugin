@@ -22,23 +22,51 @@ class AllocationDetailsForm(forms.Form):
         help_text='Specify the storage quota in terabytes for your allocation.',
     )
     cost_center = forms.ModelChoiceField(
-        queryset=CostCenter.objects.all().order_by('name'),
+        queryset=CostCenter.objects.filter(cost_center_type='department').order_by('name'),
         to_field_name='name',
         label='Cost Center',
         required=False,
-        empty_label='Select cost center...',
-        widget=forms.Select(attrs={'class': 'form-control custom-select'}),
+        widget=forms.HiddenInput(),
         help_text='Select the cost center where the project cost will be initially assigned. '
         'To update the value or split the cost between multiple Cost Centers, '
         'visit the "Billing" page under the "Project" menu after the request has been approved.'
         'If you are not sure about the cost center - leave it blank',
     )
+    grant = forms.ModelChoiceField(
+        queryset=CostCenter.objects.filter(cost_center_type='grant').order_by('name'),
+        to_field_name='name',
+        label='Grant',
+        required=False,
+        widget=forms.HiddenInput(),
+        help_text='Select the grant where the project cost will be initially assigned. '
+        'A cost center must be selected first.',
+    )
+
+    def clean(self) -> dict[str, Any]:
+        cleaned_data = super().clean()
+        cost_center = cleaned_data.get('cost_center')
+        grant = cleaned_data.get('grant')
+        if grant and cost_center is None:
+            self.add_error(
+                'grant',
+                ValidationError('Select a cost center before choosing a grant.'),
+            )
+        return cleaned_data
 
 
 class BillingSearchForm(forms.Form):
     USERNAME: ClassVar[str] = 'PI name'
+    TITLE: ClassVar[str] = 'Project title'
+    COST_CENTER: ClassVar[str] = 'Cost center'
 
     username = forms.CharField(label=USERNAME, max_length=100, required=False)
+    project_title = forms.CharField(label=TITLE, max_length=100, required=False)
+    cost_center = forms.CharField(
+        label=COST_CENTER,
+        max_length=100,
+        required=False,
+        help_text='Matches any part of assigned department or grant names (case-insensitive).',
+    )
     no_cost_center = forms.BooleanField(
         label='Only projects without any cost center assigned',
         required=False,

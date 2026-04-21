@@ -243,4 +243,4 @@ class TestBillingView:
             cost_value = int(project_obj.cost.replace('$', ''))
             assert cost_value == 500
             assert hasattr(project_obj, 'cost_centers')
-            assert project_obj.cost_centers == '-'
+            assert project_obj.cost_centers == ''

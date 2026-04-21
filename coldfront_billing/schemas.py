@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -16,6 +16,17 @@ class CostCenterSchema(BaseModel):
         max_length=4,
         description='Cost center assignments: department, optional grant, and percentage per entry',
     )
+
+    @model_validator(mode='after')
+    def validate_unique_department_grant_pairs(self):
+        seen_pairs: set[Tuple[str, str]] = set()
+        for assignment in self.assignments:
+            dept = assignment.department.strip()
+            grant = (assignment.grant or '').strip()
+            if (dept, grant) in seen_pairs:
+                raise ValueError('Each department and grant combination can only appear once.')
+            seen_pairs.add((dept, grant))
+        return self
 
     @model_validator(mode='after')
     def validate_percentages_sum_to_100(self):
