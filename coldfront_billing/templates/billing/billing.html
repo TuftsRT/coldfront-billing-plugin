@@ -78,8 +78,8 @@ Billing
                         class="fas fa-sort-down" aria-hidden="true"></i><span
                         class="sr-only">Sort Status desc</span></a>
             </th>
-            <th scope="col" class="text-nowrap">Cost</th>
-            <th scope="col" class="text-nowrap">Cost Centers</th>
+            <th scope="col" class="text-nowrap">Monthly cost</th>
+            <th scope="col" class="text-nowrap text-left">Cost centers</th>
             <th scope="col" class="text-nowrap"></th>
         </tr>
         </thead>
@@ -95,31 +95,38 @@ Billing
             <td style="text-align: justify; text-justify: inter-word;">{{ project.title }}</td>
             <td>{{ project.status.name }}</td>
             <td>{{ project.cost }}</td>
-            <td>
-                <span data-toggle="tooltip"
-                      data-placement="top"
-                      title="{{ project.all_cost_centers }}">
-                    <button type="button"
-                            class="btn btn-link p-0 d-flex justify-content-between align-items-center w-100 text-left"
-                            data-toggle="modal"
-                            data-target="#costCentersModal"
-                            data-project-id="{{ project.id }}"
-                            data-project-name="{{ project.title|escape }}"
-                            data-project-cost="{{ project.cost }}"
-                            data-assignments="{{ project.assignments_json|escape }}">
-                    {% if project.cost_centers != '-' %}
-                        <span class="text-body" style="font-size: 0.9rem;">
-                            {{ project.cost_centers }}
-                        </span>
-                        <i class="fas fa-edit text-dark"
-                           style="font-size: 1.2rem;"></i>
-                        {% else %}
-                        <span></span>
-                        <i class="fas fa-plus-circle text-dark"
-                           style="font-size: 1.2rem;"></i>
-                        {% endif %}
-                    </button>
-                </span>
+            <td class="text-left align-middle">
+                <div class="d-flex justify-content-between align-items-center flex-nowrap w-100">
+                    <span class="text-body text-left text-truncate pr-2 flex-grow-1"
+                          style="font-size: 0.9rem; cursor: pointer; min-width: 0;"
+                          data-toggle="popover"
+                          data-trigger="hover"
+                          data-placement="top"
+                          data-container="body"
+                          data-html="true"
+                          title="Cost centers"
+                          data-content="{{ project.all_cost_centers|linebreaksbr }}">
+                        {{ project.cost_centers }}
+                    </span>
+                    <span class="d-inline-flex flex-shrink-0"
+                          data-toggle="popover"
+                          data-trigger="hover"
+                          data-placement="top"
+                          data-container="body"
+                          data-content="{% if project.cost_centers != '' %}Edit{% else %}Add{% endif %} cost centers">
+                        <button type="button"
+                                class="btn btn-link p-0"
+                                data-toggle="modal"
+                                data-target="#costCentersModal"
+                                data-project-id="{{ project.id }}"
+                                data-project-name="{{ project.title|escape }}"
+                                data-project-cost="{{ project.cost }}"
+                                data-assignments="{{ project.assignments_json|escape }}">
+                            <i class="fas {% if project.cost_centers != '' %}fa-edit{% else %}fa-plus-circle{% endif %} text-dark"
+                               style="font-size: 1.2rem;"></i>
+                        </button>
+                    </span>
+                </div>
             </td>
             <td class="text-right">
                 <a href="{% url 'billing_details' project.id %}{% if return_params %}?{{ return_params }}{% endif %}">
@@ -184,7 +191,7 @@ Billing
 
                 <button type="button" class="btn btn-sm btn-primary"
                         id="add-row-btn">
-                    <i class="fas fa-plus"></i> Add Row
+                    <i class="fas fa-plus"></i> Add cost assignmnent
                 </button>
 
                 <!-- Total Calculations -->
@@ -252,7 +259,10 @@ Billing
                         {# Clean Red Minus Icon #}
                         <button type="button"
                                 class="btn btn-link text-danger p-0 remove-row-btn"
-                                title="Remove Row">
+                                data-toggle="popover"
+                                data-trigger="hover"
+                                data-placement="top"
+                                data-content="Remove cost assignment">
                             <i class="fas fa-minus-circle"
                                style="font-size: 1.2rem;"></i>
                         </button>
@@ -263,5 +273,6 @@ Billing
         </div>
     </div>
 </div>
+<script src="{% static 'billing/js/cost_center_autocomplete.js' %}"></script>
 <script src="{% static 'billing/js/billing.js' %}"></script>
 {% endblock %}

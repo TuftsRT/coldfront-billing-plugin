@@ -1,5 +1,6 @@
 {% extends "common/base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 
 {% block title %}
@@ -24,13 +25,64 @@ Complete Storage Allocation
         <h3>Storage Quota</h3>
     </div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" id="allocation-details-form">
             {% csrf_token %}
-            {{ form|crispy }}
-            <button class="btn btn-primary" type="submit">Complete Request</button>
+            {% if form.non_field_errors %}
+                {{ form.non_field_errors }}
+            {% endif %}
+            {{ form.quota_in_terabyte|as_crispy_field }}
+            {% if show_cost_center %}
+                {{ form.cost_center }}
+                {{ form.grant }}
+                {% if form.cost_center.errors %}
+                    <div class="invalid-feedback d-block">{{ form.cost_center.errors }}</div>
+                {% endif %}
+                {% if form.grant.errors %}
+                    <div class="invalid-feedback d-block">{{ form.grant.errors }}</div>
+                {% endif %}
+                <div id="allocation-cost-center-autocomplete"
+                     class="mt-3"
+                     data-autocomplete-url="{% url 'autocomplete_cost_center' %}">
+                    <div class="form-group">
+                        <label class="form-label" for="allocation-dept-search">{{ form.cost_center.label }}</label>
+                        <div class="autocomplete-wrapper position-relative text-left">
+                            <input type="text"
+                                   id="allocation-dept-search"
+                                   class="form-control dept-autocomplete-input"
+                                   placeholder="Type at least 3 letters"
+                                   autocomplete="off"
+                                   aria-describedby="allocation-dept-help">
+                            <ul class="dept-autocomplete-results list-group position-absolute w-100 d-none shadow-sm text-left"
+                                style="z-index: 1060; max-height: 220px; overflow-y: auto; top: 100%; margin-top: 2px; text-align: left;"
+                                role="listbox"></ul>
+                        </div>
+                        <small id="allocation-dept-help" class="form-text text-muted">{{ form.cost_center.help_text }}</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="allocation-grant-search">{{ form.grant.label }}</label>
+                        <div class="autocomplete-wrapper position-relative text-left">
+                            <input type="text"
+                                   id="allocation-grant-search"
+                                   class="form-control grant-autocomplete-input"
+                                   placeholder="Type at least 3 letters"
+                                   autocomplete="off"
+                                   aria-describedby="allocation-grant-help">
+                            <ul class="grant-autocomplete-results list-group position-absolute w-100 d-none shadow-sm text-left"
+                                style="z-index: 1060; max-height: 220px; overflow-y: auto; top: 100%; margin-top: 2px; text-align: left;"
+                                role="listbox"></ul>
+                        </div>
+                        <small id="allocation-grant-help" class="form-text text-muted">{{ form.grant.help_text }}</small>
+                    </div>
+                </div>
+            {% endif %}
             <a class="btn btn-secondary" href="{% url 'allocation-detail' allocation.pk %}" role="button">Back to
                 Allocation</a>
+            <button class="btn btn-primary" type="submit">Complete Request</button>
         </form>
     </div>
 </div>
+{% if show_cost_center %}
+<script src="{% static 'billing/js/cost_center_autocomplete.js' %}"></script>
+<script src="{% static 'billing/js/update_allocation_details.js' %}"></script>
+{% endif %}
 {% endblock %}
