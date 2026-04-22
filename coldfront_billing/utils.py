@@ -1,6 +1,7 @@
 import re
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
+from django.utils import timezone
 from email_validator import EmailNotValidError, validate_email
 
 
@@ -45,6 +46,30 @@ def validate_emails(emails_str: str) -> tuple[list[str], list[str]]:
             valid_recipients.append(addr)
 
     return valid_recipients, invalid_recipients
+
+
+def calculate_next_run_date_monthly(start_date: datetime, hour) -> datetime:
+    next_run = datetime.combine(start_date, time(hour=hour, minute=0))
+    return timezone.make_aware(next_run, timezone.get_default_timezone())
+
+
+def calculate_next_run_date_n_minutes(minutes: int) -> datetime:
+    return timezone.localtime(timezone.now() + timedelta(minutes=minutes))
+
+
+def calculate_next_run(
+    start_date: datetime,
+    hour: int | None = None,
+    minutes: int | None = None,
+) -> datetime:
+    if hour is not None:
+        return calculate_next_run_date_monthly(
+            start_date=start_date,
+            hour=hour,
+        )
+    if minutes is not None:
+        return calculate_next_run_date_n_minutes(minutes=minutes)
+    raise ValueError('Either hour or minutes must be provided')
 
 
 class NoStorageException(Exception):

@@ -22,18 +22,6 @@ class Migration(migrations.Migration):
                     models.BooleanField(default=True),
                 ),
                 (
-                    'schedule_type',
-                    models.CharField(
-                        choices=[
-                            ('weekly', 'Weekly'),
-                            ('monthly', 'Monthly'),
-                            ('quarterly', 'Quarterly'),
-                        ],
-                        default='monthly',
-                        max_length=20,
-                    ),
-                ),
-                (
                     'start_date',
                     models.DateField(),
                 ),

@@ -31,7 +31,6 @@ class ManageReportsView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
             pk=1,
             defaults={
                 'scheduling_enabled': True,
-                'schedule_type': BillingScheduleSettings.SCHEDULE_MONTHLY,
                 'start_date': timezone.localdate(),
                 'notification_email': '',
                 'email_subject': '',

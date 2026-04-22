@@ -1,36 +1,16 @@
 from django import forms
+from django.utils import timezone
 
+from ..constants import BILLING_REPORT_HOUR, BILLING_USE_TEST_SCHEDULING
 from ..models import BillingScheduleSettings
-from ..utils import validate_emails
+from ..utils import calculate_next_run_date_monthly, validate_emails
 
 
 class BillingScheduleSettingsForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['notification_email'].required = True
-        self.fields['notification_email'].label = 'Email addresses'
-        self.fields['notification_email'].help_text = 'Separate multiple addresses with semicolons or commas.'
-        monthly = BillingScheduleSettings.SCHEDULE_MONTHLY
-        labels = dict(BillingScheduleSettings.SCHEDULE_TYPE_CHOICES)
-        self.fields['schedule_type'] = forms.CharField(
-            max_length=20,
-            required=False,
-            widget=forms.Select(
-                choices=[(monthly, labels[monthly])],
-                attrs={
-                    'class': 'form-control custom-select w-auto d-inline-block',
-                    'aria-label': 'Schedule type (monthly only)',
-                    'disabled': True,
-                },
-            ),
-        )
-        self.fields['schedule_type'].initial = monthly
-
     class Meta:
         model = BillingScheduleSettings
         fields = [
             'scheduling_enabled',
-            'schedule_type',
             'start_date',
             'end_date',
             'notification_email',
@@ -38,6 +18,12 @@ class BillingScheduleSettingsForm(forms.ModelForm):
             'email_content',
             'autoassign_no_cost_quota',
         ]
+        labels = {
+            'notification_email': 'Email addresses',
+        }
+        help_texts = {
+            'notification_email': 'Separate multiple addresses with semicolons or commas.',
+        }
         widgets = {
             'scheduling_enabled': forms.CheckboxInput(
                 attrs={
@@ -108,7 +94,6 @@ class BillingScheduleSettingsForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        cleaned_data['schedule_type'] = BillingScheduleSettings.SCHEDULE_MONTHLY
 
         scheduling_enabled = cleaned_data.get('scheduling_enabled')
 
@@ -119,13 +104,19 @@ class BillingScheduleSettingsForm(forms.ModelForm):
         if scheduling_enabled:
             if not start_date:
                 self.add_error('start_date', 'Start date is required when scheduling is enabled.')
+            elif (
+                not BILLING_USE_TEST_SCHEDULING
+                and calculate_next_run_date_monthly(start_date, BILLING_REPORT_HOUR) < timezone.now()
+            ):
+                self.add_error(
+                    'start_date', f'Start date cannot be in the past - schedule hour is set for {BILLING_REPORT_HOUR}'
+                )
+            if start_date and end_date and end_date < start_date:
+                self.add_error('end_date', 'End date cannot be earlier than start date.')
             if not notification_email:
                 self.add_error(
                     'notification_email',
                     'Email addresses are required when scheduling is enabled.',
                 )
-
-        if start_date and end_date and end_date < start_date:
-            self.add_error('end_date', 'End date cannot be earlier than start date.')
 
         return cleaned_data

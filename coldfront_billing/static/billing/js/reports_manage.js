@@ -4,22 +4,14 @@
     if (!root || !root.dataset.enabledToggleId) return;
     var enabledToggle = document.getElementById(root.dataset.enabledToggleId);
     if (!enabledToggle) return;
-    var scheduleTypeName = root.dataset.scheduleTypeName;
-    var scheduleType = scheduleTypeName
-        ? root.querySelector('select[name="' + scheduleTypeName + '"]')
-        : null;
-
     function syncSchedulingDetails() {
         var on = enabledToggle.checked;
         root.classList.toggle('scheduling-details--disabled', !on);
         root.querySelectorAll('input, select, textarea').forEach(function (el) {
-            if (el !== enabledToggle && el !== scheduleType) {
+            if (el !== enabledToggle) {
                 el.disabled = !on;
             }
         });
-        if (scheduleType) {
-            scheduleType.disabled = true;
-        }
     }
 
     enabledToggle.addEventListener('change', syncSchedulingDetails);

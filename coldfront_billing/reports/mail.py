@@ -15,9 +15,7 @@ EMAIL_SUBJECT = 'Billing monthly report'
 EMAIL_BODY = 'Attached is the latest CSV report.'
 
 
-def send_billing_report_email():
-    billing_settings = BillingScheduleSettings.objects.first()
-
+def send_billing_report_email(billing_settings: BillingScheduleSettings):
     if not billing_settings or not billing_settings.notification_email:
         return {
             'success': False,

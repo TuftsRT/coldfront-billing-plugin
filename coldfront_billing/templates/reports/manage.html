@@ -55,26 +55,13 @@ Schedule Billing
                 </div>
 
                 <div id="scheduling-details" class="scheduling-details"
-                     data-enabled-toggle-id="{{ form.scheduling_enabled.id_for_label }}"
-                     data-schedule-type-name="{{ form.schedule_type.html_name }}">
+                     data-enabled-toggle-id="{{ form.scheduling_enabled.id_for_label }}">
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle mb-0">
                             <tbody>
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light text-nowrap" style="width: 30%;">Next Run:</th>
-                                <td>{{ schedule_settings.next_run_display }}</td>
-                            </tr>
-
-                            <tr class="scheduling-detail-row">
                                 <th scope="row" class="bg-light">Schedule Type:</th>
-                                <td>
-                                    {{ form.schedule_type }}
-                                    {% if form.schedule_type.errors %}
-                                        <div class="text-danger small mt-1">
-                                            {{ form.schedule_type.errors }}
-                                        </div>
-                                    {% endif %}
-                                </td>
+                                <td>{{ schedule_settings.schedule_type_display }}</td>
                             </tr>
 
                             <tr class="scheduling-detail-row">

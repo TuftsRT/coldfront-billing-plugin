@@ -16,7 +16,6 @@ REVERSE = 'reports_send'
 def _schedule_settings(**overrides):
     defaults = {
         'scheduling_enabled': True,
-        'schedule_type': BillingScheduleSettings.SCHEDULE_MONTHLY,
         'start_date': timezone.localdate(),
         'notification_email': 'noreply@test.local',
         'email_subject': '',
