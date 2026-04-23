@@ -22,6 +22,7 @@ class BillingScheduleSettingsForm(forms.ModelForm):
             'notification_email': 'Email addresses',
         }
         help_texts = {
+            'end_date': 'Optional - leave blank for no end date.',
             'notification_email': 'Separate multiple addresses with semicolons or commas.',
         }
         widgets = {

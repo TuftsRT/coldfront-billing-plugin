@@ -14,9 +14,7 @@ from coldfront_billing.constants import (
 from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.forms import AllocationSearchForm
-from coldfront_billing.prefetch import (
-    get_filtered_allocations_prefetch,
-)
+from coldfront_billing.prefetch import get_filtered_allocations_prefetch
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 

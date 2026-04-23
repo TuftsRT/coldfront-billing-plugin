@@ -43,9 +43,6 @@ class ManageReportsView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     def form_valid(self, form):
         response = super().form_valid(form)
 
-        # later this is where you can call your sync service:
-        # transaction.on_commit(lambda: sync_billing_schedule(self.object))
-
         messages.success(self.request, 'Billing scheduling settings were updated.')
         return response
 

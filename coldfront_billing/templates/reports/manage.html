@@ -81,10 +81,12 @@ Schedule Billing
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         {{ form.end_date }}
-                                        <small class="form-text text-muted mb-0">
-                                            Optional. Leave blank for no end date.
-                                        </small>
                                     </div>
+                                    {% if form.end_date.help_text %}
+                                        <small class="form-text text-muted d-block mt-1">
+                                            {{ form.end_date.help_text }}
+                                        </small>
+                                    {% endif %}
                                     {% if form.end_date.errors %}
                                         <div class="text-danger small mt-1">
                                             {{ form.end_date.errors }}
