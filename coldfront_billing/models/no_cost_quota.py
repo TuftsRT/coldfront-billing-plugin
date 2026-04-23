@@ -12,7 +12,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data import BillingQuota
 from coldfront_billing.enum import ProjectStatus
-from coldfront_billing.models.common import QuotaBase
+from coldfront_billing.models.common import ALLOWED_UNITS, QuotaBase
 
 User = get_user_model()
 
@@ -38,7 +38,7 @@ class NoCostQuota(QuotaBase):
     def clean(self):
         super().clean()
 
-        allowed_units = {'TB': 0.1, 'GB': 100}
+        allowed_units = ALLOWED_UNITS
         if self.units not in allowed_units:
             raise ValidationError(
                 {'units': f'Invalid units: {self.units}. Allowed: {", ".join(allowed_units.keys())}.'}

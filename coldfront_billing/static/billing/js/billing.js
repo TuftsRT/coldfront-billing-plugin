@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Append to table
         costCenterBody.append(newRow);
+        newRow.find('.remove-row-btn').popover({ container: 'body' });
 
         // If data exists (from JSON), fill the fields
         if (data) {
@@ -186,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var modal = $(this);
-        modal.find('.modal-title').text('Assign cost for project: ' + projectName + ' (' + projectId + ')');
+        modal.find('.modal-title').text('Assign costs for project: ' + projectName + ' (' + projectId + ')');
         modal.find('#id_project_id').val(projectId);
         modal.find('#id_total_project_cost').val(projectCost);
         $('#cost-center-validation-error').addClass('d-none');
