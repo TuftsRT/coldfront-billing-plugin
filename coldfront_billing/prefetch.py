@@ -1,18 +1,21 @@
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 
 from coldfront_billing.constants import (
+    ALLOTMENTS_ATTRIBUTE_NAME,
     BILLING_ATTRIBUTE_NAME,
+    BILLING_ROLE_NAME,
     COST_ATTR_NAME,
     COST_ATTRIBUTE_NAME,
-    NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
+    MANAGER_ROLE_NAME,
+    NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.models import NoCostQuotaAllotment
+from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 from coldfront_billing.utils import NoStorageException
 
 
@@ -57,9 +60,11 @@ def get_no_cost_quota_allotments_prefetch() -> Prefetch:
             'id',
             'allocation_id',
             'amount',
+            'no_cost_quota_id',
+            'no_cost_quota__user_id',
             'no_cost_quota__units',
         ),
-        to_attr=NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
+        to_attr=ALLOTMENTS_ATTRIBUTE_NAME,
     )
 
 
@@ -89,3 +94,37 @@ def get_projects_prefetch(projects: QuerySet[Project]) -> QuerySet[Project, Proj
         to_attr=BILLING_ATTRIBUTE_NAME,
     )
     return projects.select_related('pi', 'status').prefetch_related(allocations_prefetch, 'cost_center_assignment')
+
+
+def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation]:
+    quota_owner = quota.user
+    storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
+
+    if not storage_type:
+        return Allocation.objects.none()
+
+    allocations = Allocation.objects.filter(
+        resources__resource_type_id=storage_type.id,
+        resources__requires_payment=True,
+        resources__resourceattribute__resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME,
+        resources__resourceattribute__value=quota.quota_type,
+        project__in=Project.objects.filter(
+            Q(pi=quota_owner)
+            | Q(
+                projectuser__user=quota_owner,
+                projectuser__role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+                projectuser__status__name='Active',
+            )
+        ),
+    ).distinct()
+
+    return (
+        allocations.select_related('project', 'project__pi', 'status')
+        .prefetch_related(
+            'resources',
+            get_paid_storage_resources_prefetch(storage_type.id),
+            get_quota_attr_prefetch(),
+            get_no_cost_quota_allotments_prefetch(),
+        )
+        .order_by('project__title', 'pk')
+    )

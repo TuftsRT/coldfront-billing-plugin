@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, Self
 
-from coldfront_billing.constants import QUOTA_ATTRIBUTE_NAME
+from coldfront_billing.constants import ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME
 from coldfront_billing.data.common import get_cost_per_tb
 from coldfront_billing.enum import StorageUnit
 from coldfront_billing.utils import first_or_none
@@ -70,7 +70,7 @@ class NoCostQuotaAllocation:
                 allotment.no_cost_quota.units,
             )
 
-        allotments = getattr(allocation, 'all_allotments', ())
+        allotments = getattr(allocation, ALLOTMENTS_ATTRIBUTE_NAME, ())
 
         user_allotment = next((create_no_cost_quota(a) for a in allotments if a.no_cost_quota.user_id == user_id), None)
         other_allotments = [create_no_cost_quota(a) for a in allotments if a.no_cost_quota.user_id != user_id]

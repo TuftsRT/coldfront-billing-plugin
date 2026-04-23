@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from coldfront_billing.constants import QUOTA_ATTRIBUTE_NAME
+from coldfront_billing.constants import ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME
 from coldfront_billing.data import BillingQuota, NoCostQuotaAllocation
 from coldfront_billing.enum import StorageUnit
 
@@ -21,7 +21,7 @@ class TestNoCostQuotaAllocation:
     @staticmethod
     def _create_mock_allocation_for_create(all_allotments=(), quota_attrs=None):
         """Build a mock allocation like the assign view: all_allotments + prefetched quota_attr."""
-        allocation = Mock(spec=['id', 'all_allotments', QUOTA_ATTRIBUTE_NAME])
+        allocation = Mock(spec=['id', ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME])
         allocation.id = 1
         allocation.all_allotments = all_allotments
         if quota_attrs is not None:

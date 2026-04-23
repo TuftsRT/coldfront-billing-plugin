@@ -16,7 +16,7 @@ COST_ATTRIBUTE_NAME = 'cost_attr'
 QUOTA_ATTRIBUTE_NAME = 'quota_attr'
 BILLING_ATTRIBUTE_NAME = 'billing_allocations'
 STORAGE_RESOURCE_ATTRIBUTE_NAME = 'paid_storage_resource'
-NO_COST_QUOTA_DATA_ATTRIBUTE_NAME = 'no_cost_quota_data'
+ALLOTMENTS_ATTRIBUTE_NAME = 'all_allotments'
 
 # Django Q Schedule.name for billing report emails (shared by tasks and scheduling)
 BILLING_SCHEDULE_NAME = 'coldfront_billing_report'

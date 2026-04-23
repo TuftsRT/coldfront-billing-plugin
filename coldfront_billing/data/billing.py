@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from coldfront_billing.constants import (
-    NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
+    ALLOTMENTS_ATTRIBUTE_NAME,
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
@@ -60,7 +60,7 @@ class BillingAllocation:
         storage_resources = getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, [])
         resource_name = storage_resources[0].name if storage_resources else '-'
 
-        allotments = getattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, [])
+        allotments = getattr(allocation, ALLOTMENTS_ATTRIBUTE_NAME, [])
         no_cost_quotas = [
             BillingQuota.create(allotment.amount, allotment.no_cost_quota.units) for allotment in allotments
         ]

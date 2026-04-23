@@ -2,23 +2,21 @@ from typing import Any, Dict
 
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import Project
-from coldfront.core.resource.models import ResourceType
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import Q, QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView
 
 from coldfront_billing.constants import (
-    BILLING_ROLE_NAME,
-    MANAGER_ROLE_NAME,
-    NO_COST_QUOTA_TYPE_ATTR_NAME,
+    ALLOTMENTS_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.forms import AllocationSearchForm
-from coldfront_billing.models import NoCostQuotaAllotment
-from coldfront_billing.prefetch import get_paid_storage_resources_prefetch, get_quota_attr_prefetch
+from coldfront_billing.prefetch import (
+    get_filtered_allocations_prefetch,
+)
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
@@ -61,50 +59,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Allocation]:
-        quota_type = self.quota.quota_type
-        quota_owner = self.quota.user
-        storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
-
-        if not storage_type:
-            return Allocation.objects.none()
-
-        allocations = Allocation.objects.filter(
-            resources__resource_type_id=storage_type.id,
-            resources__requires_payment=True,
-            resources__resourceattribute__resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME,
-            resources__resourceattribute__value=quota_type,
-            project__in=Project.objects.filter(
-                Q(pi=quota_owner)
-                | Q(
-                    projectuser__user=quota_owner,
-                    projectuser__role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
-                    projectuser__status__name='Active',
-                )
-            ),
-        ).distinct()
-
-        allotments_prefetch = Prefetch(
-            'no_cost_quota_allotments',
-            queryset=NoCostQuotaAllotment.objects.select_related('no_cost_quota').only(
-                'id',
-                'allocation_id',
-                'amount',
-                'no_cost_quota_id',
-                'no_cost_quota__user_id',
-                'no_cost_quota__units',
-            ),
-            to_attr='all_allotments',
-        )
-        return (
-            allocations.select_related('project', 'project__pi', 'status')
-            .prefetch_related(
-                'resources',
-                get_paid_storage_resources_prefetch(storage_type.id),
-                get_quota_attr_prefetch(),
-                allotments_prefetch,
-            )
-            .order_by('project__title', 'pk')
-        )
+        return get_filtered_allocations_prefetch(self.quota)
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
@@ -126,7 +81,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         allocations = []
 
         for allocation in allocation_objs:
-            all_allotments = getattr(allocation, 'all_allotments', ())
+            all_allotments = getattr(allocation, ALLOTMENTS_ATTRIBUTE_NAME, ())
 
             ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation)
 
