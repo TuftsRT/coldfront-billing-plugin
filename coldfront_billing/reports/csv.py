@@ -42,6 +42,9 @@ def create_csv_report() -> tuple[str, str]:
             billing_allocations = create_billing_allocations(getattr(project, BILLING_ATTRIBUTE_NAME, []))
             project_cost = sum(b.total_cost for b in billing_allocations)
 
+            if not project_cost:
+                continue
+
             user_id = project.pi.username
             description = f'{month}-{DESCRIPTION_PREFIX}-{user_id}-{project.title}'
 
