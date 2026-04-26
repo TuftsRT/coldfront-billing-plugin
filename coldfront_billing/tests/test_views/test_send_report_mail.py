@@ -6,7 +6,7 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from coldfront_billing.models import BillingScheduleSettings
+from coldfront_billing.models import BillingScheduleHistory, BillingScheduleSettings
 from coldfront_billing.reports.mail import EMAIL_SUBJECT
 from coldfront_billing.utils import NoStorageException
 
@@ -58,6 +58,7 @@ class TestSendReportView:
         assert response.json() == {
             'success': False,
             'message': 'No valid email addresses found',
+            'history_status': BillingScheduleHistory.Status.FAILED_MAIL,
         }
 
     def test_superuser_no_storage_returns_400(self, client, superuser):
@@ -75,10 +76,10 @@ class TestSendReportView:
         ):
             response = client.get(reverse(REVERSE))
         assert response.status_code == 400
-        assert response.json() == {
-            'success': False,
-            'message': 'No storage resource found',
-        }
+        data = response.json()
+        assert data['success'] is False
+        assert data['message'] == 'No storage resource found'
+        assert data['history_status'] == BillingScheduleHistory.Status.FAILED_REPORT
 
     def test_superuser_sends_email_with_attachment(self, client, superuser):
         _schedule_settings()

@@ -1,0 +1,74 @@
+{% extends "common/base.html" %}
+
+{% block title %}
+Billing History
+{% endblock %}
+
+{% block content %}
+<h2>Billing History</h2>
+<hr>
+<p class="mb-3">
+    <a href="{% url 'reports_manage' %}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to schedule
+    </a>
+</p>
+{% if history_rows %}
+<strong>Finished jobs: {{ history_rows|length }}</strong>
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th scope="col" class="text-nowrap">ID</th>
+            <th scope="col" class="text-nowrap">Started</th>
+            <th scope="col" class="text-nowrap">Stopped</th>
+            <th scope="col" class="text-nowrap">Status</th>
+            <th scope="col" class="text-nowrap text-left">Details</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in history_rows %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.started|date:"M. j, Y, P" }}</td>
+            <td>{% if row.stopped %}{{ row.stopped|date:"M. j, Y, P" }}{% else %}—{% endif %}</td>
+            <td>
+                {% if row.status == 'success' %}
+                <span class="badge badge-success billing-history-status">{{ row.get_status_display }}</span>
+                {% else %}
+                <span class="badge badge-danger billing-history-status">{{ row.get_status_display }}</span>
+                {% endif %}
+            </td>
+            <td class="text-left align-middle billing-history-details">
+                {% if row.details %}
+                <pre class="billing-history-details-pre mb-0">{{ row.details }}</pre>
+                {% else %}
+                —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No billing history entries yet.
+</div>
+{% endif %}
+
+<style>
+    .billing-history-details {
+        max-width: 36rem;
+        vertical-align: top;
+    }
+
+    .billing-history-details-pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.8125rem;
+        background: transparent;
+        border: 0;
+        padding: 0;
+    }
+</style>
+{% endblock %}
