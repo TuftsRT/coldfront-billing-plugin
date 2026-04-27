@@ -1,33 +1,4 @@
 (function () {
-    var root = document.getElementById('scheduling-details');
-    var form = document.getElementById('schedule-billing-form');
-    if (!root || !root.dataset.enabledToggleId) return;
-    var enabledToggle = document.getElementById(root.dataset.enabledToggleId);
-    if (!enabledToggle) return;
-    function syncSchedulingDetails() {
-        var on = enabledToggle.checked;
-        root.classList.toggle('scheduling-details--disabled', !on);
-        root.querySelectorAll('input, select, textarea').forEach(function (el) {
-            if (el !== enabledToggle) {
-                el.disabled = !on;
-            }
-        });
-    }
-
-    enabledToggle.addEventListener('change', syncSchedulingDetails);
-    syncSchedulingDetails();
-
-    /* Disabled controls are omitted from POST; re-enable before submit so the server receives values. */
-    if (form) {
-        form.addEventListener('submit', function () {
-            root.querySelectorAll('input, select, textarea').forEach(function (el) {
-                el.disabled = false;
-            });
-        });
-    }
-})();
-
-(function () {
     var btn = document.getElementById('run-report-once-btn');
     var toast = document.getElementById('send-report-toast');
     var toastMsg = document.getElementById('send-report-toast-message');
