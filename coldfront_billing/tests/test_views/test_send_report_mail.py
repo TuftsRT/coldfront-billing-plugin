@@ -1,6 +1,5 @@
 """Tests for SendReportView (email billing report)."""
 
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,8 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from coldfront_billing.models import BillingScheduleSettings
+from coldfront_billing.reports.mail import EMAIL_SUBJECT
 from coldfront_billing.utils import NoStorageException
-from coldfront_billing.views.reports.mail import EMAIL_SUBJECT, SendReportView
 
 REVERSE = 'reports_send'
 
@@ -17,7 +16,6 @@ REVERSE = 'reports_send'
 def _schedule_settings(**overrides):
     defaults = {
         'scheduling_enabled': True,
-        'schedule_type': BillingScheduleSettings.SCHEDULE_MONTHLY,
         'start_date': timezone.localdate(),
         'notification_email': 'noreply@test.local',
         'email_subject': '',
@@ -62,22 +60,21 @@ class TestSendReportView:
             'message': 'No valid email addresses found',
         }
 
-    def test_superuser_no_storage_returns_404(self, client, superuser):
+    def test_superuser_no_storage_returns_400(self, client, superuser):
         _schedule_settings()
         client.force_login(superuser)
         with (
             patch(
-                'coldfront_billing.utils.validate_email',
-                return_value=SimpleNamespace(normalized='noreply@test.local'),
+                'coldfront_billing.reports.mail.validate_emails',
+                return_value=(['noreply@test.local'], []),
             ),
-            patch.object(
-                SendReportView,
-                'get_projects_prefetch',
+            patch(
+                'coldfront_billing.reports.mail.create_csv_report',
                 side_effect=NoStorageException(),
             ),
         ):
             response = client.get(reverse(REVERSE))
-        assert response.status_code == 404
+        assert response.status_code == 400
         assert response.json() == {
             'success': False,
             'message': 'No storage resource found',
@@ -89,19 +86,18 @@ class TestSendReportView:
         mock_msg = MagicMock()
         with (
             patch(
-                'coldfront_billing.utils.validate_email',
-                return_value=SimpleNamespace(normalized='noreply@test.local'),
+                'coldfront_billing.reports.mail.validate_emails',
+                return_value=(['noreply@test.local'], []),
             ),
-            patch.object(
-                SendReportView,
-                'create_report',
+            patch(
+                'coldfront_billing.reports.mail.create_csv_report',
                 return_value=('billing.csv', 'h1,h2\n1,2\n'),
             ),
             patch(
-                'coldfront_billing.views.reports.mail.get_month_abbr',
+                'coldfront_billing.reports.mail.get_month_abbr',
                 return_value='APR',
             ),
-            patch('coldfront_billing.views.reports.mail.EmailMessage') as mock_email_class,
+            patch('coldfront_billing.reports.mail.EmailMessage') as mock_email_class,
         ):
             mock_email_class.return_value = mock_msg
             response = client.get(reverse(REVERSE))
@@ -128,19 +124,18 @@ class TestSendReportView:
         mock_msg = MagicMock()
         with (
             patch(
-                'coldfront_billing.utils.validate_email',
-                return_value=SimpleNamespace(normalized='noreply@test.local'),
+                'coldfront_billing.reports.mail.validate_emails',
+                return_value=(['noreply@test.local'], []),
             ),
-            patch.object(
-                SendReportView,
-                'create_report',
+            patch(
+                'coldfront_billing.reports.mail.create_csv_report',
                 return_value=('billing.csv', 'x'),
             ),
             patch(
-                'coldfront_billing.views.reports.mail.get_month_abbr',
+                'coldfront_billing.reports.mail.get_month_abbr',
                 return_value='APR',
             ),
-            patch('coldfront_billing.views.reports.mail.EmailMessage') as mock_email_class,
+            patch('coldfront_billing.reports.mail.EmailMessage') as mock_email_class,
         ):
             mock_email_class.return_value = mock_msg
             response = client.get(reverse(REVERSE))

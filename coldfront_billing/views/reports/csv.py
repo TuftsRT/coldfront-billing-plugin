@@ -2,11 +2,11 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotFound
 from django.views import View
 
+from coldfront_billing.reports import create_csv_report
 from coldfront_billing.utils import NoStorageException
-from coldfront_billing.views.reports.create import CreateReportMixin
 
 
-class ExportBillingReportView(UserPassesTestMixin, CreateReportMixin, View):
+class ExportBillingReportView(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_superuser
 
@@ -15,7 +15,7 @@ class ExportBillingReportView(UserPassesTestMixin, CreateReportMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            filename, csv_content = self.create_report()
+            filename, csv_content = create_csv_report()
         except NoStorageException:
             return HttpResponseNotFound('No storage resource found')
 

@@ -1,10 +1,11 @@
 from coldfront.core.project.models import Project
 from django.contrib.auth import get_user_model
-from django.db.models.signals import m2m_changed, pre_save
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from coldfront_billing.enum import ProjectStatus
-from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
+from coldfront_billing.models import BillingScheduleSettings, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
+from coldfront_billing.scheduling import sync_billing_schedule
 
 User = get_user_model()
 
@@ -48,3 +49,13 @@ def project_archived(sender, instance: Project, **kwargs):
     # Handle only transition from Active to Archived
     if old_project.status.name != ProjectStatus.ARCHIVED and instance.status.name == ProjectStatus.ARCHIVED:
         NoCostQuotaAllotment.objects.filter(allocation__project=instance).delete()
+
+
+@receiver(post_save, sender=BillingScheduleSettings)
+def billing_settings_saved(sender, instance, **kwargs):
+    sync_billing_schedule(instance)
+
+
+@receiver(post_delete, sender=BillingScheduleSettings)
+def billing_settings_deleted(sender, instance, **kwargs):
+    sync_billing_schedule(None)

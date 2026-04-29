@@ -42,43 +42,34 @@ Schedule Billing
                     </div>
                 {% endif %}
 
-                <div class="form-check mb-3">
-                    {{ form.scheduling_enabled }}
-                    <label class="form-check-label font-weight-bold" for="{{ form.scheduling_enabled.id_for_label }}">
-                        Scheduling enabled
-                    </label>
-                    {% if form.scheduling_enabled.errors %}
-                        <div class="text-danger small mt-1">
-                            {{ form.scheduling_enabled.errors }}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <div id="scheduling-details" class="scheduling-details"
-                     data-enabled-toggle-id="{{ form.scheduling_enabled.id_for_label }}"
-                     data-schedule-type-name="{{ form.schedule_type.html_name }}">
+                <div>
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle mb-0">
                             <tbody>
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light text-nowrap" style="width: 30%;">Next Run:</th>
-                                <td>{{ schedule_settings.next_run_display }}</td>
-                            </tr>
-
-                            <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">Schedule Type:</th>
+                                <th scope="row" class="bg-light">{{ form.scheduling_enabled.label }}</th>
                                 <td>
-                                    {{ form.schedule_type }}
-                                    {% if form.schedule_type.errors %}
+                                    <div class="form-check mb-0">
+                                        {{ form.scheduling_enabled }}
+                                        <label class="form-check-label font-weight-bold sr-only" for="{{ form.scheduling_enabled.id_for_label }}">
+                                            Scheduling enabled
+                                        </label>
+                                    </div>
+                                    {% if form.scheduling_enabled.errors %}
                                         <div class="text-danger small mt-1">
-                                            {{ form.schedule_type.errors }}
+                                            {{ form.scheduling_enabled.errors }}
                                         </div>
                                     {% endif %}
                                 </td>
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">Start Date:</th>
+                                <th scope="row" class="bg-light">Schedule type</th>
+                                <td>{{ schedule_settings.schedule_type_display }}</td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.start_date.label }}</th>
                                 <td>
                                     {{ form.start_date }}
                                     {% if form.start_date.errors %}
@@ -90,14 +81,16 @@ Schedule Billing
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">End Date:</th>
+                                <th scope="row" class="bg-light">{{ form.end_date.label }}</th>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         {{ form.end_date }}
-                                        <small class="form-text text-muted mb-0">
-                                            Optional. Leave blank for no end date.
-                                        </small>
                                     </div>
+                                    {% if form.end_date.help_text %}
+                                        <small class="form-text text-muted d-block mt-1">
+                                            {{ form.end_date.help_text }}
+                                        </small>
+                                    {% endif %}
                                     {% if form.end_date.errors %}
                                         <div class="text-danger small mt-1">
                                             {{ form.end_date.errors }}
@@ -107,7 +100,7 @@ Schedule Billing
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">Email addresses:</th>
+                                <th scope="row" class="bg-light">{{ form.notification_email.label }}</th>
                                 <td>
                                     {{ form.notification_email }}
                                     {% if form.notification_email.help_text %}
@@ -124,7 +117,7 @@ Schedule Billing
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">{{ form.email_subject.label }}:</th>
+                                <th scope="row" class="bg-light">{{ form.email_subject.label }}</th>
                                 <td>
                                     {{ form.email_subject }}
                                     {% if form.email_subject.errors %}
@@ -136,7 +129,7 @@ Schedule Billing
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">{{ form.email_content.label }}:</th>
+                                <th scope="row" class="bg-light">{{ form.email_content.label }}</th>
                                 <td>
                                     {{ form.email_content }}
                                     {% if form.email_content.errors %}
@@ -148,7 +141,7 @@ Schedule Billing
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">{{ form.autoassign_no_cost_quota.label }}:</th>
+                                <th scope="row" class="bg-light">{{ form.autoassign_no_cost_quota.label }}</th>
                                 <td>
                                     <div class="form-check mb-0">
                                         {{ form.autoassign_no_cost_quota }}
@@ -162,7 +155,7 @@ Schedule Billing
                             </tr>
 
                             <tr class="scheduling-detail-row">
-                                <th scope="row" class="bg-light">Last Modified:</th>
+                                <th scope="row" class="bg-light">Last modified</th>
                                 <td>{{ schedule_settings.updated_at|date:"M. j, Y, P" }}</td>
                             </tr>
                             </tbody>
@@ -186,18 +179,6 @@ Schedule Billing
         </a>
     </div>
 </div>
-
-<style>
-    .scheduling-details.scheduling-details--disabled {
-        opacity: 0.5;
-        pointer-events: none;
-    }
-
-    .scheduling-details.scheduling-details--disabled .scheduling-detail-row th,
-    .scheduling-details.scheduling-details--disabled .scheduling-detail-row td {
-        color: #6c757d;
-    }
-</style>
 
 <script src="{% static 'billing/js/reports_manage.js' %}"></script>
 {% endblock %}

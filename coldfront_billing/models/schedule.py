@@ -1,23 +1,18 @@
 from django.db import models
 
+from coldfront_billing.constants import BILLING_USE_TEST_SCHEDULING
+
 
 class BillingScheduleSettings(models.Model):
-    SCHEDULE_WEEKLY = 'weekly'
     SCHEDULE_MONTHLY = 'monthly'
-    SCHEDULE_QUARTERLY = 'quarterly'
+    SCHEDULE_EVERY_5_MINUTES = 'every_5_minutes'
 
-    SCHEDULE_TYPE_CHOICES = [
-        (SCHEDULE_WEEKLY, 'Weekly'),
-        (SCHEDULE_MONTHLY, 'Monthly'),
-        (SCHEDULE_QUARTERLY, 'Quarterly'),
-    ]
+    _SCHEDULE_TYPE_LABELS = {
+        SCHEDULE_MONTHLY: 'Monthly',
+        SCHEDULE_EVERY_5_MINUTES: 'Every 5 minutes',
+    }
 
     scheduling_enabled = models.BooleanField(default=True)
-    schedule_type = models.CharField(
-        max_length=20,
-        choices=SCHEDULE_TYPE_CHOICES,
-        default=SCHEDULE_MONTHLY,
-    )
     start_date = models.DateField()
     end_date = models.DateField(blank=True, null=True)
     notification_email = models.CharField(
@@ -59,17 +54,17 @@ class BillingScheduleSettings(models.Model):
     def __str__(self):
         return 'Billing schedule settings'
 
+    def get_schedule(self):
+        if BILLING_USE_TEST_SCHEDULING:
+            return self.SCHEDULE_EVERY_5_MINUTES
+        return self.SCHEDULE_MONTHLY
+
+    @property
+    def schedule_type_display(self):
+        return self._SCHEDULE_TYPE_LABELS[self.get_schedule()]
+
     def clean(self):
         from django.core.exceptions import ValidationError
 
         if self.end_date and self.start_date and self.end_date < self.start_date:
             raise ValidationError({'end_date': 'End date cannot be earlier than start date.'})
-
-    @property
-    def next_run_display(self):
-        """
-        Placeholder for now.
-        """
-        if not self.scheduling_enabled:
-            return 'Disabled'
-        return 'Not scheduled yet'
