@@ -19,7 +19,9 @@ class BillingScheduleSettingsForm(forms.ModelForm):
             'autoassign_no_cost_quota',
         ]
         labels = {
-            'notification_email': 'Email addresses',
+            'scheduling_enabled': 'Schedule enabled',
+            'notification_email': 'Notification email addresses',
+            'autoassign_no_cost_quota': 'Automatically assign no-cost quotas',
         }
         help_texts = {
             'end_date': 'Optional - leave blank for no end date.',
