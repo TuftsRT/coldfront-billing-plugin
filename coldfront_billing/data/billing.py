@@ -24,9 +24,15 @@ class BillingAllocation:
 
     @property
     def total_cost(self) -> int:
+        total_cost, _ = self.get_predicted_cost(0)
+        return total_cost
+
+    def get_predicted_cost(self, user_remaining_quota_tb: float) -> tuple[int, float]:
         total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
-        final_quota = max(self.quota_tb - total_no_cost_quota, 0)
-        return int(math.ceil(final_quota)) * int(round(self.cost_per_tb))
+        unpaid_quota = max(self.quota_tb - total_no_cost_quota, 0)
+        applied_quota = 0 if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
+        billable_quota = max(unpaid_quota - applied_quota, 0)
+        return int(math.ceil(billable_quota)) * int(round(self.cost_per_tb)), applied_quota
 
     @classmethod
     def parse(

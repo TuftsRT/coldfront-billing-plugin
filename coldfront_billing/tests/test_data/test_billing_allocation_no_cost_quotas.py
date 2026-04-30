@@ -76,6 +76,33 @@ class TestBillingAllocationNoCostQuotas:
         )
         assert billing.total_cost == 500
 
+    def test_get_predicted_cost_applies_user_remaining_after_allocation_no_cost(self):
+        """User remaining no-cost quota reduces billable TB and returns applied amount."""
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=10,
+            cost_per_tb=100,
+            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
+        )
+        # unpaid_quota = 7 TB; user applies 2 TB -> billable 5 TB -> ceil(5) * 100
+        predicted, applied = billing.get_predicted_cost(2.0)
+        assert applied == 2.0
+        assert predicted == 500
+
+    def test_get_predicted_cost_caps_applied_at_unpaid_quota(self):
+        """User remaining cannot apply beyond an unpaid quota for this allocation."""
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=10,
+            cost_per_tb=100,
+            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
+        )
+        predicted, applied = billing.get_predicted_cost(100.0)
+        assert applied == 7.0
+        assert predicted == 0
+
     def test_parse_with_no_cost_quota_data(self):
         """Test parse populates no_cost_quotas from allocation allotments."""
         allotment1 = create_mock_allotment(amount=2.0, units='TB')
