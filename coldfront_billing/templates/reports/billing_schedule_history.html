@@ -1,0 +1,140 @@
+{% extends "common/base.html" %}
+{% load common_tags %}
+
+{% block title %}
+Billing History
+{% endblock %}
+
+{% block content %}
+<h2>Billing History</h2>
+<hr>
+<p class="mb-3">
+    <a href="{% url 'reports_manage' %}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to schedule
+    </a>
+</p>
+{% if expand_accordion == "show" or history_rows %}
+<div class="mb-3" id="accordion">
+    <div class="card">
+        <div class="card-header">
+            <a id="expand_button" role="button" class="card-link"
+               data-toggle="collapse" href="#collapseOne">
+                <i class="fas fa-filter" aria-hidden="true"></i> Filter
+                <i id="plus_minus"
+                   class="fas {{expand_accordion|get_icon}} float-right"></i>
+            </a>
+        </div>
+        <div id="collapseOne" class="collapse {{expand_accordion}}"
+             data-parent="#accordion">
+            <div class="card-body">
+                <form id="filter_form" method="GET"
+                      action="{% url 'reports_billing_history' %}" autocomplete="off">
+                    {% if request.GET.order_by %}<input type="hidden" name="order_by" value="{{ request.GET.order_by }}">{% endif %}
+                    {% if request.GET.direction %}<input type="hidden" name="direction" value="{{ request.GET.direction }}">{% endif %}
+                    <div class="form-group mb-2">
+                        <label for="execution_date_from">Execution date from</label>
+                        <input type="date" class="form-control form-control-sm" id="execution_date_from"
+                               name="execution_date_from" value="{{ execution_date_from }}">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label for="execution_date_to">Execution date to</label>
+                        <input type="date" class="form-control form-control-sm" id="execution_date_to"
+                               name="execution_date_to" value="{{ execution_date_to }}">
+                    </div>
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="failed_only" name="failed_only" value="1"
+                                   {% if failed_only %}checked{% endif %}>
+                            <label class="form-check-label" for="failed_only">Failed only</label>
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <input type="submit" class="btn btn-primary" value="Search">
+                        <a href="{% url 'reports_billing_history' %}" class="btn btn-secondary">Reset</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<hr>
+{% endif %}
+{% if history_rows %}
+<strong>Finished jobs: {{ page_obj.paginator.count }}</strong>
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th scope="col" class="text-nowrap">
+                ID
+                <a href="?order_by=id&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort ID asc</span></a>
+                <a href="?order_by=id&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort ID desc</span></a>
+            </th>
+            <th scope="col" class="text-nowrap">
+                Execution date
+                <a href="?order_by=stopped&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Execution date asc</span></a>
+                <a href="?order_by=stopped&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Execution date desc</span></a>
+            </th>
+            <th scope="col" class="text-nowrap">
+                Status
+                <a href="?order_by=status&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Status asc</span></a>
+                <a href="?order_by=status&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Status desc</span></a>
+            </th>
+            <th scope="col" class="text-nowrap text-left">
+                Details
+                <a href="?order_by=details&direction=asc&{{filter_parameters}}"><i class="fas fa-sort-up" aria-hidden="true"></i><span class="sr-only">Sort Details asc</span></a>
+                <a href="?order_by=details&direction=des&{{filter_parameters}}"><i class="fas fa-sort-down" aria-hidden="true"></i><span class="sr-only">Sort Details desc</span></a>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in history_rows %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{% if row.stopped %}{{ row.stopped|date:"M. j, Y, P" }}{% else %}—{% endif %}</td>
+            <td>
+                {% if row.status == 'success' %}
+                <span class="badge badge-success billing-history-status">{{ row.get_status_display }}</span>
+                {% else %}
+                <span class="badge badge-danger billing-history-status">{{ row.get_status_display }}</span>
+                {% endif %}
+            </td>
+            <td class="text-left align-middle billing-history-details">
+                {% if row.details %}
+                <pre class="billing-history-details-pre mb-0">{{ row.details }}</pre>
+                {% else %}
+                —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% include 'common/pagination.html' %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    {% if history_filters_active %}
+    No entries match your filters.
+    {% else %}
+    No billing history entries yet.
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+    .billing-history-details {
+        max-width: 36rem;
+        vertical-align: top;
+    }
+
+    .billing-history-details-pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.8125rem;
+        background: transparent;
+        border: 0;
+        padding: 0;
+    }
+</style>
+{% endblock %}

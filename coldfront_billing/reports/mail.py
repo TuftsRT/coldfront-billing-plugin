@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.mail import EmailMessage
 
-from coldfront_billing.models import BillingScheduleSettings
+from coldfront_billing.models import BillingScheduleHistory, BillingScheduleSettings
 from coldfront_billing.reports import create_csv_report
 from coldfront_billing.utils import NoStorageException, get_month_abbr, validate_emails
 
@@ -15,26 +15,25 @@ EMAIL_SUBJECT = 'Billing monthly report'
 EMAIL_BODY = 'Attached is the latest CSV report.'
 
 
+def create_failed_mail_response(message: str):
+    return {
+        'success': False,
+        'message': message,
+        'history_status': BillingScheduleHistory.Status.FAILED_MAIL,
+    }
+
+
 def send_billing_report_email(billing_settings: BillingScheduleSettings):
     if not billing_settings or not billing_settings.notification_email:
-        return {
-            'success': False,
-            'message': 'No email address configured',
-        }
+        return create_failed_mail_response('No email address configured')
 
     valid_recipients, invalid_recipients = validate_emails(billing_settings.notification_email)
 
     if invalid_recipients:
-        return {
-            'success': False,
-            'message': f'Invalid email addresses: {", ".join(invalid_recipients)}',
-        }
+        return create_failed_mail_response(f'Invalid email addresses: {", ".join(invalid_recipients)}')
 
     if not valid_recipients:
-        return {
-            'success': False,
-            'message': 'No valid email addresses found',
-        }
+        return create_failed_mail_response('No valid email addresses found')
 
     try:
         filename, csv_content = create_csv_report()
@@ -42,6 +41,13 @@ def send_billing_report_email(billing_settings: BillingScheduleSettings):
         return {
             'success': False,
             'message': 'No storage resource found',
+            'history_status': BillingScheduleHistory.Status.FAILED_REPORT,
+        }
+    except Exception as exc:
+        return {
+            'success': False,
+            'message': f'Report generation failed: {exc}',
+            'history_status': BillingScheduleHistory.Status.FAILED_REPORT,
         }
 
     subject = (billing_settings.email_subject or '').strip() or EMAIL_SUBJECT
@@ -54,7 +60,10 @@ def send_billing_report_email(billing_settings: BillingScheduleSettings):
         to=valid_recipients,
     )
     email.attach(filename, csv_content, 'text/csv')
-    email.send()
+    try:
+        email.send()
+    except Exception as exc:
+        return create_failed_mail_response(f'Email send failed: {exc}')
 
     return {
         'success': True,
