@@ -29,6 +29,7 @@ Complete Storage Allocation
               id="allocation-details-form"
               data-cost-preview-url="{% url 'allocation_cost_preview' allocation.pk %}">
             {% csrf_token %}
+            <input type="hidden" name="apply_allocation_quota" id="id_apply_allocation_quota" value="">
             {% if form.non_field_errors %}
                 {{ form.non_field_errors }}
             {% endif %}
@@ -95,10 +96,12 @@ Complete Storage Allocation
             </div>
             <div class="modal-body">
                 <p id="allocation-cost-modal-summary"></p>
+                <p id="allocation-cost-modal-apply-prompt" class="mb-0"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="allocation-cost-confirm-submit">Confirm and complete request</button>
+                <button type="button" class="btn btn-secondary" id="allocation-cost-confirm-no">No</button>
+                <button type="button" class="btn btn-primary" id="allocation-cost-confirm-yes">Proceed</button>
             </div>
         </div>
     </div>

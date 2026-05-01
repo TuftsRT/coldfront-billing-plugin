@@ -188,6 +188,55 @@ class TestUpdateAllocationDetailsView:
         )
         assert attr.value == '10.5'
 
+    def test_post_with_apply_allocation_quota_creates_string_attribute(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """POST with apply_allocation_quota creates the string allocation attribute from migration."""
+        from coldfront.core.allocation.models import AllocationAttribute, AllocationAttributeType
+        from coldfront.core.allocation.models import AttributeType as AllocationAttributeTypeBase
+
+        from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME
+
+        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Text')
+        AllocationAttributeType.objects.get_or_create(
+            name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+            defaults={
+                'attribute_type': text_attr_type,
+                'has_usage': False,
+                'is_changeable': True,
+                'is_unique': True,
+            },
+        )
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        quota_pk = 4242
+        data = {'quota_in_terabyte': 10.5, 'apply_allocation_quota': str(quota_pk)}
+
+        response = self._post_update_allocation_details(client, superuser, allocation.pk, data)
+
+        assert response.status_code == 302
+        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+
+        apply_attr = AllocationAttribute.objects.get(
+            allocation=allocation,
+            allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+        )
+        assert apply_attr.value == str(quota_pk)
+
     def test_post_with_cost_center_creates_assignment(
         self,
         client,

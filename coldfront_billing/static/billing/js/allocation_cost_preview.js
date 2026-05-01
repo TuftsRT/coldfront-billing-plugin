@@ -28,13 +28,18 @@
 
         var modalEl = document.getElementById('allocationCostConfirmModal');
         var summaryEl = document.getElementById('allocation-cost-modal-summary');
-        var confirmBtn = document.getElementById('allocation-cost-confirm-submit');
+        var applyPromptEl = document.getElementById('allocation-cost-modal-apply-prompt');
+        var noBtn = document.getElementById('allocation-cost-confirm-no');
+        var yesBtn = document.getElementById('allocation-cost-confirm-yes');
         var quotaInput = document.getElementById('id_quota_in_terabyte');
-        if (!modalEl || !summaryEl || !confirmBtn || !quotaInput) {
+        var applyHidden = document.getElementById('id_apply_allocation_quota');
+        if (!modalEl || !summaryEl || !applyPromptEl || !noBtn || !yesBtn || !quotaInput || !applyHidden) {
             return;
         }
 
         var skipPreview = false;
+        var lastPreviewHadQuotaId = false;
+        var lastQuotaId = null;
 
         form.addEventListener('submit', function (e) {
             if (skipPreview) {
@@ -69,7 +74,7 @@
 
             fetch(url, {
                 method: 'GET',
-                headers: { Accept: 'application/json' },
+                headers: {Accept: 'application/json'},
                 credentials: 'same-origin',
             })
                 .then(function (r) {
@@ -85,6 +90,16 @@
                     var perTb = data.cost_per_tb;
                     var reduced = data.reduced_cost;
                     var applied = data.applied_quota;
+                    var hasQuotaChoice = data.quota_id != null;
+                    lastQuotaId = hasQuotaChoice ? data.quota_id : null;
+                    lastPreviewHadQuotaId = hasQuotaChoice;
+                    if (hasQuotaChoice) {
+                        noBtn.classList.remove('d-none');
+                        applyPromptEl.textContent = 'Would you like to apply the quota?';
+                    } else {
+                        noBtn.classList.add('d-none');
+                        applyPromptEl.textContent = '';
+                    }
                     if (typeof applied === 'number' && applied > 0 && reduced !== undefined) {
                         var appliedStr =
                             applied % 1 === 0
@@ -97,13 +112,12 @@
                             'Cost per TB: <strong>' +
                             perTb +
                             '$</strong><br>' +
-                            'No-cost quota applied: <strong>' +
-                            appliedStr +
-                            ' TB</strong><br>' +
                             'Estimated total cost: <strong>' +
                             total +
-                            '$</strong> (before no-cost quota)<br>' +
-                            'Estimated cost after no-cost quota: <strong>' +
+                            '$</strong><br><br>' +
+                            'You have possibility to apply <strong>' +
+                            applied +
+                            ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>' +
                             reduced +
                             '$</strong>';
                     } else {
@@ -121,13 +135,19 @@
                     showModal(modalEl);
                 })
                 .catch(function (err) {
+                    lastPreviewHadQuotaId = false;
+                    lastQuotaId = null;
+                    noBtn.classList.add('d-none');
+                    applyPromptEl.textContent = '';
                     summaryEl.textContent =
                         'Could not load cost preview: ' + (err && err.message ? err.message : 'unknown error');
                     showModal(modalEl);
                 });
         });
 
-        confirmBtn.addEventListener('click', function () {
+        function submitWithApply(apply) {
+            applyHidden.value =
+                apply && lastPreviewHadQuotaId && lastQuotaId != null ? String(lastQuotaId) : '';
             hideModal(modalEl);
             skipPreview = true;
             if (typeof form.requestSubmit === 'function') {
@@ -135,6 +155,14 @@
             } else {
                 form.submit();
             }
+        }
+
+        noBtn.addEventListener('click', function () {
+            submitWithApply(false);
+        });
+
+        yesBtn.addEventListener('click', function () {
+            submitWithApply(lastPreviewHadQuotaId);
         });
     }
 

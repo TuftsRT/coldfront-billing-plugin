@@ -11,7 +11,12 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView
 
-from coldfront_billing.constants import NO_COST_QUOTA_TYPE_ATTR_NAME, QUOTA_ATTR_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
+from coldfront_billing.constants import (
+    ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+    NO_COST_QUOTA_TYPE_ATTR_NAME,
+    QUOTA_ATTR_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME,
+)
 from coldfront_billing.data.billing import BillingAllocation
 from coldfront_billing.forms import AllocationDetailsForm
 from coldfront_billing.models import CostCenterAssignment
@@ -110,6 +115,20 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
                 value=str(quota),
             )
 
+            if apply_quota_value := self.request.POST.get('apply_allocation_quota', '').strip():
+                try:
+                    apply_attr_type = AllocationAttributeType.objects.get(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME)
+                except AllocationAttributeType.DoesNotExist:
+                    messages.warning(
+                        self.request,
+                        'Quota application preference could not be saved. Please contact support.',
+                    )
+                else:
+                    self.allocation.allocationattribute_set.create(
+                        allocation_attribute_type=apply_attr_type,
+                        value=apply_quota_value,
+                    )
+
             if cost_center is not None:
                 cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
                     project=self.allocation.project,
@@ -176,6 +195,7 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
         )
 
         remaining_quota = 0
+        quota_id = None
         storage_resource = first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
 
         if storage_resource:
@@ -188,18 +208,25 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
 
                 no_cost_quota = quota_with_remaining.filter(user=quota_user, quota_type=no_cost_quota_att.value).first()
                 remaining_quota = no_cost_quota.remaining_normalized if no_cost_quota else 0
+                quota_id = no_cost_quota.id if no_cost_quota else None
 
         # Allocation has no quota attribute on first completion; use form value as quota_tb.
         billing = BillingAllocation.parse(allocation, quota_tb, DEFAULT_COST)
 
-        reduced_cost, applied_quota_amount = billing.get_predicted_cost(remaining_quota)
+        response = {
+            'total_cost': billing.total_cost,
+            'cost_per_tb': billing.cost_per_tb,
+            'quota_tb': quota_tb,
+        }
 
-        return JsonResponse(
-            {
-                'total_cost': billing.total_cost,
-                'reduced_cost': reduced_cost,
-                'applied_quota': applied_quota_amount,
-                'cost_per_tb': billing.cost_per_tb,
-                'quota_tb': quota_tb,
-            },
-        )
+        if quota_id:
+            reduced_cost, applied_quota_amount = billing.get_predicted_cost(remaining_quota)
+            response.update(
+                {
+                    'quota_id': quota_id,
+                    'applied_quota': applied_quota_amount,
+                    'reduced_cost': reduced_cost,
+                }
+            )
+
+        return JsonResponse(response)
