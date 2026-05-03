@@ -96,9 +96,11 @@
                     if (hasQuotaChoice) {
                         noBtn.classList.remove('d-none');
                         applyPromptEl.textContent = 'Would you like to apply the quota?';
+                        yesBtn.textContent = 'Yes';
                     } else {
                         noBtn.classList.add('d-none');
                         applyPromptEl.textContent = '';
+                        yesBtn.textContent = 'Proceed';
                     }
                     if (typeof applied === 'number' && applied > 0 && reduced !== undefined) {
                         var appliedStr =
@@ -139,6 +141,7 @@
                     lastQuotaId = null;
                     noBtn.classList.add('d-none');
                     applyPromptEl.textContent = '';
+                    yesBtn.textContent = 'Proceed';
                     summaryEl.textContent =
                         'Could not load cost preview: ' + (err && err.message ? err.message : 'unknown error');
                     showModal(modalEl);

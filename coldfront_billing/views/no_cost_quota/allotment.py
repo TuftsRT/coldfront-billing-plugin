@@ -1,40 +1,15 @@
-from coldfront.core.allocation.models import Allocation
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
 
+from coldfront_billing.allotments import create_or_update_allotment
 from coldfront_billing.data import parse_allocations
 from coldfront_billing.data.quota import AllocationAssignement
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
 REDIRECT = 'manage_no_cost_quota'
-
-
-def create_or_update_allotment(allocation_id: int, amount: float, quota) -> str:
-    allocation = get_object_or_404(Allocation, pk=allocation_id)
-
-    allotment, created = NoCostQuotaAllotment.objects.get_or_create(
-        no_cost_quota=quota,
-        allocation=allocation,
-        defaults={'amount': amount},
-    )
-
-    if not created:
-        allotment.amount = amount
-
-    try:
-        allotment.full_clean()
-        allotment.save()
-    except Exception as e:
-        if hasattr(e, 'message_dict'):
-            msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
-        else:
-            msg = str(e)
-        raise Exception(f'Could not save allotment: {msg}')
-
-    return 'Assigned' if created else 'Updated'
 
 
 class ManageAllotmentView(LoginRequiredMixin, View):
