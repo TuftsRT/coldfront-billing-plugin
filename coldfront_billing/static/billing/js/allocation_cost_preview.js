@@ -100,7 +100,7 @@
                     } else {
                         noBtn.classList.add('d-none');
                         applyPromptEl.textContent = '';
-                        yesBtn.textContent = 'Proceed';
+                        yesBtn.textContent = 'Confirm';
                     }
                     if (typeof applied === 'number' && applied > 0 && reduced !== undefined) {
                         var appliedStr =
@@ -141,7 +141,7 @@
                     lastQuotaId = null;
                     noBtn.classList.add('d-none');
                     applyPromptEl.textContent = '';
-                    yesBtn.textContent = 'Proceed';
+                    yesBtn.textContent = 'Confirm';
                     summaryEl.textContent =
                         'Could not load cost preview: ' + (err && err.message ? err.message : 'unknown error');
                     showModal(modalEl);

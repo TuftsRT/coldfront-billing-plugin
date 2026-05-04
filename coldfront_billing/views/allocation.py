@@ -207,8 +207,9 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
                 quota_user = allocation_user if not allocation_user.is_superuser else allocation.project.pi
 
                 no_cost_quota = quota_with_remaining.filter(user=quota_user, quota_type=no_cost_quota_att.value).first()
-                remaining_quota = no_cost_quota.remaining_normalized if no_cost_quota else 0
-                quota_id = no_cost_quota.id if no_cost_quota else None
+                if no_cost_quota and no_cost_quota.remaining_normalized > 0:
+                    remaining_quota = no_cost_quota.remaining_normalized
+                    quota_id = no_cost_quota.id
 
         # Allocation has no quota attribute on first completion; use form value as quota_tb.
         billing = BillingAllocation.parse(allocation, quota_tb, DEFAULT_COST)
