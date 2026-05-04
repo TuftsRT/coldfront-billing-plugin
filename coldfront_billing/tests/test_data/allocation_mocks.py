@@ -3,8 +3,8 @@
 from unittest.mock import Mock
 
 from coldfront_billing.constants import (
+    ALLOTMENTS_ATTRIBUTE_NAME,
     COST_ATTRIBUTE_NAME,
-    NO_COST_QUOTA_DATA_ATTRIBUTE_NAME,
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
@@ -44,7 +44,7 @@ def create_mock_allocation(
         STORAGE_RESOURCE_ATTRIBUTE_NAME,
     ]
     if no_cost_quota_data:
-        spec = spec + [NO_COST_QUOTA_DATA_ATTRIBUTE_NAME]
+        spec = spec + [ALLOTMENTS_ATTRIBUTE_NAME]
     allocation = Mock(spec=spec)
     allocation.id = allocation_id
     allocation.project_id = project_id
@@ -58,7 +58,7 @@ def create_mock_allocation(
     setattr(allocation, QUOTA_ATTRIBUTE_NAME, quota_attrs)
     setattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, storage_resources)
     if no_cost_quota_data:
-        setattr(allocation, NO_COST_QUOTA_DATA_ATTRIBUTE_NAME, no_cost_quota_data)
+        setattr(allocation, ALLOTMENTS_ATTRIBUTE_NAME, no_cost_quota_data)
     return allocation
 
 
@@ -102,7 +102,7 @@ def mock_allocation_for_priced(
     storage_resources=None,
 ):
     allocation = Mock(
-        spec=['id', 'all_allotments', QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME],
+        spec=['id', ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME],
     )
     allocation.id = 1
     allocation.all_allotments = all_allotments

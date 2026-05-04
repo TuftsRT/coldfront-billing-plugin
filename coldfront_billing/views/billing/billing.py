@@ -1,21 +1,22 @@
 import json
 from typing import Any, Dict
 
-from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import Project
-from coldfront.core.resource.models import ResourceType
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Prefetch, Q, QuerySet, TextField
+from django.db.models import Q, QuerySet, TextField
 from django.db.models.functions import Cast
 from django.views.generic import ListView
 
+from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME, BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.forms import BillingSearchForm
-from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
+from coldfront_billing.prefetch import get_projects_prefetch
+from coldfront_billing.utils import NoStorageException
+from coldfront_billing.views.mixins import BillingListViewStateMixin
 
 
-class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingListViewStateMixin, ListView):
+class BillingView(LoginRequiredMixin, BillingListViewStateMixin, ListView):
     model = Project
     template_name = 'billing/billing.html'
     context_object_name = 'project_list'
@@ -57,35 +58,10 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
                 | Q(pi=self.request.user)
             ).distinct()
 
-        if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
+        try:
+            return get_projects_prefetch(projects).order_by(ordering)
+        except NoStorageException:
             return projects.select_related('pi', 'status').order_by(ordering)
-
-        # Restrict to only projects that actually have paid Storage allocations
-        projects = projects.filter(
-            allocation__resources__resource_type_id=storage_type.id,
-            allocation__resources__requires_payment=True,
-        ).distinct()
-
-        allocations_prefetch = Prefetch(
-            'allocation_set',
-            queryset=Allocation.objects.filter(
-                resources__resource_type_id=storage_type.id,
-                resources__requires_payment=True,
-                status__name='Active',
-            )
-            .distinct()
-            .prefetch_related(
-                self.get_quota_attr_prefetch(),
-                self.get_paid_storage_resources_prefetch(storage_type.id),
-                self.get_no_cost_quota_allotments_prefetch(),
-            ),
-            to_attr=BILLING_ATTRIBUTE_NAME,
-        )
-        projects = projects.select_related('pi', 'status').prefetch_related(
-            allocations_prefetch, 'cost_center_assignment'
-        )
-
-        return projects.order_by(ordering)
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
@@ -93,9 +69,7 @@ class BillingView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingLis
         context['projects_count'] = len(context['project_list'])
 
         for project in context.get('project_list', []):
-            billing_allocations = self.create_billing_allocations(
-                [a for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])]
-            )
+            billing_allocations = create_billing_allocations([a for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])])
             project_cost = sum(b.total_cost for b in billing_allocations)
             project.cost = f'${project_cost}'
 

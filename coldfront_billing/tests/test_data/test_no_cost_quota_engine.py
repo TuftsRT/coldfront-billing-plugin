@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from coldfront_billing.constants import QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
+from coldfront_billing.constants import ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
 from coldfront_billing.data.quota import AllocationAssignement, NoCostQuotaEngine
 
 from .allocation_mocks import create_ncq_allotment, storage_resource_with_cost
@@ -18,7 +18,7 @@ class TestNoCostQuotaEngine:
         allotments: tuple = (),
     ) -> Mock:
         allocation = Mock(
-            spec=['id', 'all_allotments', QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME],
+            spec=['id', ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME],
         )
         allocation.id = allocation_id
         allocation.all_allotments = allotments

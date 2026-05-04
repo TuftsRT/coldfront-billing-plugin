@@ -9,11 +9,17 @@ from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
 
+from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
-from coldfront_billing.views.mixins import BillingAllocationPrefetchMixin, BillingListViewStateMixin
+from coldfront_billing.prefetch import (
+    get_no_cost_quota_allotments_prefetch,
+    get_paid_storage_resources_prefetch,
+    get_quota_attr_prefetch,
+)
+from coldfront_billing.views.mixins import BillingListViewStateMixin
 
 
-class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, BillingListViewStateMixin, DetailView):
+class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailView):
     """Project billing details view showing all allocations for a project."""
 
     model = Project
@@ -63,12 +69,12 @@ class BillingDetailsView(LoginRequiredMixin, BillingAllocationPrefetchMixin, Bil
             .distinct()
             .select_related('project', 'project__pi', 'status')
             .prefetch_related(
-                self.get_quota_attr_prefetch(),
-                self.get_paid_storage_resources_prefetch(storage_type.id),
-                self.get_no_cost_quota_allotments_prefetch(),
+                get_quota_attr_prefetch(),
+                get_paid_storage_resources_prefetch(storage_type.id),
+                get_no_cost_quota_allotments_prefetch(),
             )
         )
-        allocations = self.create_billing_allocations([a for a in allocation_objs])
+        allocations = create_billing_allocations([a for a in allocation_objs])
         key, reverse = self.get_object_ordering()
         allocations = sorted(allocations, key=key, reverse=reverse)
 

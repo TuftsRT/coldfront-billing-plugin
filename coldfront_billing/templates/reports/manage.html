@@ -1,0 +1,184 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}
+Schedule Billing
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div id="send-report-toast" class="alert alert-dismissible fade" role="alert"
+         style="display: none; position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 28rem; box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);"
+         aria-live="polite">
+        <span id="send-report-toast-message"></span>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+
+    <h2 class="mb-4 border-bottom pb-2">Schedule Billing</h2>
+
+    <div class="card shadow-sm">
+
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>
+                <i class="fas fa-list" aria-hidden="true"></i> Schedule Details
+            </strong>
+
+            <button type="button" id="run-report-once-btn" class="btn btn-warning btn-sm"
+                    data-send-report-url="{% url 'reports_send' %}">
+                <i class="fas fa-paper-plane" aria-hidden="true"></i> Run Once Now
+            </button>
+        </div>
+
+        <div class="card-body">
+            <form method="post" action="" id="schedule-billing-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <tbody>
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.scheduling_enabled.label }}</th>
+                                <td>
+                                    <div class="form-check mb-0">
+                                        {{ form.scheduling_enabled }}
+                                        <label class="form-check-label font-weight-bold sr-only" for="{{ form.scheduling_enabled.id_for_label }}">
+                                            Scheduling enabled
+                                        </label>
+                                    </div>
+                                    {% if form.scheduling_enabled.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.scheduling_enabled.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">Schedule type</th>
+                                <td>{{ schedule_settings.schedule_type_display }}</td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.start_date.label }}</th>
+                                <td>
+                                    {{ form.start_date }}
+                                    {% if form.start_date.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.start_date.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.end_date.label }}</th>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {{ form.end_date }}
+                                    </div>
+                                    {% if form.end_date.help_text %}
+                                        <small class="form-text text-muted d-block mt-1">
+                                            {{ form.end_date.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.end_date.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.end_date.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.notification_email.label }}</th>
+                                <td>
+                                    {{ form.notification_email }}
+                                    {% if form.notification_email.help_text %}
+                                        <small class="form-text text-muted d-block mt-1">
+                                            {{ form.notification_email.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.notification_email.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.notification_email.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.email_subject.label }}</th>
+                                <td>
+                                    {{ form.email_subject }}
+                                    {% if form.email_subject.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.email_subject.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.email_content.label }}</th>
+                                <td>
+                                    {{ form.email_content }}
+                                    {% if form.email_content.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.email_content.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">{{ form.autoassign_no_cost_quota.label }}</th>
+                                <td>
+                                    <div class="form-check mb-0">
+                                        {{ form.autoassign_no_cost_quota }}
+                                    </div>
+                                    {% if form.autoassign_no_cost_quota.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.autoassign_no_cost_quota.errors }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <tr class="scheduling-detail-row">
+                                <th scope="row" class="bg-light">Last modified</th>
+                                <td>{{ schedule_settings.updated_at|date:"M. j, Y, P" }}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex justify-content-end w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sync-alt" aria-hidden="true"></i> Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <a href="{% url 'reports_billing_history' %}" class="btn btn-secondary">Billing History</a>
+        <a href="{% url 'reports_export' %}" class="btn btn-primary">
+            Generate report
+        </a>
+    </div>
+</div>
+
+<script src="{% static 'billing/js/reports_manage.js' %}"></script>
+{% endblock %}
