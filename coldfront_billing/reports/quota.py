@@ -1,11 +1,11 @@
 from coldfront.core.project.models import Project
 
+from coldfront_billing.allotments import create_or_update_allotment
 from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.prefetch import (
     get_filtered_allocations_prefetch,
     get_projects_prefetch,
 )
-from coldfront_billing.views.no_cost_quota.allotment import create_or_update_allotment
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 

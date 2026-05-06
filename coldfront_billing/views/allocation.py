@@ -1,15 +1,31 @@
 from coldfront.core.allocation.models import Allocation, AllocationAttributeType, AllocationPermission
 from coldfront.core.allocation.views import AllocationCreateView as ColdfrontAllocationCreateView
 from coldfront.core.project.models import Project
+from coldfront.core.resource.models import ResourceType
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.views import View
 from django.views.generic import FormView
 
-from coldfront_billing.constants import QUOTA_ATTR_NAME
+from coldfront_billing.constants import (
+    ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+    NO_COST_QUOTA_TYPE_ATTR_NAME,
+    QUOTA_ATTR_NAME,
+    STORAGE_RESOURCE_ATTRIBUTE_NAME,
+)
+from coldfront_billing.data.billing import BillingAllocation
 from coldfront_billing.forms import AllocationDetailsForm
 from coldfront_billing.models import CostCenterAssignment
+from coldfront_billing.prefetch import get_no_cost_quota_allotments_prefetch, get_paid_storage_resources_prefetch
+from coldfront_billing.tests.test_data.defaults import DEFAULT_COST
+from coldfront_billing.utils import first_or_none
+from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
+
+default_cost_setting = getattr(settings, 'COLDFRONT_BILLING_DEFAULT_COST', 10)
 
 
 def project_has_cost_center_assignment(project: Project) -> bool:
@@ -99,6 +115,20 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
                 value=str(quota),
             )
 
+            if apply_quota_value := self.request.POST.get('apply_allocation_quota', '').strip():
+                try:
+                    apply_attr_type = AllocationAttributeType.objects.get(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME)
+                except AllocationAttributeType.DoesNotExist:
+                    messages.warning(
+                        self.request,
+                        'Quota application preference could not be saved. Please contact support.',
+                    )
+                else:
+                    self.allocation.allocationattribute_set.create(
+                        allocation_attribute_type=apply_attr_type,
+                        value=apply_quota_value,
+                    )
+
             if cost_center is not None:
                 cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
                     project=self.allocation.project,
@@ -133,3 +163,71 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
                 msg = f'Storage quota of {quota} TB has been set. Your allocation request is complete.'
             messages.success(self.request, msg)
             return redirect(reverse('project-detail', kwargs={'pk': self.allocation.project_id}))
+
+
+class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """JSON endpoint: estimated total cost for a storage quota (TB) before completing the allocation."""
+
+    def test_func(self):
+        allocation = get_object_or_404(Allocation, pk=self.kwargs['pk'])
+        if self.request.user.has_perm('allocation.can_view_all_allocations'):
+            return True
+        return allocation.has_perm(self.request.user, AllocationPermission.USER)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            quota_tb = int(request.GET['quota_in_terabyte'])
+        except (KeyError, TypeError, ValueError):
+            return JsonResponse({'error': 'quota_in_terabyte is required and must be a number.'}, status=400)
+        if quota_tb < 0:
+            return JsonResponse({'error': 'quota_in_terabyte must be zero or positive.'}, status=400)
+
+        storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
+        if not storage_type:
+            return JsonResponse({'error': 'Storage resource type is not configured.'}, status=500)
+
+        allocation = get_object_or_404(
+            Allocation.objects.select_related('project', 'status').prefetch_related(
+                get_paid_storage_resources_prefetch(storage_type.id),
+                get_no_cost_quota_allotments_prefetch(),
+            ),
+            pk=kwargs['pk'],
+        )
+
+        remaining_quota = 0
+        quota_id = None
+        storage_resource = first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
+
+        if storage_resource:
+            no_cost_quota_att = storage_resource.resourceattribute_set.filter(
+                resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME
+            ).first()
+            if no_cost_quota_att:
+                allocation_user = self.request.user
+                quota_user = allocation_user if not allocation_user.is_superuser else allocation.project.pi
+
+                no_cost_quota = quota_with_remaining.filter(user=quota_user, quota_type=no_cost_quota_att.value).first()
+                if no_cost_quota and no_cost_quota.remaining_normalized > 0:
+                    remaining_quota = no_cost_quota.remaining_normalized
+                    quota_id = no_cost_quota.id
+
+        # Allocation has no quota attribute on first completion; use form value as quota_tb.
+        billing = BillingAllocation.parse(allocation, quota_tb, DEFAULT_COST)
+
+        response = {
+            'total_cost': billing.total_cost,
+            'cost_per_tb': billing.cost_per_tb,
+            'quota_tb': quota_tb,
+        }
+
+        if quota_id:
+            reduced_cost, applied_quota_amount = billing.get_predicted_cost(remaining_quota)
+            response.update(
+                {
+                    'quota_id': quota_id,
+                    'applied_quota': applied_quota_amount,
+                    'reduced_cost': reduced_cost,
+                }
+            )
+
+        return JsonResponse(response)

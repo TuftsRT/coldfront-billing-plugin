@@ -1,11 +1,15 @@
+from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import Project
 from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from coldfront_billing.allotments import create_update_allotment
+from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
 from coldfront_billing.enum import ProjectStatus
 from coldfront_billing.models import BillingScheduleSettings, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
 from coldfront_billing.scheduling import sync_billing_schedule
+from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 User = get_user_model()
 
@@ -34,6 +38,43 @@ def user_groups_changed(sender, instance: User, action, reverse, model, pk_set, 
                 'minimum_increment': group.minimum_increment,
             },
         )
+
+
+@receiver(pre_save, sender=Allocation)
+def allocation_became_active(sender, instance: Allocation, **kwargs):
+    if not instance.pk:
+        return
+    try:
+        old_allocation = Allocation.objects.select_related('status').get(pk=instance.pk)
+    except Allocation.DoesNotExist:
+        return
+
+    if old_allocation.status.name != 'Active' and instance.status.name == 'Active':
+        apply_quota_attr = instance.allocationattribute_set.filter(
+            allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+        ).first()
+        if not apply_quota_attr:
+            return
+
+        try:
+            quota_pk = int(apply_quota_attr.value)
+        except (TypeError, ValueError):
+            return
+
+        try:
+            no_cost_quota = quota_with_remaining.get(pk=quota_pk)
+        except NoCostQuota.DoesNotExist:
+            return
+
+        allocation_quota_tb = instance.get_attribute(QUOTA_ATTR_NAME, typed=True)
+        if allocation_quota_tb is None:
+            return
+
+        allocation_tb = float(allocation_quota_tb)
+        remaining_tb = float(no_cost_quota.remaining_normalized)
+
+        amount = min(allocation_tb, remaining_tb)
+        create_update_allotment(instance, amount, no_cost_quota)
 
 
 @receiver(pre_save, sender=Project)
