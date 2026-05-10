@@ -2,6 +2,8 @@ from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, Field, model_validator
 
+from coldfront_billing.constants import MAX_COST_CENTER_ASSIGNMENTS
+
 
 class AssignmentSchema(BaseModel):
     department: str = Field(..., description='Department name')
@@ -13,7 +15,7 @@ class CostCenterSchema(BaseModel):
     assignments: List[AssignmentSchema] = Field(
         ...,
         min_length=1,
-        max_length=4,
+        max_length=MAX_COST_CENTER_ASSIGNMENTS,
         description='Cost center assignments: department, optional grant, and percentage per entry',
     )
 
