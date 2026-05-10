@@ -82,8 +82,9 @@ class TestExportBillingReportView:
         assert rows[0] == ['Account', 'DeptId', 'Project Number', 'Cost', 'Description']
 
         desc = f'MAR-PRE-{pi_user.username}-{project.title}'
-        assert rows[1] == ['ACC1', 'DEPT_A', 'DEPT_X', '$300.0', desc]
-        assert rows[2] == ['ACC1', 'DEPT_B', '', '$200.0', desc]
+        assert rows[1] == ['ACC1', 'DEPT_A', 'DEPT_X', '300.00', desc]
+        assert rows[2] == ['ACC1', 'DEPT_B', '', '200.00', desc]
+        assert rows[3] == ['ACC1', 'C800260', '', '-500.00', 'MAR-PRE-Storage Charges']
 
     @patch('coldfront_billing.reports.csv.get_month_abbr', return_value='MAR')
     def test_skips_project_without_cost_center_assignment(
