@@ -29,10 +29,10 @@ class TestBillingAllocation:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=5.1,
+            quota_tb=5.03,
             cost_per_tb=100,
         )
-        assert billing.total_cost == 600
+        assert billing.total_cost == 510
 
     def test_total_cost_with_float_quota_exact(self):
         """Test that exact float quota values work correctly."""
@@ -288,7 +288,7 @@ class TestBillingAllocation:
         assert result.quota_tb == 5.0
         assert result.cost_per_tb == DEFAULT_COST  # Uses default
 
-    def test_total_cost_with_parsed_float_values(self):
+    def test_total_cost_with_parsed_float_values_1(self):
         """Test total_cost calculation with float values from parse."""
         storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='150.5')])
         allocation = create_mock_allocation(
@@ -297,8 +297,20 @@ class TestBillingAllocation:
         )
 
         billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
-        # ceil(7.3) = 8, int(150.5) = 150, so 8 * 150 = 1200
-        assert billing.total_cost == 1200
+        # round up with 1 digit (7.3) = 7.3, int(150.5) = 150, so 7.3 * 150 = 1200
+        assert billing.total_cost == 1095
+
+    def test_total_cost_with_parsed_float_values_2(self):
+        """Test total_cost calculation with float values from parse."""
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='150.5')])
+        allocation = create_mock_allocation(
+            quota_attrs=[Mock(value='7.32')],
+            storage_resources=[storage_resource],
+        )
+
+        billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
+        # round up with 1 digit (7.32) = 7.4, int(150.5) = 150, so 7.4 * 150 = 1200
+        assert billing.total_cost == 1110
 
     def test_parse_includes_extra_project_title_and_pi_name(self):
         """Test parse populates extra.project_title and extra.pi_name from project."""

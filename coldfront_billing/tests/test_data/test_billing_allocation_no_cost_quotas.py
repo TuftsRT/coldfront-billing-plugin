@@ -47,11 +47,11 @@ class TestBillingAllocationNoCostQuotas:
             cost_per_tb=100,
             no_cost_quotas=[
                 BillingQuota(amount=2.0, unit=StorageUnit.TB),
-                BillingQuota(amount=500.0, unit=StorageUnit.GB),  # 0.5 TB
+                BillingQuota(amount=450.0, unit=StorageUnit.GB),  # 0.5 TB
             ],
         )
-        # 10 - 2.5 = 7.5 TB billable, ceil(7.5) * 100 = 800
-        assert billing.total_cost == 800
+        # 10 - 2.45 = 7.55 TB billable, ceil(7.55) -> 7.6 * 100 = 760
+        assert billing.total_cost == 760
 
     def test_total_cost_no_cost_quota_exceeds_quota_returns_zero(self):
         """Test total_cost is zero when no_cost_quotas exceed quota."""
@@ -94,7 +94,7 @@ class TestBillingAllocationNoCostQuotas:
         assert result.no_cost_quotas[0].unit == StorageUnit.TB
         assert result.no_cost_quotas[1].amount == 500.0
         assert result.no_cost_quotas[1].unit == StorageUnit.GB
-        assert result.total_cost == 800  # 10 - 2.5 = 7.5 TB, ceil(7.5) * 100 = 800
+        assert result.total_cost == 750  # 10 - 2.5 = 7.5 TB, 7.5 * 100 = 750
 
     def test_parse_without_no_cost_quota_data_yields_empty(self):
         """Test parse when allocation has no allotments (attribute not set, real-life scenario)."""
