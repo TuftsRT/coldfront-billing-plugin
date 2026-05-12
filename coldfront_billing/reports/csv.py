@@ -7,7 +7,11 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from coldfront_billing.billing import create_billing_allocations
-from coldfront_billing.constants import BILLING_ATTRIBUTE_NAME
+from coldfront_billing.constants import (
+    BILLIG_REPORTS_TOTAL_DEPT_NAME,
+    BILLIG_REPORTS_TOTAL_DESCRIPTION,
+    BILLING_ATTRIBUTE_NAME,
+)
 from coldfront_billing.prefetch import get_projects_prefetch
 from coldfront_billing.utils import get_month_abbr
 
@@ -32,6 +36,7 @@ def create_csv_report() -> tuple[str, str]:
     with StringIO() as output:
         writer = csv.writer(output)
         writer.writerow(['Account', 'DeptId', 'Project Number', 'Cost', 'Description'])
+        total_cost = 0
 
         for project in projects:
             try:
@@ -53,14 +58,24 @@ def create_csv_report() -> tuple[str, str]:
                 pct = assignement.get('percentage')
                 grant = assignement.get('grant', '')
                 cost = round(project_cost * (int(pct) / 100), 2)
+                total_cost += cost
                 writer.writerow(
                     (
                         ACCOUNT_NAME,
                         dept_id,
                         grant,
-                        f'${cost}',
+                        f'{cost:.2f}',
                         description,
                     )
                 )
+            writer.writerow(
+                (
+                    ACCOUNT_NAME,
+                    BILLIG_REPORTS_TOTAL_DEPT_NAME,
+                    '',
+                    f'-{total_cost:.2f}',
+                    f'{month}-{DESCRIPTION_PREFIX}-{BILLIG_REPORTS_TOTAL_DESCRIPTION}',
+                )
+            )
 
         return filename, output.getvalue()

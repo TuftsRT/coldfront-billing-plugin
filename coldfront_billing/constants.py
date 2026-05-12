@@ -22,6 +22,8 @@ STORAGE_RESOURCE_ATTRIBUTE_NAME = 'paid_storage_resource'
 ALLOTMENTS_ATTRIBUTE_NAME = 'all_allotments'
 
 # Django Q Schedule.name for billing report emails (shared by tasks and scheduling)
+BILLIG_REPORTS_TOTAL_DEPT_NAME = getattr(settings, 'COLDFRONT_BILLIG_REPORTS_TOTAL_DEPT_NAME', 'C800260')
+BILLIG_REPORTS_TOTAL_DESCRIPTION = getattr(settings, 'COLDFRONT_BILLIG_REPORTS_TOTAL_DESCRIPTION', 'Storage Charges')
 BILLING_SCHEDULE_NAME = 'coldfront_billing_report'
 BILLING_REPORT_HOUR = getattr(settings, 'COLDFRONT_BILLING_REPORT_HOUR', 8)
 BILLING_USE_TEST_SCHEDULING = getattr(settings, 'COLDFRONT_BILLING_USE_TEST_SCHEDULING', False)
