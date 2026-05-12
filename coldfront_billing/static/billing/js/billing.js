@@ -1,9 +1,10 @@
 const toastDurationMs = 3000;
-const maxCostCenters = 4;
+const costCenterScrollThreshold = 8;
 const BILLING_SUCCESS_KEY = 'billing_assignment_success';
-const DEBOUNCE_TIME_MS = 250;
 
 document.addEventListener('DOMContentLoaded', function () {
+
+    var maxCostCenters = window.COLDFRONT_MAX_COST_CENTER_ASSIGNMENTS;
 
     $("#navbar-main > ul > li.active").removeClass("active");
     $("#navbar-project-menu").addClass("active");
@@ -85,6 +86,35 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#total-cost').text('$' + totalCost.toFixed(2));
 
         updateValidationState(totalPercent, hasDeptWithoutPercent, hasDuplicateDepts, rowsWithDeptCount, errorRows);
+        requestAnimationFrame(updateCostCenterTableScroll);
+    }
+
+    // Helper: Vertical scrollbar when many assignment rows are shown
+    function updateCostCenterTableScroll() {
+        var wrap = $('#cost-center-table-scroll-wrap');
+        if (!wrap.length) {
+            return;
+        }
+        var $tbodyRows = $('#cost-center-body tr');
+        var tbodyRowCount = $tbodyRows.length;
+        if (tbodyRowCount > costCenterScrollThreshold) {
+            var theadH = wrap.find('thead').outerHeight(true) || 0;
+            var rowH = Math.max($tbodyRows.first().outerHeight(true) || 0, 36);
+            var maxPx = theadH + rowH * costCenterScrollThreshold;
+            wrap.css({
+                maxHeight: maxPx + 'px',
+                overflowY: 'scroll',
+                overflowX: 'auto',
+                scrollbarGutter: 'stable'
+            });
+        } else {
+            wrap.css({
+                maxHeight: '',
+                overflowY: '',
+                overflowX: '',
+                scrollbarGutter: ''
+            });
+        }
     }
 
     // Helper: Disable save button and show error when validation fails
@@ -110,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
             errorEl.removeClass('d-none').text('Total percentage must equal 100%.');
         } else if (rowsWithDeptCount > maxCostCenters) {
             saveBtn.prop('disabled', true);
-            errorEl.removeClass('d-none').text('Maximum 4 cost centers allowed.');
+            errorEl.removeClass('d-none').text('Maximum ' + maxCostCenters + ' cost centers allowed.');
         } else {
             saveBtn.prop('disabled', false);
             errorEl.addClass('d-none');

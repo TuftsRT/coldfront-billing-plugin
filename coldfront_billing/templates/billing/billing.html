@@ -175,6 +175,7 @@ Billing
                 <div id="cost-center-validation-error" class="alert alert-danger d-none" role="alert">
                     Total percentage must equal 100%.
                 </div>
+                <div id="cost-center-table-scroll-wrap">
                 <table class="table table-bordered text-center">
                     <thead class="thead-light">
                     <tr>
@@ -188,6 +189,7 @@ Billing
                     <tbody id="cost-center-body">
                     </tbody>
                 </table>
+                </div>
 
                 <button type="button" class="btn btn-sm btn-primary"
                         id="add-row-btn">
@@ -274,5 +276,6 @@ Billing
     </div>
 </div>
 <script src="{% static 'billing/js/cost_center_autocomplete.js' %}"></script>
+<script>window.COLDFRONT_MAX_COST_CENTER_ASSIGNMENTS = {{ max_cost_center_assignments }};</script>
 <script src="{% static 'billing/js/billing.js' %}"></script>
 {% endblock %}
