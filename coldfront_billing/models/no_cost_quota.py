@@ -1,3 +1,5 @@
+import math
+
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import ProjectUser
 from django.contrib.auth import get_user_model
@@ -115,7 +117,11 @@ class NoCostQuotaAllotment(models.Model):
             if 0 < self.amount < min_inc:
                 raise ValidationError({'amount': f'Allotment amount must be ≥ minimum increment ({minimum})'})
             # Ensure the amount is a multiple of minimum_increment (with float tolerance)
-            if self.amount % min_inc != 0:
+            if min_inc > 0 and not math.isclose(
+                round(self.amount / min_inc) * min_inc,
+                self.amount,
+                abs_tol=1e-7,
+            ):
                 raise ValidationError(
                     {'amount': f'Allotment amount must be a multiple of minimum increment ({minimum})'}
                 )

@@ -10,7 +10,7 @@ UNITS_CHOICES = [
     ('GB', 'GB'),
 ]
 
-ALLOWED_UNITS = {'TB': 0.1, 'GB': 100}
+ALLOWED_UNITS = {'TB': 0.01, 'GB': 100}
 
 
 class QuotaBase(models.Model):

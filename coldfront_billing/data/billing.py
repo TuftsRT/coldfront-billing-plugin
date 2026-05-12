@@ -23,10 +23,11 @@ class BillingAllocation:
     no_cost_quotas: List[BillingQuota] = field(default_factory=list)
 
     @property
-    def total_cost(self) -> int:
+    def total_cost(self) -> float:
         total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
         final_quota = max(self.quota_tb - total_no_cost_quota, 0)
-        return int(math.ceil(final_quota)) * int(round(self.cost_per_tb))
+        calculation = math.ceil(final_quota * 10) / 10 * int(round(self.cost_per_tb))
+        return round(calculation, 2)
 
     @classmethod
     def parse(

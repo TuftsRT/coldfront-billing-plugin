@@ -56,7 +56,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
 
         if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
             context['allocations'] = []
-            context['total_cost'] = 0
+            context['total_cost'] = 0.0
             return context
 
         allocation_objs = (
@@ -82,6 +82,6 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
             context
             | self.get_extended_pagination_params(allocations)
             | {
-                'total_cost': sum(a.total_cost for a in allocations),
+                'total_cost': round(sum(a.total_cost for a in allocations), 2),
             }
         )
