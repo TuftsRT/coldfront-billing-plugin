@@ -1,10 +1,10 @@
 from coldfront.core.allocation.models import Allocation
 from django.shortcuts import get_object_or_404
 
-from coldfront_billing.models import NoCostQuotaAllotment
+from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
 
-def create_update_allotment(allocation: Allocation, amount: float, quota) -> str:
+def create_update_allotment(allocation: Allocation, amount: float, quota: NoCostQuota, append: bool = False) -> str:
     allotment, created = NoCostQuotaAllotment.objects.get_or_create(
         no_cost_quota=quota,
         allocation=allocation,
@@ -12,7 +12,10 @@ def create_update_allotment(allocation: Allocation, amount: float, quota) -> str
     )
 
     if not created:
-        allotment.amount = amount
+        if append:
+            allotment.amount += amount
+        else:
+            allotment.amount = amount
 
     try:
         allotment.full_clean()

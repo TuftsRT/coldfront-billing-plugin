@@ -32,8 +32,11 @@ class BillingAllocation:
         unpaid_quota = max(self.quota_tb - total_no_cost_quota, 0)
         applied_quota = 0 if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
         billable_quota = max(unpaid_quota - applied_quota, 0)
-        calculation = math.ceil(billable_quota * 10) / 10 * int(round(self.cost_per_tb))
-        return round(calculation, 2), applied_quota
+        return self.calculate_cost(billable_quota), applied_quota
+
+    def calculate_cost(self, quota_tb: float) -> float:
+        calculation = math.ceil(quota_tb * 10) / 10 * int(round(self.cost_per_tb))
+        return round(calculation, 2)
 
     @classmethod
     def parse(
@@ -41,6 +44,7 @@ class BillingAllocation:
         allocation,
         default_quota: int,
         default_cost: int,
+        new_quota: float | None = None,
     ) -> 'BillingAllocation':
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
@@ -48,6 +52,9 @@ class BillingAllocation:
             quota_tb = float_quota if float_quota >= 0 else default_quota
         else:
             quota_tb = default_quota
+
+        if new_quota is not None:
+            quota_tb += new_quota
 
         cost_per_tb = get_cost_per_tb(allocation, default_cost)
 

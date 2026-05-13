@@ -1,0 +1,152 @@
+{% extends "common/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% load billing_tags %}
+
+
+{% block title %}
+Request Allocation Change
+{% endblock %}
+
+
+{% block content %}
+{% billing_quota_attr_name as billing_quota_attribute_name %}
+
+<h2>[New] Request change to {{ allocation.get_parent_resource }} for project: {{ allocation.project.title }}</h2>
+<hr>
+
+<p class="text-justify">
+  Request changes to an existing allocation using the form below. You must provide a reason for each change.
+</p>
+
+<form
+  action="{% url 'allocation-change' allocation.pk %}"
+  method="post"
+  class="js-allocation-quota-confirm-form"
+  data-quota-attribute-name="{{ billing_quota_attribute_name }}"
+  data-cost-preview-url="{% url 'allocation_cost_preview' allocation.pk %}"
+>
+    {% csrf_token %}
+    <input type="hidden" name="apply_allocation_quota" id="id_apply_allocation_quota" value="" />
+  <div class="card mb-3">
+
+    <div class="card-body">
+
+          <div>
+            <p>Pending changes for this allocation:</p>
+          <ul>
+            {% for change in allocation.allocationchangerequest_set.all %}
+              {% if change.status.name == "Pending" %}
+              <li><a href="{% url 'allocation-change-detail' change.pk %}">{{ change.created|date:"M. d, Y" }} - {{ change.allocationattributechangerequest_set.first }} to {{ change.allocationattributechangerequest_set.first.new_value  }} </a></li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+          </div>
+  {% if formset %}
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm">
+              <thead>
+                <tr>
+                  <th scope="col"><span class="sr-only">Attribute</span></th>
+                  <th scope="col">Current Value</th>
+                  <th scope="col">Requested Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for form in formset %}
+                    <tr>
+                      <td>{{form.name.value}}</td>
+                      <td>{{form.value.value}}
+                        {% for attr in allocation.allocationattribute_set.all %}
+                          {% if attr.allocation_attribute_type.name == form.name.value and attr.allocationattributeusage %} ({{ attr.allocationattributeusage.value }} used){% endif %}
+                        {% endfor %}
+                      </td>
+                      <td>
+                        {{form.new_value}}
+                        <input
+                          type="hidden"
+                          class="js-allocation-attribute-meta"
+                          data-input-id="{{ form.new_value.auto_id }}"
+                          data-attribute-name="{{ form.name.value }}"
+                          data-original-value="{{ form.value.value }}"
+                          data-change-indicator-id="change-indicator-ac-{{ forloop.counter }}"
+                        />
+                        <span
+                          class="d-none"
+                          id="change-indicator-ac-{{ forloop.counter }}"
+                        >
+                          <i class="fas fa-info-circle" aria-hidden="true"></i>
+                          Value changed
+                        </span>
+                      </td>
+                    </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {{ formset.management_form }}
+        </div>
+      </div>
+    {% endif %}
+
+    <div>
+    <style>
+    textarea {
+        display: block;
+        width: 100%;
+        height: 5em;
+    }
+    </style>
+      <div class="form-group">
+            <label for="{{ form.justification.id_for_label }}">
+                Reason for Change:
+            </label>
+            {{ form.justification }}
+            <small class="form-text text-muted">please include some information about the reason for this request. e.g. new lab member, new data set</small>
+        </div>
+      <input class="btn btn-success" type="submit" value="Submit" />
+      <a class="btn btn-secondary" href="{% url 'allocation-detail' allocation.pk %}" role="button">Back to
+        Allocation</a><br>
+    </div>
+</form>
+
+<div
+  class="modal fade"
+  id="quota-change-confirmation-modal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="quota-change-confirmation-modal-label"
+  aria-hidden="true"
+>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="quota-change-confirmation-modal-label">
+          Confirm storage modification cost
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="quota-change-modal-summary"></p>
+        <p id="quota-change-modal-apply-prompt" class="mb-0"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary d-none" id="quota-change-confirm-no">No</button>
+        <button type="button" class="btn btn-danger" id="quota-change-confirm-button">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="{% static 'billing/js/allocation_attribute_edit.js' %}"></script>
+{% endblock %}

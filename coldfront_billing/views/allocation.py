@@ -1,11 +1,19 @@
-from coldfront.core.allocation.models import Allocation, AllocationAttributeType, AllocationPermission
+from urllib.parse import urlparse
+
+from coldfront.core.allocation.models import (
+    Allocation,
+    AllocationAttribute,
+    AllocationAttributeType,
+    AllocationPermission,
+)
+from coldfront.core.allocation.views import AllocationChangeView as ColdfrontAllocationChangeView
 from coldfront.core.allocation.views import AllocationCreateView as ColdfrontAllocationCreateView
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import ResourceType
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
@@ -20,8 +28,12 @@ from coldfront_billing.constants import (
 from coldfront_billing.data.billing import BillingAllocation
 from coldfront_billing.forms import AllocationDetailsForm
 from coldfront_billing.models import CostCenterAssignment
-from coldfront_billing.prefetch import get_no_cost_quota_allotments_prefetch, get_paid_storage_resources_prefetch
-from coldfront_billing.tests.test_data.defaults import DEFAULT_COST
+from coldfront_billing.prefetch import (
+    get_no_cost_quota_allotments_prefetch,
+    get_paid_storage_resources_prefetch,
+    get_quota_attr_prefetch,
+)
+from coldfront_billing.tests.test_data.defaults import DEFAULT_COST, DEFAULT_QUOTA
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
@@ -176,7 +188,7 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            quota_tb = int(request.GET['quota_in_terabyte'])
+            quota_tb = float(request.GET['quota_in_terabyte'])
         except (KeyError, TypeError, ValueError):
             return JsonResponse({'error': 'quota_in_terabyte is required and must be a number.'}, status=400)
         if quota_tb < 0:
@@ -190,6 +202,7 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
             Allocation.objects.select_related('project', 'status').prefetch_related(
                 get_paid_storage_resources_prefetch(storage_type.id),
                 get_no_cost_quota_allotments_prefetch(),
+                get_quota_attr_prefetch(),
             ),
             pk=kwargs['pk'],
         )
@@ -211,11 +224,11 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
                     remaining_quota = no_cost_quota.remaining_normalized
                     quota_id = no_cost_quota.id
 
-        # Allocation has no quota attribute on first completion; use form value as quota_tb.
-        billing = BillingAllocation.parse(allocation, quota_tb, DEFAULT_COST)
+        billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST, quota_tb)
 
         response = {
             'total_cost': billing.total_cost,
+            'quota_cost': billing.calculate_cost(quota_tb),
             'cost_per_tb': billing.cost_per_tb,
             'quota_tb': quota_tb,
         }
@@ -231,3 +244,40 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
             )
 
         return JsonResponse(response)
+
+
+class BillingAllocationChangeView(ColdfrontAllocationChangeView):
+    """
+    ColdFront ``AllocationChangeView`` plus ``apply_allocation_quota`` POST (same as solution 1:
+    extend the allocation-change handler to set ``ALLOCATION_QUOTA_ATTRIBUTE_NAME`` on success).
+    """
+
+    def post(self, request, *args, **kwargs):
+        apply_quota_raw = request.POST.get('apply_allocation_quota', '').strip()
+        pk = self.kwargs.get('pk')
+        response = super().post(request, *args, **kwargs)
+        if apply_quota_raw and pk is not None and self._is_successful_change_submission(response, pk):
+            try:
+                apply_attr_type = AllocationAttributeType.objects.get(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME)
+            except AllocationAttributeType.DoesNotExist:
+                messages.warning(
+                    request,
+                    'Quota application preference could not be saved. Please contact support.',
+                )
+            else:
+                allocation = get_object_or_404(Allocation, pk=pk)
+                AllocationAttribute.objects.update_or_create(
+                    allocation=allocation,
+                    allocation_attribute_type=apply_attr_type,
+                    defaults={'value': apply_quota_raw},
+                )
+        return response
+
+    @staticmethod
+    def _is_successful_change_submission(response: HttpResponse, allocation_pk: int | str) -> bool:
+        if not isinstance(response, HttpResponseRedirect):
+            return False
+        expected = reverse('allocation-detail', kwargs={'pk': allocation_pk})
+        location = response.url
+        path = urlparse(location).path if location.startswith(('http://', 'https://')) else location
+        return path.rstrip('/') == expected.rstrip('/')

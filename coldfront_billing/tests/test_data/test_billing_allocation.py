@@ -54,6 +54,64 @@ class TestBillingAllocation:
         )
         assert billing.total_cost == 500
 
+    def test_calculate_cost_integer_quota(self):
+        """ceil is applied in tenths; whole TB matches simple product."""
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=5,
+            cost_per_tb=100,
+        )
+        assert billing.calculate_cost(5) == 500.0
+
+    def test_calculate_cost_ceils_quota_to_next_tenth(self):
+        """Quota below next tenth is ceiled (e.g. 5.01 TB -> 5.1 TB billable)."""
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=0,
+            cost_per_tb=100,
+        )
+        assert billing.calculate_cost(5.01) == 510.0
+        assert billing.calculate_cost(5.03) == 510.0
+
+    def test_calculate_cost_exact_tenth_unchanged(self):
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=0,
+            cost_per_tb=100,
+        )
+        assert billing.calculate_cost(5.0) == 500.0
+        assert billing.calculate_cost(5.1) == 510.0
+
+    def test_calculate_cost_zero_quota(self):
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=0,
+            cost_per_tb=100,
+        )
+        assert billing.calculate_cost(0) == 0.0
+
+    def test_calculate_cost_uses_rounded_cost_per_tb(self):
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=0,
+            cost_per_tb=99.51,
+        )
+        assert billing.calculate_cost(5) == 500.0
+
+    def test_calculate_cost_fractional_quota_with_cost(self):
+        billing = BillingAllocation(
+            allocation_id=1,
+            project_id=1,
+            quota_tb=0,
+            cost_per_tb=50,
+        )
+        assert billing.calculate_cost(1.11) == 60.0
+
     def test_parse_with_valid_quota_and_cost_attributes(self):
         """Test parse with valid quota and cost attributes."""
         storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
@@ -69,6 +127,70 @@ class TestBillingAllocation:
         assert result.project_id == 1
         assert result.quota_tb == 5.0
         assert result.cost_per_tb == 100.0
+
+    def test_parse_with_new_quota_adds_to_quota_tb(self):
+        """When new_quota is provided, it is added to the resolved quota_tb."""
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+        )
+
+        result = BillingAllocation.parse(
+            allocation,
+            default_quota=DEFAULT_QUOTA,
+            default_cost=DEFAULT_COST,
+            new_quota=2.5,
+        )
+        assert result.quota_tb == 7.5
+
+    def test_parse_with_negative_new_quota_subtracts_from_quota_tb(self):
+        """Negative new_quota is applied additively (reduces resolved quota_tb)."""
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+        )
+
+        result = BillingAllocation.parse(
+            allocation,
+            default_quota=DEFAULT_QUOTA,
+            default_cost=DEFAULT_COST,
+            new_quota=-2.0,
+        )
+        assert result.quota_tb == 3.0
+
+    def test_parse_without_new_quota_unchanged(self):
+        """When new_quota is omitted or None, quota_tb matches baseline parse."""
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = create_mock_allocation(
+            quota_attrs=[Mock(value='5')],
+            storage_resources=[storage_resource],
+        )
+
+        baseline = BillingAllocation.parse(allocation, default_quota=DEFAULT_QUOTA, default_cost=DEFAULT_COST)
+        with_extra = BillingAllocation.parse(
+            allocation,
+            default_quota=DEFAULT_QUOTA,
+            default_cost=DEFAULT_COST,
+            new_quota=None,
+        )
+        assert with_extra.quota_tb == baseline.quota_tb == 5.0
+
+    def test_parse_with_new_quota_adds_to_default_quota(self):
+        """new_quota is added when quota_tb is the default (no quota attribute on allocation)."""
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allocation = create_mock_allocation(
+            storage_resources=[storage_resource],
+        )
+
+        result = BillingAllocation.parse(
+            allocation,
+            default_quota=DEFAULT_QUOTA,
+            default_cost=DEFAULT_COST,
+            new_quota=3.0,
+        )
+        assert result.quota_tb == DEFAULT_QUOTA + 3.0
 
     def test_parse_without_quota_attribute_uses_default(self):
         """Test parse when quota attribute is missing, uses default."""
