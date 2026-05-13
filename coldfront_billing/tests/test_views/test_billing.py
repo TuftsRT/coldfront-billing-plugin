@@ -240,7 +240,7 @@ class TestBillingView:
         for project_obj in response.context['project_list']:
             assert hasattr(project_obj, 'cost')
             assert project_obj.cost.startswith('$')
-            cost_value = int(project_obj.cost.replace('$', ''))
+            cost_value = float(project_obj.cost.replace('$', ''))
             assert cost_value == 500
             assert hasattr(project_obj, 'cost_centers')
             assert project_obj.cost_centers == ''

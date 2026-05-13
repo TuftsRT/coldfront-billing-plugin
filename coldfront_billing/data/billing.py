@@ -23,16 +23,17 @@ class BillingAllocation:
     no_cost_quotas: List[BillingQuota] = field(default_factory=list)
 
     @property
-    def total_cost(self) -> int:
+    def total_cost(self) -> float:
         total_cost, _ = self.get_predicted_cost(0)
         return total_cost
 
-    def get_predicted_cost(self, user_remaining_quota_tb: float) -> tuple[int, float]:
+    def get_predicted_cost(self, user_remaining_quota_tb: float) -> tuple[float, float]:
         total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
         unpaid_quota = max(self.quota_tb - total_no_cost_quota, 0)
         applied_quota = 0 if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
         billable_quota = max(unpaid_quota - applied_quota, 0)
-        return int(math.ceil(billable_quota)) * int(round(self.cost_per_tb)), applied_quota
+        calculation = math.ceil(billable_quota * 10) / 10 * int(round(self.cost_per_tb))
+        return round(calculation, 2), applied_quota
 
     @classmethod
     def parse(

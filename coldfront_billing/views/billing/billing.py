@@ -75,7 +75,7 @@ class BillingView(LoginRequiredMixin, BillingListViewStateMixin, ListView):
 
         for project in context.get('project_list', []):
             billing_allocations = create_billing_allocations([a for a in getattr(project, BILLING_ATTRIBUTE_NAME, [])])
-            project_cost = sum(b.total_cost for b in billing_allocations)
+            project_cost = round(sum(b.total_cost for b in billing_allocations), 2)
             project.cost = f'${project_cost}'
 
             # 2. Handle Cost Center & JSON Serialization safely

@@ -205,4 +205,4 @@ class TestBillingDetailsView:
         assert 'project' in response.context
         assert 'allocations' in response.context
         assert 'total_cost' in response.context
-        assert isinstance(response.context['total_cost'], int)
+        assert isinstance(response.context['total_cost'], float)
