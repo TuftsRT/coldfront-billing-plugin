@@ -8,6 +8,7 @@ from coldfront.core.allocation.models import (
     AllocationStatusChoice,
 )
 from coldfront.core.allocation.models import AttributeType as AllocationAttributeTypeBase
+from coldfront.core.allocation.signals import allocation_change_approved
 from coldfront.core.resource.models import Resource, ResourceAttribute
 from django.contrib.auth.models import Group
 
@@ -430,6 +431,40 @@ class TestAllocationBecameActiveSignal:
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
         assert allotment.amount == 10.0
+
+    def test_allocation_change_approved_creates_allotment_when_allocation_already_active(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+        allocation_quota_apply_attribute_type,
+    ):
+        """``allocation_became_active`` does not run on create; approval signal applies allotments."""
+        allocation = self._pending_no_cost_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            allocation_quota_apply_attribute_type,
+            no_cost_quota,
+            quota_value='10',
+            apply_pref_value=str(no_cost_quota.pk),
+        )
+
+        allocation_change_approved.send(sender=object, allocation_pk=allocation.pk, allocation_change_pk=1)
+
+        allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
+        assert allotment.amount == 10.0
+        assert not AllocationAttribute.objects.filter(
+            allocation=allocation,
+            allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+        ).exists()
 
     def test_allotment_amount_capped_by_remaining_pool(
         self,
