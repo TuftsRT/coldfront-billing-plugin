@@ -68,14 +68,14 @@ def create_csv_report() -> tuple[str, str]:
                         description,
                     )
                 )
-            writer.writerow(
-                (
-                    ACCOUNT_NAME,
-                    BILLIG_REPORTS_TOTAL_DEPT_NAME,
-                    '',
-                    f'-{total_cost:.2f}',
-                    f'{month}-{DESCRIPTION_PREFIX}-{BILLIG_REPORTS_TOTAL_DESCRIPTION}',
-                )
+        writer.writerow(
+            (
+                ACCOUNT_NAME,
+                BILLIG_REPORTS_TOTAL_DEPT_NAME,
+                '',
+                f'-{total_cost:.2f}',
+                f'{month}-{DESCRIPTION_PREFIX}-{BILLIG_REPORTS_TOTAL_DESCRIPTION}',
             )
+        )
 
         return filename, output.getvalue()
