@@ -25,6 +25,11 @@ urlpatterns = [
         name='update_allocation_details',
     ),
     path(
+        'allocation/<int:pk>/allocation-cost-preview/',
+        views.AllocationCostPreviewView.as_view(),
+        name='allocation_cost_preview',
+    ),
+    path(
         'no-cost-quota/manage/',
         views.ManageNoCostQuotasView.as_view(),
         name='manage_no_cost_quota',
