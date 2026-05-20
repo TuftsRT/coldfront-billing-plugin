@@ -13,5 +13,6 @@ BILLING_ALLOCATION_EMAIL_SUBJECT = getattr(
 BILLING_ALLOCATION_EMAIL_BODY = getattr(
     settings,
     'COLDFRONT_BILLING_ALLOCATION_EMAIL_BODY',
-    'The storage quota amount for your project {project_name} has been changed to {quota_amount}.',
+    'The storage quota amount for your project {project_name} has been changed to {quota_amount}. '
+    'This new quota will incur a monthly cost of {cost}.',
 )

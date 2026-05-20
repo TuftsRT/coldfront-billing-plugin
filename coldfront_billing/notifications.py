@@ -5,44 +5,68 @@ from coldfront.core.allocation.models import (
     AllocationAttributeChangeRequest,
     AllocationChangeRequest,
 )
-from django.contrib.auth import get_user_model
+from coldfront.core.resource.models import ResourceType
 from django.core.mail import EmailMessage
 
+from coldfront_billing.billing import default_cost, default_quota
 from coldfront_billing.constants import (
     QUOTA_ATTR_NAME,
 )
-from coldfront_billing.prefetch import is_paid_storage_allocation
+from coldfront_billing.data import BillingAllocation
+from coldfront_billing.prefetch import (
+    get_no_cost_quota_allotments_prefetch,
+    get_paid_storage_resources_prefetch,
+    get_quota_attr_prefetch,
+    is_paid_storage_allocation,
+)
 from coldfront_billing.settings import (
     BILLING_ALLOCATION_EMAIL_BODY,
     BILLING_ALLOCATION_EMAIL_SUBJECT,
     BILLING_EMAIL_FROM,
 )
 
-User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def _get_allocation_requester(allocation: Allocation) -> User | None:
-    record = allocation.history.order_by('history_date').first()
-    if record is None:
-        return None
-    return record.history_user
+def create_recipient_list(
+    allocation: Allocation,
+    allocation_change_pk: int | None = None,
+) -> list[str]:
+    project_owner = allocation.project.pi
+
+    if allocation_change_pk is not None:
+        record = AllocationChangeRequest.history.filter(id=allocation_change_pk).order_by('history_date').first()
+    else:
+        record = allocation.history.order_by('history_date').first()
+
+    requester = record.history_user if record else None
+
+    return [
+        email
+        for email in {
+            project_owner.email,
+            requester.email if requester and requester.pk != project_owner.pk else None,
+        }
+        if email
+    ]
 
 
-def _get_change_request_requester(allocation_change_pk: int) -> User | None:
-    record = AllocationChangeRequest.history.filter(id=allocation_change_pk).order_by('history_date').first()
-    if record is None:
-        return None
-    return record.history_user
-
-
-def _recipient_emails(project_owner: User, requester: User | None) -> list[str]:
-    emails: list[str] = []
-    if project_owner.email:
-        emails.append(project_owner.email)
-    if requester and requester.pk != project_owner.pk and requester.email:
-        emails.append(requester.email)
-    return emails
+def calculate_cost(allocation_pk) -> float:
+    storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
+    if not storage_type:
+        return 0.0
+    prefetched = (
+        Allocation.objects.filter(pk=allocation_pk)
+        .prefetch_related(
+            get_quota_attr_prefetch(),
+            get_paid_storage_resources_prefetch(storage_type.id),
+            get_no_cost_quota_allotments_prefetch(),
+        )
+        .first()
+    )
+    return (
+        BillingAllocation.parse(prefetched, default_quota, default_cost).total_cost if prefetched is not None else 0.0
+    )
 
 
 def send_allocation_notification(
@@ -69,24 +93,25 @@ def send_allocation_notification(
     if quota_amount is None:
         return
 
-    project = allocation.project
-    project_owner = project.pi
-    requester = (
-        _get_change_request_requester(allocation_change_pk)
-        if allocation_change_pk is not None
-        else _get_allocation_requester(allocation)
-    )
-    recipient_list = _recipient_emails(project_owner, requester)
+    if (cost := calculate_cost(allocation.pk)) <= 0:
+        return
+
+    recipient_list = create_recipient_list(allocation, allocation_change_pk)
     if not recipient_list:
         logger.warning(
-            'Skipping allocation quota approval email for allocation %s: no recipient addresses',
-            allocation.pk,
+            f'Skipping allocation quota approval email for allocation {allocation.pk}: no recipient addresses',
         )
         return
 
-    project_name = project.title
-    subject = BILLING_ALLOCATION_EMAIL_SUBJECT.format(project_name=project_name)
-    body = BILLING_ALLOCATION_EMAIL_BODY.format(project_name=project_name, quota_amount=quota_amount)
+    project_name = allocation.project.title
+    subject = BILLING_ALLOCATION_EMAIL_SUBJECT.format(
+        project_name=project_name,
+    )
+    body = BILLING_ALLOCATION_EMAIL_BODY.format(
+        project_name=project_name,
+        quota_amount=quota_amount,
+        cost=f'{cost:.2f}',
+    )
 
     email = EmailMessage(
         subject=subject,
