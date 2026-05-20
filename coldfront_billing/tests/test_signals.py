@@ -1,10 +1,15 @@
 """Unit tests for coldfront_billing signals."""
 
+from unittest.mock import patch
+
 import pytest
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttribute,
+    AllocationAttributeChangeRequest,
     AllocationAttributeType,
+    AllocationChangeRequest,
+    AllocationChangeStatusChoice,
     AllocationStatusChoice,
 )
 from coldfront.core.allocation.models import AttributeType as AllocationAttributeTypeBase
@@ -12,10 +17,15 @@ from coldfront.core.allocation.signals import allocation_change_approved
 from coldfront.core.resource.models import Resource, ResourceAttribute
 from django.contrib.auth.models import Group
 
-from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME
+from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
 from coldfront_billing.enum import ProjectStatus
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
-from coldfront_billing.tests.conftest import add_no_cost_quota_storage_allocation, create_project_with_role_user
+from coldfront_billing.notifications import send_allocation_notification
+from coldfront_billing.tests.conftest import (
+    add_no_cost_quota_storage_allocation,
+    add_storage_allocation_to_project,
+    create_project_with_role_user,
+)
 
 
 @pytest.fixture
@@ -640,3 +650,225 @@ class TestAllocationBecameActiveSignal:
 
         allotment.refresh_from_db()
         assert allotment.amount == first_amount
+
+
+@pytest.fixture
+def allocation_change_status_approved(db) -> AllocationChangeStatusChoice:
+    return AllocationChangeStatusChoice.objects.get_or_create(name='Approved')[0]
+
+
+@pytest.fixture
+def allocation_change_status_pending(db) -> AllocationChangeStatusChoice:
+    return AllocationChangeStatusChoice.objects.get_or_create(name='Pending')[0]
+
+
+@pytest.mark.django_db
+class TestAllocationQuotaApprovedNotification:
+    """Tests for quota approval emails to project owner and requester."""
+
+    @pytest.fixture(autouse=True)
+    def enable_email(self):
+        with patch('coldfront_billing.allocation_notifications.EMAIL_ENABLED', True):
+            yield
+
+    @patch('coldfront_billing.allocation_notifications.EmailMessage')
+    def test_activation_sends_email_to_project_owner(
+        self,
+        mock_email_message,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            quota_value='12',
+            resource_name='Quota Email Activation Storage',
+        )
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        mock_email_message.return_value.send.assert_called_once()
+        _, kwargs = mock_email_message.call_args
+        assert project.pi.email in kwargs['to']
+        assert '12' in kwargs['body']
+        assert project.title in kwargs['body']
+
+    @patch('coldfront_billing.allocation_notifications.EmailMessage')
+    @patch('coldfront_billing.allocation_notifications._get_allocation_requester')
+    def test_activation_sends_email_to_requester_when_different_from_owner(
+        self,
+        mock_requester,
+        mock_email_message,
+        project,
+        user,
+        storage_resource_type,
+        allocation_status_new,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        mock_requester.return_value = user
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            resource_name='Quota Email Requester Storage',
+        )
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        _, kwargs = mock_email_message.call_args
+        assert set(kwargs['to']) == {project.pi.email, user.email}
+
+    @patch('coldfront_billing.allocation_notifications.EmailMessage')
+    def test_activation_skips_non_paid_storage(
+        self,
+        mock_email_message,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        allocation, storage_resource = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            resource_name='Quota Email Free Storage',
+        )
+        storage_resource.requires_payment = False
+        storage_resource.save(update_fields=['requires_payment'])
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        mock_email_message.return_value.send.assert_not_called()
+
+    @patch('coldfront_billing.allocation_notifications.EmailMessage')
+    def test_change_approved_sends_when_quota_changed(
+        self,
+        mock_email_message,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        allocation_change_status_pending,
+    ):
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            quota_value='5',
+            resource_name='Quota Email Change Storage',
+        )
+        quota_attr = allocation.allocationattribute_set.get(
+            allocation_attribute_type__name=QUOTA_ATTR_NAME,
+        )
+        change_request = AllocationChangeRequest.objects.create(
+            allocation=allocation,
+            status=allocation_change_status_pending,
+            end_date_extension=0,
+            justification='Increase quota',
+        )
+        AllocationAttributeChangeRequest.objects.create(
+            allocation_change_request=change_request,
+            allocation_attribute=quota_attr,
+            new_value='20',
+        )
+        quota_attr.value = '20'
+        quota_attr.save()
+
+        allocation_change_approved.send(
+            sender=object,
+            allocation_pk=allocation.pk,
+            allocation_change_pk=change_request.pk,
+        )
+
+        mock_email_message.return_value.send.assert_called_once()
+        _, kwargs = mock_email_message.call_args
+        assert '20' in kwargs['body']
+
+    @patch('coldfront_billing.allocation_notifications.EmailMessage')
+    def test_change_approved_skips_when_quota_not_in_request(
+        self,
+        mock_email_message,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        allocation_change_status_pending,
+    ):
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            resource_name='Quota Email Extend Storage',
+        )
+        change_request = AllocationChangeRequest.objects.create(
+            allocation=allocation,
+            status=allocation_change_status_pending,
+            end_date_extension=30,
+            justification='Extend only',
+        )
+
+        allocation_change_approved.send(
+            sender=object,
+            allocation_pk=allocation.pk,
+            allocation_change_pk=change_request.pk,
+        )
+
+        mock_email_message.return_value.send.assert_not_called()
+
+    @patch(
+        'coldfront_billing.allocation_notifications.ALLOCATION_QUOTA_APPROVED_EMAIL_BODY',
+        'Project {project_name} quota is now {quota_amount}.',
+    )
+    @patch(
+        'coldfront_billing.allocation_notifications.ALLOCATION_QUOTA_APPROVED_EMAIL_SUBJECT',
+        'Quota update: {project_name}',
+    )
+    @patch('coldfront_billing.allocation_notifications.EmailMessage')
+    def test_uses_settings_templates(
+        self,
+        mock_email_message,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            quota_value='7',
+            resource_name='Quota Email Template Storage',
+        )
+
+        send_allocation_notification(allocation)
+
+        _, kwargs = mock_email_message.call_args
+        assert kwargs['subject'] == f'Quota update: {project.title}'
+        assert kwargs['body'] == f'Project {project.title} quota is now 7.'

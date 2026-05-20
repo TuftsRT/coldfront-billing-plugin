@@ -32,6 +32,7 @@ from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,
     get_paid_storage_resources_prefetch,
     get_quota_attr_prefetch,
+    is_paid_storage_allocation,
 )
 from coldfront_billing.tests.test_data.defaults import DEFAULT_COST, DEFAULT_QUOTA
 from coldfront_billing.utils import first_or_none
@@ -57,13 +58,7 @@ class AllocationCreateView(ColdfrontAllocationCreateView):
         allocation = Allocation.objects.filter(project_id=self.kwargs['project_pk']).order_by('-pk').first()
 
         # Redirect to update_allocation_details page for paid storage allocations
-        if (
-            allocation
-            and allocation.resources.filter(
-                resource_type__name='Storage',
-                requires_payment=True,
-            ).exists()
-        ):
+        if allocation and is_paid_storage_allocation(allocation):
             return redirect(
                 'update_allocation_details',
                 pk=allocation.pk,

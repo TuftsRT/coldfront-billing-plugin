@@ -128,3 +128,10 @@ def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation
         )
         .order_by('project__title', 'pk')
     )
+
+
+def is_paid_storage_allocation(allocation: Allocation) -> bool:
+    return allocation.resources.filter(
+        resource_type__name='Storage',
+        requires_payment=True,
+    ).exists()
