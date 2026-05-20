@@ -8,8 +8,9 @@ import pytest
 from coldfront.core.project.models import Project
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 
-from coldfront_billing.models import CostCenterAssignment
+from coldfront_billing.models import BillingScheduleSettings, CostCenterAssignment
 from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 from coldfront_billing.utils import NoStorageException
 
@@ -30,6 +31,40 @@ class TestExportBillingReportView:
         response = client.get(reverse('reports_export'))
         assert response.status_code == 403
         assert b'not allowed' in response.content.lower()
+
+    def test_auto_assign_when_setting_enabled(self, client, superuser):
+        BillingScheduleSettings.objects.create(
+            start_date=timezone.localdate(),
+            autoassign_no_cost_quota=True,
+        )
+        client.force_login(superuser)
+        with (
+            patch('coldfront_billing.views.reports.csv.auto_assign_quota') as mock_auto_assign,
+            patch(
+                'coldfront_billing.views.reports.csv.create_csv_report',
+                return_value=('billing.csv', 'h1\n'),
+            ),
+        ):
+            response = client.get(reverse('reports_export'))
+        assert response.status_code == 200
+        mock_auto_assign.assert_called_once()
+
+    def test_no_auto_assign_when_setting_disabled(self, client, superuser):
+        BillingScheduleSettings.objects.create(
+            start_date=timezone.localdate(),
+            autoassign_no_cost_quota=False,
+        )
+        client.force_login(superuser)
+        with (
+            patch('coldfront_billing.views.reports.csv.auto_assign_quota') as mock_auto_assign,
+            patch(
+                'coldfront_billing.views.reports.csv.create_csv_report',
+                return_value=('billing.csv', 'h1\n'),
+            ),
+        ):
+            response = client.get(reverse('reports_export'))
+        assert response.status_code == 200
+        mock_auto_assign.assert_not_called()
 
     def test_superuser_no_storage_returns_404(self, client, superuser):
         client.force_login(superuser)
