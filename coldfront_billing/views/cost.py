@@ -8,6 +8,7 @@ from django.views import View
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO
+from coldfront_billing.enum import ProjectStatus
 from coldfront_billing.forms import CostCenterAssignmentForm
 from coldfront_billing.models import CostCenter, CostCenterAssignment
 
@@ -22,7 +23,9 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             return True
 
         return project.projectuser_set.filter(
-            user=self.request.user, role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME], status__name='Active'
+            user=self.request.user,
+            role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+            status__name=ProjectStatus.ACTIVE,
         ).exists()
 
     def post(self, request: HttpRequest) -> JsonResponse:

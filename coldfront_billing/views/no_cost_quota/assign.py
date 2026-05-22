@@ -13,6 +13,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.data.quota import NoCostQuotaEngine
+from coldfront_billing.enum import AllocationStatus
 from coldfront_billing.forms import AllocationSearchForm
 from coldfront_billing.prefetch import get_filtered_allocations_prefetch
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin
@@ -35,9 +36,9 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
             status = search_form.cleaned_data.get('status')
             match status:
                 case 'active':
-                    allocations = [a for a in allocations if a.status.name == 'Active']
+                    allocations = [a for a in allocations if a.status.name == AllocationStatus.ACTIVE]
                 case 'inactive':
-                    allocations = [a for a in allocations if a.status.name != 'Active']
+                    allocations = [a for a in allocations if a.status.name != AllocationStatus.ACTIVE]
                 case _:
                     pass
 
@@ -84,7 +85,9 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
             ncq_allocation = NoCostQuotaAllocation.create(self.quota.user_id, allocation)
 
             user_allotment = next((a for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
-            if allocation.status.name != 'Active' and (user_allotment is None or user_allotment.amount == 0):
+            if allocation.status.name != AllocationStatus.ACTIVE and (
+                user_allotment is None or user_allotment.amount == 0
+            ):
                 continue  # skip inactive allocations without user allotment
 
             user_allotment_pk = user_allotment.pk if user_allotment else None
@@ -110,7 +113,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
                     'max_possible': max_possible,
                     'minimum_increment': self.quota.minimum_increment,
                     'allotment_id': user_allotment_pk or '',
-                    'inactive': allocation.status.name != 'Active',
+                    'inactive': allocation.status.name != AllocationStatus.ACTIVE,
                     'auto_assign_amount': auto_assign_amount,
                 }
             )

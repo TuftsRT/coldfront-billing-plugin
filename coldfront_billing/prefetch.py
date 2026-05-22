@@ -15,6 +15,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
+from coldfront_billing.enum import AllocationStatus, ProjectStatus
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 from coldfront_billing.utils import NoStorageException
 
@@ -83,7 +84,7 @@ def get_projects_prefetch(projects: QuerySet[Project]) -> QuerySet[Project, Proj
         queryset=Allocation.objects.filter(
             resources__resource_type_id=storage_type.id,
             resources__requires_payment=True,
-            status__name='Active',
+            status__name=AllocationStatus.ACTIVE,
         )
         .distinct()
         .prefetch_related(
@@ -104,6 +105,7 @@ def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation
         return Allocation.objects.none()
 
     allocations = Allocation.objects.filter(
+        status__name=AllocationStatus.ACTIVE,
         resources__resource_type_id=storage_type.id,
         resources__requires_payment=True,
         resources__resourceattribute__resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME,
@@ -113,7 +115,7 @@ def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation
             | Q(
                 projectuser__user=quota_owner,
                 projectuser__role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
-                projectuser__status__name='Active',
+                projectuser__status__name=ProjectStatus.ACTIVE,
             )
         ),
     ).distinct()

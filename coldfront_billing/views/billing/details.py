@@ -11,6 +11,7 @@ from django.views.generic import DetailView
 
 from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
+from coldfront_billing.enum import AllocationStatus, ProjectStatus
 from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,
     get_paid_storage_resources_prefetch,
@@ -35,7 +36,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
             project.projectuser_set.filter(
                 user=user,
                 role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
-                status__name='Active',
+                status__name=ProjectStatus.ACTIVE,
             ).exists()
             or project.pi_id == user.id
         )
@@ -64,7 +65,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
                 project=project,
                 resources__resource_type_id=storage_type.id,
                 resources__requires_payment=True,
-                status__name='Active',
+                status__name=AllocationStatus.ACTIVE,
             )
             .distinct()
             .select_related('project', 'project__pi', 'status')

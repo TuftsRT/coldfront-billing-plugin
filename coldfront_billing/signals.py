@@ -7,7 +7,7 @@ from django.dispatch import receiver
 
 from coldfront_billing.allotments import create_update_allotment
 from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enum import AllocationStatus, ProjectStatus
 from coldfront_billing.models import BillingScheduleSettings, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
 from coldfront_billing.notifications import send_allocation_notification
 from coldfront_billing.scheduling import sync_billing_schedule
@@ -81,7 +81,7 @@ def allocation_became_active(sender, instance: Allocation, **kwargs):
     except Allocation.DoesNotExist:
         return
 
-    if old_allocation.status.name != 'Active' and instance.status.name == 'Active':
+    if old_allocation.status.name != AllocationStatus.ACTIVE and instance.status.name == AllocationStatus.ACTIVE:
         _apply_no_cost_quota_allotment_if_requested(instance)
         send_allocation_notification(instance)
 
