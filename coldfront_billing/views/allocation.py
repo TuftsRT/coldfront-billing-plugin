@@ -10,7 +10,6 @@ from coldfront.core.allocation.views import AllocationChangeView as ColdfrontAll
 from coldfront.core.allocation.views import AllocationCreateView as ColdfrontAllocationCreateView
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import ResourceType
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -19,6 +18,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView
 
+from coldfront_billing.billing import default_cost, default_quota
 from coldfront_billing.constants import (
     ALLOCATION_QUOTA_ATTRIBUTE_NAME,
     NO_COST_QUOTA_TYPE_ATTR_NAME,
@@ -32,12 +32,10 @@ from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,
     get_paid_storage_resources_prefetch,
     get_quota_attr_prefetch,
+    is_paid_storage_allocation,
 )
-from coldfront_billing.tests.test_data.defaults import DEFAULT_COST, DEFAULT_QUOTA
 from coldfront_billing.utils import first_or_none
 from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
-
-default_cost_setting = getattr(settings, 'COLDFRONT_BILLING_DEFAULT_COST', 10)
 
 
 def project_has_cost_center_assignment(project: Project) -> bool:
@@ -57,13 +55,7 @@ class AllocationCreateView(ColdfrontAllocationCreateView):
         allocation = Allocation.objects.filter(project_id=self.kwargs['project_pk']).order_by('-pk').first()
 
         # Redirect to update_allocation_details page for paid storage allocations
-        if (
-            allocation
-            and allocation.resources.filter(
-                resource_type__name='Storage',
-                requires_payment=True,
-            ).exists()
-        ):
+        if allocation and is_paid_storage_allocation(allocation):
             return redirect(
                 'update_allocation_details',
                 pk=allocation.pk,
@@ -224,7 +216,7 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
                     remaining_quota = no_cost_quota.remaining_normalized
                     quota_id = no_cost_quota.id
 
-        billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST, quota_tb)
+        billing = BillingAllocation.parse(allocation, default_quota, default_cost, quota_tb)
 
         response = {
             'total_cost': billing.total_cost,
