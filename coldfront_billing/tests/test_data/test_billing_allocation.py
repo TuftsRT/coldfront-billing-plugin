@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 from coldfront_billing.data import BillingAllocation
 
+from ...enum import AllocationStatus
 from .allocation_mocks import (
     create_mock_allocation,
     create_mock_pi,
@@ -473,13 +474,13 @@ class TestBillingAllocation:
         allocation = create_mock_allocation(
             quota_attrs=[Mock(value='5')],
             storage_resources=[storage_resource],
-            status='Active',
+            status=AllocationStatus.ACTIVE,
         )
 
         result = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
 
         assert result.extra is not None
-        assert result.extra['status'] == 'Active'
+        assert result.extra['status'] == AllocationStatus.ACTIVE
 
     def test_parse_includes_extra_end_date_when_present(self):
         """Test parse populates extra.end_date when allocation has end_date."""

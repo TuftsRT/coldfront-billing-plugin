@@ -15,6 +15,7 @@ from coldfront_billing.constants import (
     MANAGER_ROLE_NAME,
     MAX_COST_CENTER_ASSIGNMENTS,
 )
+from coldfront_billing.enum import ProjectStatus
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.prefetch import get_projects_prefetch
 from coldfront_billing.utils import NoStorageException
@@ -34,7 +35,8 @@ class BillingView(LoginRequiredMixin, BillingListViewStateMixin, ListView):
             if username := search_form.cleaned_data.get('username'):
                 projects = projects.filter(
                     Q(pi__username__icontains=username)
-                    | Q(projectuser__user__username__icontains=username) & Q(projectuser__status__name='Active')
+                    | Q(projectuser__user__username__icontains=username)
+                    & Q(projectuser__status__name=ProjectStatus.ACTIVE)
                 )
             if project_title := search_form.cleaned_data.get('project_title'):
                 projects = projects.filter(Q(title__icontains=project_title))
@@ -58,7 +60,7 @@ class BillingView(LoginRequiredMixin, BillingListViewStateMixin, ListView):
                 Q(
                     projectuser__user=self.request.user,
                     projectuser__role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
-                    projectuser__status__name='Active',
+                    projectuser__status__name=ProjectStatus.ACTIVE,
                 )
                 | Q(pi=self.request.user)
             ).distinct()

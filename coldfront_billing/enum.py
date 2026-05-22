@@ -7,6 +7,11 @@ class ProjectStatus(str, Enum):
     NEW = 'New'
 
 
+class AllocationStatus(str, Enum):
+    ACTIVE = 'Active'
+    REJECTED = 'Rejected'
+
+
 class StorageUnit(str, Enum):
     TB = 'TB'
     GB = 'GB'

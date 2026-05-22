@@ -2,7 +2,7 @@ from django.db.models import Case, F, FloatField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
 
 from coldfront_billing.data import UNIT_TO_TB
-from coldfront_billing.enum import StorageUnit
+from coldfront_billing.enum import AllocationStatus, StorageUnit
 from coldfront_billing.models import NoCostQuota
 
 
@@ -20,7 +20,7 @@ quota_with_remaining = NoCostQuota.objects.annotate(
     used_inactive=Coalesce(
         Sum(
             'allotments__amount',
-            filter=~Q(allotments__allocation__status__name='Active'),
+            filter=~Q(allotments__allocation__status__name=AllocationStatus.ACTIVE),
         ),
         Value(0.0),
     ),

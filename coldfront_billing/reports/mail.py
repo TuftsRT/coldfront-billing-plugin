@@ -1,15 +1,9 @@
-from django.conf import settings
 from django.core.mail import EmailMessage
 
 from coldfront_billing.models import BillingScheduleHistory, BillingScheduleSettings
 from coldfront_billing.reports import create_csv_report
+from coldfront_billing.settings import BILLING_EMAIL_FROM
 from coldfront_billing.utils import NoStorageException, get_month_abbr, validate_emails
-
-EMAIL_FROM = getattr(
-    settings,
-    'COLDFRONT_BILLING_EMAIL_FROM',
-    'billing@tufts.com',
-)
 
 EMAIL_SUBJECT = 'Billing monthly report'
 EMAIL_BODY = 'Attached is the latest CSV report.'
@@ -56,7 +50,7 @@ def send_billing_report_email(billing_settings: BillingScheduleSettings):
     email = EmailMessage(
         subject=f'{subject} [{get_month_abbr()}]',
         body=body,
-        from_email=EMAIL_FROM,
+        from_email=BILLING_EMAIL_FROM,
         to=valid_recipients,
     )
     email.attach(filename, csv_content, 'text/csv')

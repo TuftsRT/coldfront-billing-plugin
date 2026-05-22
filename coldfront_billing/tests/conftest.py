@@ -38,7 +38,7 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
 )
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enum import AllocationStatus, ProjectStatus
 
 
 @pytest.fixture
@@ -265,7 +265,7 @@ def storage_resource_type(db) -> ResourceType:
 @pytest.fixture
 def allocation_status_active(db) -> AllocationStatusChoice:
     """Create an Active allocation status."""
-    return AllocationStatusChoice.objects.get_or_create(name='Active')[0]
+    return AllocationStatusChoice.objects.get_or_create(name=AllocationStatus.ACTIVE)[0]
 
 
 @pytest.fixture

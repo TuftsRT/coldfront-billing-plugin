@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 
+from coldfront_billing.enum import AllocationStatus
 from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 
 
@@ -55,7 +56,7 @@ class TestBillingDetailsView:
         assert billing_alloc.extra['project_title'] == project.title
         assert billing_alloc.extra['pi_name'] == project.pi.username
         assert billing_alloc.extra['resource_name'] == 'Test Storage'
-        assert billing_alloc.extra['status'] == 'Active'
+        assert billing_alloc.extra['status'] == AllocationStatus.ACTIVE
 
     def test_user_with_billing_role_can_view_project_details(
         self,
