@@ -127,8 +127,12 @@ Manage No-Cost Quotas
                 <td>
                     {{ quota.remaining|floatformat:-2 }} {{ quota.units }}
                     {% if quota.has_inactive %}
-                    <span class="text-danger" data-bs-toggle="tooltip" title="Amount in inactive allocations">
-                         + {{ quota.used_inactive|floatformat:-2 }} {{ quota.units }}
+                    <span class="text-danger js-ncq-inactive-popover text-nowrap"
+                          data-toggle="popover"
+                          data-placement="right"
+                          data-container="body"
+                          data-content="Amount in inactive allocations.">
+                        + {{ quota.used_inactive|floatformat:-2 }} {{ quota.units }}
                     </span>
                     {% endif %}
                 </td>
@@ -148,4 +152,5 @@ Manage No-Cost Quotas
     No no-cost quotas to display.
 </div>
 {% endif %}
+<script src="{% static 'billing/js/no_cost_quota_manage.js' %}"></script>
 {% endblock %}
