@@ -27,3 +27,7 @@ BILLIG_REPORTS_TOTAL_DESCRIPTION = getattr(settings, 'COLDFRONT_BILLIG_REPORTS_T
 BILLING_SCHEDULE_NAME = 'coldfront_billing_report'
 BILLING_REPORT_HOUR = getattr(settings, 'COLDFRONT_BILLING_REPORT_HOUR', 8)
 BILLING_USE_TEST_SCHEDULING = getattr(settings, 'COLDFRONT_BILLING_USE_TEST_SCHEDULING', False)
+
+# Defaults for BillingAllocation.parse when quota/cost attributes are missing
+DEFAULT_BILLING_QUOTA = getattr(settings, 'COLDFRONT_BILLING_DEFAULT_QUOTA', 0)
+DEFAULT_BILLING_COST = getattr(settings, 'COLDFRONT_BILLING_DEFAULT_COST', 10)
