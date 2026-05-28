@@ -9,8 +9,8 @@ from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
 
-from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
+from coldfront_billing.data.billing import create_billing_allocations
 from coldfront_billing.enum import AllocationStatus, ProjectStatus
 from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,

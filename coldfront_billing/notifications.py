@@ -8,10 +8,7 @@ from coldfront.core.allocation.models import (
 from coldfront.core.resource.models import ResourceType
 from django.core.mail import EmailMessage
 
-from coldfront_billing.billing import default_cost, default_quota
-from coldfront_billing.constants import (
-    QUOTA_ATTR_NAME,
-)
+from coldfront_billing.constants import DEFAULT_BILLING_COST, DEFAULT_BILLING_QUOTA, QUOTA_ATTR_NAME
 from coldfront_billing.data import BillingAllocation
 from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,
@@ -65,7 +62,9 @@ def calculate_cost(allocation_pk) -> float:
         .first()
     )
     return (
-        BillingAllocation.parse(prefetched, default_quota, default_cost).total_cost if prefetched is not None else 0.0
+        BillingAllocation.parse(prefetched, DEFAULT_BILLING_QUOTA, DEFAULT_BILLING_COST).total_cost
+        if prefetched is not None
+        else 0.0
     )
 
 
