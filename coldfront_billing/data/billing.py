@@ -2,8 +2,12 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from coldfront.core.allocation.models import Allocation
+
 from coldfront_billing.constants import (
     ALLOTMENTS_ATTRIBUTE_NAME,
+    DEFAULT_BILLING_COST,
+    DEFAULT_BILLING_QUOTA,
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
@@ -92,3 +96,7 @@ class BillingAllocation:
             },
             no_cost_quotas=no_cost_quotas,
         )
+
+
+def create_billing_allocations(allocation_objs: list[Allocation]) -> list[BillingAllocation]:
+    return [BillingAllocation.parse(a, DEFAULT_BILLING_QUOTA, DEFAULT_BILLING_COST) for a in allocation_objs]

@@ -34,6 +34,10 @@ class TestNoCostQuotaEngine:
         engine = NoCostQuotaEngine(1, [])
         assert engine.allocations == []
 
+    def test_allocation_assignement_str(self):
+        assignment = AllocationAssignement(42, 3.5)
+        assert str(assignment) == '42 - 3.5'
+
     def test_auto_assign_empty_returns_empty_list(self):
         engine = NoCostQuotaEngine(1, [])
         assert engine.auto_assign(10.0, 'TB', 1.0) == []

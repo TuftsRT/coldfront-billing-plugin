@@ -142,7 +142,9 @@ class NoCostQuotaAllotment(models.Model):
             allocation_quota = BillingQuota.create(allocation_quota_value, 'TB')
             allotment_quota = BillingQuota.create(self.amount, self.no_cost_quota.units)
 
-            if alottment_size := allotment_quota.normalized_amount > (alloc_size := allocation_quota.normalized_amount):
+            if (alottment_size := allotment_quota.normalized_amount) > (
+                alloc_size := allocation_quota.normalized_amount
+            ):
                 raise ValidationError(
                     {
                         'amount': f'No cost quota allotment size ({alottment_size}) is bigger than allocation size ({alloc_size} TB)'

@@ -8,13 +8,13 @@ from django.db.models import Q, QuerySet, TextField
 from django.db.models.functions import Cast
 from django.views.generic import ListView
 
-from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,
     BILLING_ROLE_NAME,
     MANAGER_ROLE_NAME,
     MAX_COST_CENTER_ASSIGNMENTS,
 )
+from coldfront_billing.data.billing import create_billing_allocations
 from coldfront_billing.enum import ProjectStatus
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.prefetch import get_projects_prefetch

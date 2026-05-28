@@ -18,9 +18,10 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView
 
-from coldfront_billing.billing import default_cost, default_quota
 from coldfront_billing.constants import (
     ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+    DEFAULT_BILLING_COST,
+    DEFAULT_BILLING_QUOTA,
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
@@ -216,7 +217,7 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
                     remaining_quota = no_cost_quota.remaining_normalized
                     quota_id = no_cost_quota.id
 
-        billing = BillingAllocation.parse(allocation, default_quota, default_cost, quota_tb)
+        billing = BillingAllocation.parse(allocation, DEFAULT_BILLING_QUOTA, DEFAULT_BILLING_COST, quota_tb)
 
         response = {
             'total_cost': billing.total_cost,

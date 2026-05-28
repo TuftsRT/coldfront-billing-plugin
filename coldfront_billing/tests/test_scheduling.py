@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
@@ -41,3 +42,21 @@ class TestSyncBillingSchedule:
         q = Schedule.objects.get(name=BILLING_SCHEDULE_NAME)
         assert q.schedule_type == Schedule.MONTHLY
         assert q.minutes is None
+
+    def test_disabled_or_missing_settings_removes_schedule(self):
+        s = self._settings()
+        sync_billing_schedule(s)
+        assert Schedule.objects.filter(name=BILLING_SCHEDULE_NAME).exists()
+        s.scheduling_enabled = False
+        s.save()
+        sync_billing_schedule(s)
+        assert not Schedule.objects.filter(name=BILLING_SCHEDULE_NAME).exists()
+        sync_billing_schedule(None)
+        assert not Schedule.objects.filter(name=BILLING_SCHEDULE_NAME).exists()
+
+    def test_monthly_schedule_repeats_limited_when_end_date_set(self):
+        end = timezone.localdate() + timedelta(days=60)
+        s = self._settings(end_date=end)
+        sync_billing_schedule(s)
+        q = Schedule.objects.get(name=BILLING_SCHEDULE_NAME)
+        assert q.repeats > 0

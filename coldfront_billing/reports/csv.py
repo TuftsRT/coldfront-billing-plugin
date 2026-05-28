@@ -6,12 +6,12 @@ from coldfront.core.project.models import Project
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from coldfront_billing.billing import create_billing_allocations
 from coldfront_billing.constants import (
     BILLIG_REPORTS_TOTAL_DEPT_NAME,
     BILLIG_REPORTS_TOTAL_DESCRIPTION,
     BILLING_ATTRIBUTE_NAME,
 )
+from coldfront_billing.data.billing import create_billing_allocations
 from coldfront_billing.prefetch import get_projects_prefetch
 from coldfront_billing.utils import get_month_abbr
 
