@@ -27,7 +27,7 @@ def auto_assign_quota() -> tuple[str, str]:
             if remaining <= 0:
                 continue
 
-            base_allocations = get_filtered_allocations_prefetch(quota)
+            base_allocations = get_filtered_allocations_prefetch(quota, active_only=True)
 
             auto_assign_allocations = base_allocations.filter(
                 project__in=Project.objects.filter(pi=quota.user),

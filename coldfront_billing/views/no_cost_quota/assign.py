@@ -58,7 +58,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Allocation]:
-        return get_filtered_allocations_prefetch(self.quota)
+        return get_filtered_allocations_prefetch(self.quota, active_only=False)
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
