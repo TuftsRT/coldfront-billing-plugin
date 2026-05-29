@@ -2,6 +2,7 @@ from coldfront.core.project.models import Project
 
 from coldfront_billing.allotments import create_or_update_allotment
 from coldfront_billing.data.quota import NoCostQuotaEngine
+from coldfront_billing.enum import AllocationStatus
 from coldfront_billing.prefetch import (
     get_filtered_allocations_prefetch,
     get_projects_prefetch,
@@ -27,9 +28,10 @@ def auto_assign_quota() -> tuple[str, str]:
             if remaining <= 0:
                 continue
 
-            base_allocations = get_filtered_allocations_prefetch(quota, active_only=True)
+            base_allocations = get_filtered_allocations_prefetch(quota)
 
             auto_assign_allocations = base_allocations.filter(
+                status__name=AllocationStatus.ACTIVE,
                 project__in=Project.objects.filter(pi=quota.user),
             )
 
