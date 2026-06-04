@@ -97,7 +97,7 @@ def get_projects_prefetch(projects: QuerySet[Project]) -> QuerySet[Project, Proj
     return projects.select_related('pi', 'status').prefetch_related(allocations_prefetch, 'cost_center_assignment')
 
 
-def get_filtered_allocations_prefetch(quota: NoCostQuota, active_only: bool) -> QuerySet[Allocation]:
+def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation]:
     quota_owner = quota.user
     storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
 
@@ -118,8 +118,6 @@ def get_filtered_allocations_prefetch(quota: NoCostQuota, active_only: bool) -> 
             )
         ),
     ).distinct()
-    if active_only:
-        allocations = allocations.filter(status__name=AllocationStatus.ACTIVE)
 
     return (
         allocations.select_related('project', 'project__pi', 'status')
