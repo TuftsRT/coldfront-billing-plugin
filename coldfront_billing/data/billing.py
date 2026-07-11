@@ -1,5 +1,4 @@
-from decimal import Decimal
-import math
+from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
@@ -12,7 +11,6 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.utils import parse_float
 
 from .common import get_cost_per_tb
 from .quota import BillingQuota
@@ -40,8 +38,8 @@ class BillingAllocation:
         return self.calculate_cost(billable_quota), applied_quota
 
     def calculate_cost(self, quota_tb: Decimal) -> Decimal:
-        calculation = math.ceil(float(quota_tb) * 10) / 10 * int(round(self.cost_per_tb))
-        return Decimal(round(calculation, 2))
+        calculation = quota_tb * self.cost_per_tb
+        return calculation.quantize(Decimal('0.01'))  # Round to 2 decimal places
 
     @classmethod
     def parse(
@@ -53,8 +51,11 @@ class BillingAllocation:
     ) -> 'BillingAllocation':
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
-            dec_quota = Decimal(quota_raw) if quota_raw is not None else Decimal(default_quota)
-            quota_tb = dec_quota if dec_quota >= 0 else Decimal(default_quota)
+            try:
+                dec_quota = Decimal(quota_raw) if quota_raw is not None else default_quota
+                quota_tb = dec_quota if dec_quota >= 0 else default_quota
+            except (InvalidOperation, ValueError):
+                quota_tb = default_quota
         else:
             quota_tb = default_quota
 
@@ -62,7 +63,6 @@ class BillingAllocation:
             quota_tb += new_quota
 
         cost_per_tb = get_cost_per_tb(allocation, default_cost)
-
         if (project := getattr(allocation, 'project', None)) is not None:
             project_title = getattr(project, 'title', '-')
             pi = getattr(project, 'pi', None)
@@ -81,7 +81,7 @@ class BillingAllocation:
 
         allotments = getattr(allocation, ALLOTMENTS_ATTRIBUTE_NAME, [])
         no_cost_quotas = [
-            BillingQuota.create(allotment.amount, allotment.no_cost_quota.units) for allotment in allotments
+            BillingQuota.create(allotment.amount_tb, allotment.no_cost_quota.units) for allotment in allotments
         ]
 
         return cls(

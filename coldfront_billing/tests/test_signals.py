@@ -508,6 +508,7 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota=no_cost_quota,
             allocation=consumer,
             amount=70.0,
+            amount_tb=70.0,
         )
 
         allocation = self._pending_no_cost_allocation(
@@ -526,9 +527,8 @@ class TestAllocationBecameActiveSignal:
 
         allocation.status = allocation_status_active
         allocation.save()
-
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        assert allotment.amount == 30.0
+        assert allotment.amount_tb == 30.0
 
     def test_no_apply_pref_attribute_skips_allotment(
         self,
@@ -865,6 +865,7 @@ class TestAllocationQuotaApprovedNotification:
             no_cost_quota=no_cost_quota,
             allocation=allocation,
             amount=10.0,
+            amount_tb=Decimal('10.0'),
         )
 
         send_allocation_notification(allocation)

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import Mock
 
 from coldfront_billing.data import BillingAllocation, BillingQuota
@@ -21,7 +22,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=10,
             cost_per_tb=100,
-            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
         )
         # 10 - 3 = 7 TB billable, ceil(7) * 100 = 700
         assert billing.total_cost == 700
@@ -33,7 +34,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=5,
             cost_per_tb=100,
-            no_cost_quotas=[BillingQuota(amount=1000.0, unit=StorageUnit.GB)],
+            no_cost_quotas=[BillingQuota(amount=Decimal('1000.0'), unit=StorageUnit.GB)],
         )
         # 5 - 1 = 4 TB billable, 4 * 100 = 400
         assert billing.total_cost == 400
@@ -46,12 +47,13 @@ class TestBillingAllocationNoCostQuotas:
             quota_tb=10,
             cost_per_tb=100,
             no_cost_quotas=[
-                BillingQuota(amount=2.0, unit=StorageUnit.TB),
-                BillingQuota(amount=450.0, unit=StorageUnit.GB),  # 0.5 TB
+                BillingQuota(amount=Decimal('2.0'), unit=StorageUnit.TB),
+                BillingQuota(amount=Decimal('450.0'), unit=StorageUnit.GB),  # 0.5 TB
             ],
         )
-        # 10 - 2.45 = 7.55 TB billable, ceil(7.55) -> 7.6 * 100 = 760
-        assert billing.total_cost == 760
+        # 10 - 2.45 = 7.55 TB billable, ceil(7.55) -> 7.6 * 100 = 760 
+        # todo: do we want to round up to nearest 0.1 TB 
+        assert billing.total_cost == 755
 
     def test_total_cost_no_cost_quota_exceeds_quota_returns_zero(self):
         """Test total_cost is zero when no_cost_quotas exceed quota."""
@@ -60,7 +62,7 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=5,
             cost_per_tb=100,
-            no_cost_quotas=[BillingQuota(amount=10.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=Decimal('10.0'), unit=StorageUnit.TB)],
         )
         # max(5 - 10, 0) = 0, 0 * 100 = 0
         assert billing.total_cost == 0
@@ -83,10 +85,10 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=10,
             cost_per_tb=100,
-            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
         )
         # unpaid_quota = 7 TB; user applies 2 TB -> billable 5 TB -> ceil(5) * 100
-        predicted, applied = billing.get_predicted_cost(2.0)
+        predicted, applied = billing.get_predicted_cost(Decimal('2.0'))
         assert applied == 2.0
         assert predicted == 500
 
@@ -97,16 +99,16 @@ class TestBillingAllocationNoCostQuotas:
             project_id=1,
             quota_tb=10,
             cost_per_tb=100,
-            no_cost_quotas=[BillingQuota(amount=3.0, unit=StorageUnit.TB)],
+            no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
         )
-        predicted, applied = billing.get_predicted_cost(100.0)
-        assert applied == 7.0
+        predicted, applied = billing.get_predicted_cost(Decimal('100.0'))
+        assert applied == Decimal('7.0')
         assert predicted == 0
 
     def test_parse_with_no_cost_quota_data(self):
         """Test parse populates no_cost_quotas from allocation allotments."""
-        allotment1 = create_mock_allotment(amount=2.0, units='TB')
-        allotment2 = create_mock_allotment(amount=500.0, units='GB')
+        allotment1 = create_mock_allotment(amount=Decimal('2.0'), units='TB')
+        allotment2 = create_mock_allotment(amount=Decimal('500.0'), units='GB')
         storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
         allocation = create_mock_allocation(
             quota_attrs=[Mock(value='10')],

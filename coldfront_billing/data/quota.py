@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -61,13 +61,13 @@ class NoCostQuotaAllocation:
         return round(math.floor(max_possible / increment) * increment, digits)
 
     @property
-    def user_allotment_amount(self) -> float:
+    def user_allotment_amount(self) -> Decimal:
         # returns the amount of existing user allotment on this allocation in TB
-        return self.users_allotment.normalized_amount if self.users_allotment else 0
+        return self.users_allotment.normalized_amount if self.users_allotment else Decimal('0')
 
     @property
-    def other_allotments_amount(self) -> float:
-        return sum(a.normalized_amount for a in self.other_allotments)
+    def other_allotments_amount(self) -> Decimal:
+        return sum((a.normalized_amount for a in self.other_allotments), Decimal('0'))
 
     @classmethod
     def create(cls, user_id: int, allocation: Any) -> Self:
@@ -86,7 +86,7 @@ class NoCostQuotaAllocation:
         # Check if allocation has quota_in_terabyte set
         try:
             allocation_amount = Decimal(quota_attr_tb.value) if quota_attr_tb else None
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, InvalidOperation):
             allocation_amount = None
 
         return cls(
