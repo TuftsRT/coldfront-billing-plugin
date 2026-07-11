@@ -53,7 +53,7 @@ class NoCostQuotaAllocation:
             else:
                 raise ValueError(f"Unsupported quota unit: {quota_unit}")
 
-        tb_to_quota_unit = 1.0 / UNIT_TO_TB[StorageUnit.parse(quota_unit)]
+        tb_to_quota_unit = Decimal('1.0') / UNIT_TO_TB[StorageUnit.parse(quota_unit)]
         allocation_available_tb = max(0, self.allocation_amount - self.other_allotments_amount)
         allocation_available = allocation_available_tb * tb_to_quota_unit
         max_possible = min(possible_quota, allocation_available)
