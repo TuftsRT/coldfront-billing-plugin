@@ -11,6 +11,8 @@ from coldfront_billing.utils import first_or_none
 UNIT_TO_TB = {
     StorageUnit.TB: Decimal('1.0'),
     StorageUnit.GB: Decimal('0.001'),
+    StorageUnit.TB: Decimal('1.0'),
+    StorageUnit.GB: Decimal('0.001'),
 }
 
 
@@ -28,6 +30,8 @@ class BillingQuota:
         return self.amount_tb / UNIT_TO_TB[StorageUnit.GB]
 
     @staticmethod
+    def create(amount: Decimal, unit: str, *_, **__) -> 'BillingQuota':
+        return BillingQuota(amount, StorageUnit.parse(unit))
     def create(amount: Decimal, unit: str, *_, **__) -> 'BillingQuota':
         return BillingQuota(amount, StorageUnit.parse(unit))
 
