@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 
-from coldfront_billing.enum import AllocationStatus
+from coldfront_billing.enums import AllocationStatus
 from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 
 

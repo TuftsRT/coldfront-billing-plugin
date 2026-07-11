@@ -30,6 +30,7 @@ class QuotaBase(models.Model):
         max_digits=12,
         decimal_places=3,
         help_text='Quota amount',
+        default=Decimal('0.000'),
         validators=[MinValueValidator(Decimal('0.000'))]
     ) # 3 decimal places to support GB precision (e.g., 0.001 TB = 1 GB)
     units = models.CharField(

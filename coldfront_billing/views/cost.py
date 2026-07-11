@@ -8,7 +8,7 @@ from django.views import View
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enums import ProjectStatus
 from coldfront_billing.forms import CostCenterAssignmentForm
 from coldfront_billing.models import CostCenter, CostCenterAssignment
 

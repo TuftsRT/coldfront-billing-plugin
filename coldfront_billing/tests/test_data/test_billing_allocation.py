@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 from coldfront_billing.data import BillingAllocation
 
-from ...enum import AllocationStatus
+from ...enums import AllocationStatus
 from .allocation_mocks import (
     create_mock_allocation,
     create_mock_pi,

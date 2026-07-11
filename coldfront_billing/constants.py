@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import environ
 from django.conf import settings
 
@@ -29,5 +31,5 @@ BILLING_REPORT_HOUR = getattr(settings, 'COLDFRONT_BILLING_REPORT_HOUR', 8)
 BILLING_USE_TEST_SCHEDULING = getattr(settings, 'COLDFRONT_BILLING_USE_TEST_SCHEDULING', False)
 
 # Defaults for BillingAllocation.parse when quota/cost attributes are missing
-DEFAULT_BILLING_QUOTA = getattr(settings, 'COLDFRONT_BILLING_DEFAULT_QUOTA', 0)
-DEFAULT_BILLING_COST = getattr(settings, 'COLDFRONT_BILLING_DEFAULT_COST', 10)
+DEFAULT_BILLING_QUOTA = Decimal(getattr(settings, 'COLDFRONT_BILLING_DEFAULT_QUOTA', 0))
+DEFAULT_BILLING_COST = Decimal(getattr(settings, 'COLDFRONT_BILLING_DEFAULT_COST', 10))

@@ -1,5 +1,5 @@
 from coldfront_billing.data import BillingQuota
-from coldfront_billing.enum import StorageUnit
+from coldfront_billing.enums import StorageUnit
 
 
 class TestBillingQuota:

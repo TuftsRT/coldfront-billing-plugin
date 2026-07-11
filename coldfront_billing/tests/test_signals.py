@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from decimal import Decimal
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttribute,
@@ -18,7 +19,7 @@ from coldfront.core.resource.models import Resource, ResourceAttribute
 from django.contrib.auth.models import Group
 
 from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enums import ProjectStatus
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
 from coldfront_billing.notifications import send_allocation_notification
 from coldfront_billing.tests.conftest import (
@@ -37,8 +38,10 @@ def no_cost_quota_group(db):
         quota_type='tier_1',
         description='Tier 1 storage',
         amount=15.0,
+        amount_tb=Decimal('15.0'),
         units='TB',
         minimum_increment=1.0,
+        increment_gb=1000,
     )
 
 
@@ -52,8 +55,10 @@ def no_cost_quota_group_tier2(db):
         quota_type='tier_2',
         description='Tier 2 storage',
         amount=50.0,
+        amount_tb=Decimal('50.0'),
         units='TB',
         minimum_increment=0.5,
+        increment_gb=500,
     )
 
 
@@ -70,9 +75,9 @@ class TestUserGroupsChangedSignal:
         user.groups.add(no_cost_quota_group.group)
 
         quota = NoCostQuota.objects.get(user=user, quota_type=no_cost_quota_group.quota_type)
-        assert quota.amount == no_cost_quota_group.amount
+        assert quota.amount_tb == no_cost_quota_group.amount_tb
         assert quota.units == no_cost_quota_group.units
-        assert quota.minimum_increment == no_cost_quota_group.minimum_increment
+        assert quota.increment_gb == no_cost_quota_group.increment_gb
         assert quota.description == no_cost_quota_group.description
 
     def test_adding_user_to_non_matching_group_does_not_create_quota(
@@ -440,7 +445,7 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        assert allotment.amount == 10.0
+        assert allotment.amount_tb == Decimal('10.0')
 
     def test_allocation_change_approved_creates_allotment_when_allocation_already_active(
         self,

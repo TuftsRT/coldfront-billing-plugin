@@ -1,4 +1,3 @@
-import math
 from decimal import Decimal
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import ProjectUser
@@ -14,7 +13,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTR_NAME,
 )
 from coldfront_billing.data import BillingQuota
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enums import ProjectStatus
 from coldfront_billing.models.common import UNITS_CHOICES, QuotaBase
 
 User = get_user_model()
@@ -73,6 +72,7 @@ class NoCostQuotaAllotment(models.Model):
         max_digits=12,
         decimal_places=3,
         help_text='Allotted quota amount',
+        default=Decimal('0.000'),
         validators=[MinValueValidator(Decimal('0.000'))]
     )  # 3 decimal places to support GB precision (e.g., 0.001 TB = 1 GB)
 
@@ -86,7 +86,7 @@ class NoCostQuotaAllotment(models.Model):
                 name='uniq_nocostquotaallotment_quota_allocation',
             ),
             models.CheckConstraint(
-                condition=models.Q(amount_tb__gte=Decimal('0.000')),
+                check=models.Q(amount_tb__gte=Decimal('0.000')),
                 name='amount_tb_must_be_positive'
             )
         ]
@@ -150,12 +150,12 @@ class NoCostQuotaAllotment(models.Model):
                         'amount': f'No cost quota allotment size ({amount}) is bigger than no-cost quota size ({no_cost_quota})'
                     }
                 )
-            allocation_quota_value = self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
+            allocation_quota_value = self.allocation.get_attribute(QUOTA_ATTR_NAME)
 
             if not allocation_quota_value:
                 return
 
-            allocation_quota = BillingQuota.create(allocation_quota_value, 'TB')
+            allocation_quota = BillingQuota.create(Decimal(allocation_quota_value), 'TB')
             allotment_quota = BillingQuota.create(self.amount_tb, self.no_cost_quota.units)
 
             if (allotment_size := allotment_quota.normalized_amount) > (

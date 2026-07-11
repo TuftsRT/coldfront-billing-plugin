@@ -1,3 +1,4 @@
+from decimal import Decimal
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -5,53 +6,59 @@ from typing import Any, Self
 
 from coldfront_billing.constants import ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME
 from coldfront_billing.data.common import get_cost_per_tb
-from coldfront_billing.enum import StorageUnit
+from coldfront_billing.enums import StorageUnit
 from coldfront_billing.utils import first_or_none
 
 UNIT_TO_TB = {
-    StorageUnit.TB: 1.0,
-    StorageUnit.GB: 1.0 / 1000.0,
+    StorageUnit.TB: Decimal('1.0'),
+    StorageUnit.GB: Decimal('0.001'),
 }
 
 
 @dataclass
 class BillingQuota:
-    amount: float
+    amount: Decimal
     unit: StorageUnit
 
     @property
-    def normalized_amount(self) -> float:
+    def normalized_amount(self) -> Decimal:
         return self.amount * UNIT_TO_TB[self.unit]
 
     @staticmethod
-    def create(ammount: float, unit: str, *_, **__) -> 'BillingQuota':
-        return BillingQuota(ammount, StorageUnit.parse(unit))
+    def create(amount: Decimal, unit: str, *_, **__) -> 'BillingQuota':
+        return BillingQuota(amount, StorageUnit.parse(unit))
 
 
 @dataclass
 class NoCostQuotaAllocation:
     user_id: int
-    allocation_amount: float | None
+    allocation_amount: Decimal | None
     users_allotment: BillingQuota | None
     other_allotments: list[BillingQuota]
 
     @property
-    def user_amount(self) -> float:
-        return self.users_allotment.amount if self.users_allotment else 0
+    def user_amount(self) -> Decimal:
+        return self.users_allotment.amount if self.users_allotment else Decimal(0)
 
-    def max_possible_allocation(self, remaining_quota: float, quota_unit: str, min_increment: float) -> float:
+    def max_possible_allocation(self, remaining_quota: Decimal, quota_unit: str, increment: int) -> Decimal:
         quota_unit = StorageUnit.parse(quota_unit)
         possible_quota = remaining_quota + self.user_amount
 
         if self.allocation_amount is None:
-            return round(possible_quota, 2)
+            # increment is always in GB, so we need to convert it to the quota unit for comparison
+            if quota_unit == StorageUnit.TB:
+                return possible_quota.quantize(Decimal(increment)/Decimal(1000))
+            elif quota_unit == StorageUnit.GB:
+                return possible_quota.quantize(Decimal(increment))
+            else:
+                raise ValueError(f"Unsupported quota unit: {quota_unit}")
 
         tb_to_quota_unit = 1.0 / UNIT_TO_TB[StorageUnit.parse(quota_unit)]
         allocation_available_tb = max(0, self.allocation_amount - self.other_allotments_amount)
         allocation_available = allocation_available_tb * tb_to_quota_unit
         max_possible = min(possible_quota, allocation_available)
-        digits = int(round(-math.log10(min_increment)))
-        return round(math.floor(max_possible / min_increment) * min_increment, digits)
+        digits = int(round(-math.log10(increment)))
+        return round(math.floor(max_possible / increment) * increment, digits)
 
     @property
     def user_allotment_amount(self) -> float:
@@ -78,7 +85,7 @@ class NoCostQuotaAllocation:
         quota_attr_tb = first_or_none(getattr(allocation, QUOTA_ATTRIBUTE_NAME, None))
         # Check if allocation has quota_in_terabyte set
         try:
-            allocation_amount = float(quota_attr_tb.value) if quota_attr_tb else None
+            allocation_amount = Decimal(quota_attr_tb.value) if quota_attr_tb else None
         except (TypeError, ValueError):
             allocation_amount = None
 
@@ -93,7 +100,7 @@ class NoCostQuotaAllocation:
 @dataclass
 class PricedAllocation(NoCostQuotaAllocation):
     allocation_id: int
-    cost_per_tb: float
+    cost_per_tb: Decimal
 
     @classmethod
     def create(cls, user_id: int, allocation: Any) -> Self:
@@ -107,9 +114,9 @@ class PricedAllocation(NoCostQuotaAllocation):
 
 
 @dataclass
-class AllocationAssignement:
+class AllocationAssignment:
     allocation_id: int
-    amount: float
+    amount: Decimal
 
     def __str__(self) -> str:
         return f'{self.allocation_id} - {self.amount}'
@@ -123,11 +130,11 @@ class NoCostQuotaEngine:
 
     def auto_assign(
         self,
-        remaining_quota: float,
+        remaining_quota: Decimal,
         quota_unit: str,
-        min_increment: float,
-    ) -> list[AllocationAssignement]:
-        allocation_assignements = []
+        min_increment: int,
+    ) -> list[AllocationAssignment]:
+        allocation_assignments = []
         for allocation in sorted(self.allocations, key=lambda x: x.cost_per_tb, reverse=True):
             if remaining_quota == 0:
                 break
@@ -139,12 +146,12 @@ class NoCostQuotaEngine:
             max_possible = allocation.max_possible_allocation(remaining_quota, quota_unit, min_increment)
             if max_possible > 0:
                 remaining_quota -= max_possible - allocation.user_allotment_amount
-                allocation_assignements.append(AllocationAssignement(allocation.allocation_id, max_possible))
+                allocation_assignments.append(AllocationAssignment(allocation.allocation_id, max_possible))
 
-        return allocation_assignements
+        return allocation_assignments
 
 
-def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list[AllocationAssignement]:
+def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list[AllocationAssignment]:
     allocation_ids = [a.strip() for a in allocation_ids]
     amount_strs = [a.strip() for a in amount_strs]
     if not allocation_ids:
@@ -156,7 +163,7 @@ def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list
     if len(allocation_ids) != len(amount_strs):
         raise Exception('Invalid request: allocation and amount counts do not match.')
 
-    assignnements = []
+    assignments = []
 
     for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
         if not allocation_id_str:
@@ -168,10 +175,10 @@ def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list
             raise Exception('The allocation id is invalid.')
 
         try:
-            amount = float(str(amount_str).replace(',', '.'))
+            amount = Decimal(str(amount_str).replace(',', '.'))
         except (ValueError, TypeError):
             raise Exception('The amount of allocation is invalid.')
 
-        assignnements.append(AllocationAssignement(allocation_id, amount))
+        assignments.append(AllocationAssignment(allocation_id, amount))
 
-    return assignnements
+    return assignments

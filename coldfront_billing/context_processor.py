@@ -2,7 +2,7 @@ from coldfront.core.project.models import Project, ProjectUser
 from django.http import HttpRequest
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enums import ProjectStatus
 
 ALLOWED_PROJECT_STATUSES = (ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED)
 

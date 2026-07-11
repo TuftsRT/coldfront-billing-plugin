@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.allocation.signals import allocation_change_approved
 from coldfront.core.project.models import Project
@@ -7,7 +9,7 @@ from django.dispatch import receiver
 
 from coldfront_billing.allotments import create_update_allotment
 from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
-from coldfront_billing.enum import AllocationStatus, ProjectStatus
+from coldfront_billing.enums import AllocationStatus, ProjectStatus
 from coldfront_billing.models import BillingScheduleSettings, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
 from coldfront_billing.notifications import send_allocation_notification
 from coldfront_billing.scheduling import sync_billing_schedule
@@ -38,8 +40,8 @@ def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
     if allocation_quota_tb is None:
         return
 
-    allocation_tb = float(allocation_quota_tb)
-    remaining_tb = float(no_cost_quota.remaining_normalized)
+    allocation_tb = Decimal(allocation_quota_tb)
+    remaining_tb = no_cost_quota.remaining_normalized
 
     amount = min(allocation_tb, remaining_tb)
     create_update_allotment(allocation, amount, no_cost_quota, append=True)
@@ -66,8 +68,10 @@ def user_groups_changed(sender, instance: User, action, reverse, model, pk_set, 
             defaults={
                 'description': group.description or group.group.name,
                 'amount': group.amount,
+                'amount_tb': group.amount_tb,
                 'units': group.units,
                 'minimum_increment': group.minimum_increment,
+                'increment_gb': group.increment_gb,
             },
         )
 

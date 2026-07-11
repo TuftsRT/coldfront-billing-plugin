@@ -8,7 +8,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.enum import AllocationStatus
+from coldfront_billing.enums import AllocationStatus
 
 
 def create_mock_allotment(amount, units='TB'):

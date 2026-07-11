@@ -2,7 +2,7 @@
 
 import pytest
 
-from coldfront_billing.data.quota import AllocationAssignement, parse_allocations
+from coldfront_billing.data.quota import AllocationAssignment, parse_allocations
 
 
 class TestParseAllocations:
@@ -34,16 +34,16 @@ class TestParseAllocations:
 
     def test_comma_as_decimal_separator(self):
         result = parse_allocations(['10'], ['1,5'])
-        assert result == [AllocationAssignement(10, 1.5)]
+        assert result == [AllocationAssignment(10, 1.5)]
 
     def test_strips_whitespace(self):
         result = parse_allocations(['  7  '], ['  2.5  '])
-        assert result == [AllocationAssignement(7, 2.5)]
+        assert result == [AllocationAssignment(7, 2.5)]
 
     def test_multiple_rows(self):
         result = parse_allocations(['1', '2', '3'], ['1.0', '2,5', '0'])
         assert result == [
-            AllocationAssignement(1, 1.0),
-            AllocationAssignement(2, 2.5),
-            AllocationAssignement(3, 0.0),
+            AllocationAssignment(1, 1.0),
+            AllocationAssignment(2, 2.5),
+            AllocationAssignment(3, 0.0),
         ]

@@ -1,3 +1,4 @@
+from decimal import Decimal
 import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
@@ -21,39 +22,39 @@ from .quota import BillingQuota
 class BillingAllocation:
     allocation_id: int
     project_id: int
-    quota_tb: int | float
-    cost_per_tb: int | float
+    quota_tb: Decimal
+    cost_per_tb: Decimal
     extra: Dict[str, Any] = field(default_factory=dict)
     no_cost_quotas: List[BillingQuota] = field(default_factory=list)
 
     @property
-    def total_cost(self) -> float:
-        total_cost, _ = self.get_predicted_cost(0)
+    def total_cost(self) -> Decimal:
+        total_cost, _ = self.get_predicted_cost(Decimal(0))
         return total_cost
 
-    def get_predicted_cost(self, user_remaining_quota_tb: float) -> tuple[float, float]:
+    def get_predicted_cost(self, user_remaining_quota_tb: Decimal) -> tuple[Decimal, Decimal]:
         total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
-        unpaid_quota = max(self.quota_tb - total_no_cost_quota, 0)
-        applied_quota = 0 if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
-        billable_quota = max(unpaid_quota - applied_quota, 0)
+        unpaid_quota = max(self.quota_tb - total_no_cost_quota, Decimal(0))
+        applied_quota = Decimal(0) if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
+        billable_quota = max(unpaid_quota - applied_quota, Decimal(0))
         return self.calculate_cost(billable_quota), applied_quota
 
-    def calculate_cost(self, quota_tb: float) -> float:
-        calculation = math.ceil(quota_tb * 10) / 10 * int(round(self.cost_per_tb))
-        return round(calculation, 2)
+    def calculate_cost(self, quota_tb: Decimal) -> Decimal:
+        calculation = math.ceil(float(quota_tb) * 10) / 10 * int(round(self.cost_per_tb))
+        return Decimal(round(calculation, 2))
 
     @classmethod
     def parse(
         cls,
         allocation,
-        default_quota: int,
-        default_cost: int,
-        new_quota: float | None = None,
+        default_quota: Decimal,
+        default_cost: Decimal,
+        new_quota: Decimal | None = None,
     ) -> 'BillingAllocation':
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
-            float_quota = parse_float(quota_raw, default_quota)
-            quota_tb = float_quota if float_quota >= 0 else default_quota
+            dec_quota = Decimal(quota_raw) if quota_raw is not None else Decimal(default_quota)
+            quota_tb = dec_quota if dec_quota >= 0 else Decimal(default_quota)
         else:
             quota_tb = default_quota
 

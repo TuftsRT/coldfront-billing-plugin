@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from coldfront.core.allocation.models import (
     Allocation,
@@ -48,10 +49,10 @@ def create_recipient_list(
     ]
 
 
-def calculate_cost(allocation_pk) -> float:
+def calculate_cost(allocation_pk) -> Decimal:
     storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
     if not storage_type:
-        return 0.0
+        return Decimal('0.00')
     prefetched = (
         Allocation.objects.filter(pk=allocation_pk)
         .prefetch_related(
@@ -64,7 +65,7 @@ def calculate_cost(allocation_pk) -> float:
     return (
         BillingAllocation.parse(prefetched, DEFAULT_BILLING_QUOTA, DEFAULT_BILLING_COST).total_cost
         if prefetched is not None
-        else 0.0
+        else Decimal('0.00')
     )
 
 

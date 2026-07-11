@@ -6,7 +6,7 @@ from django.views import View
 
 from coldfront_billing.allotments import create_or_update_allotment
 from coldfront_billing.data import parse_allocations
-from coldfront_billing.data.quota import AllocationAssignement
+from coldfront_billing.data.quota import AllocationAssignment
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
 REDIRECT = 'manage_no_cost_quota'
@@ -87,7 +87,7 @@ class AutoAssignAllotmentsView(LoginRequiredMixin, View):
         amount_strs = post.getlist('amount')
 
         try:
-            assignnements: list[AllocationAssignement] = parse_allocations(allocation_ids, amount_strs)
+            assignnements: list[AllocationAssignment] = parse_allocations(allocation_ids, amount_strs)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(assign_url)

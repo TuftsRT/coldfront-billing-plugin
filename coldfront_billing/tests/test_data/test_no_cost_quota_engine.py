@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 
 from coldfront_billing.constants import ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME
-from coldfront_billing.data.quota import AllocationAssignement, NoCostQuotaEngine
+from coldfront_billing.data.quota import AllocationAssignment, NoCostQuotaEngine
 
 from .allocation_mocks import create_ncq_allotment, storage_resource_with_cost
 
@@ -35,7 +35,7 @@ class TestNoCostQuotaEngine:
         assert engine.allocations == []
 
     def test_allocation_assignement_str(self):
-        assignment = AllocationAssignement(42, 3.5)
+        assignment = AllocationAssignment(42, 3.5)
         assert str(assignment) == '42 - 3.5'
 
     def test_auto_assign_empty_returns_empty_list(self):
@@ -55,8 +55,8 @@ class TestNoCostQuotaEngine:
         engine = NoCostQuotaEngine(1, [low_cost, high_cost])
         pairs = engine.auto_assign(15.0, 'TB', 1.0)
         assert pairs == [
-            AllocationAssignement(2, 10.0),
-            AllocationAssignement(1, 5.0),
+            AllocationAssignment(2, 10.0),
+            AllocationAssignment(1, 5.0),
         ]
 
     def test_auto_assign_skips_fully_utilized_allocation(self):
@@ -67,26 +67,26 @@ class TestNoCostQuotaEngine:
         open_slot = self._raw_allocation(2, 10.0, '50', allotments=())
         engine = NoCostQuotaEngine(1, [full, open_slot])
         pairs = engine.auto_assign(4.0, 'TB', 1.0)
-        assert pairs == [AllocationAssignement(2, 4.0)]
+        assert pairs == [AllocationAssignment(2, 4.0)]
 
     def test_auto_assign_stops_when_remaining_quota_exhausted(self):
         a = self._raw_allocation(1, 10.0, '100')
         b = self._raw_allocation(2, 10.0, '200')
         engine = NoCostQuotaEngine(1, [a, b])
         pairs = engine.auto_assign(5.0, 'TB', 1.0)
-        assert pairs == [AllocationAssignement(2, 5.0)]
+        assert pairs == [AllocationAssignment(2, 5.0)]
 
     def test_auto_assign_single_allocation(self):
         allocation = self._raw_allocation(42, 20.0, '75')
         engine = NoCostQuotaEngine(1, [allocation])
         pairs = engine.auto_assign(7.0, 'TB', 1.0)
-        assert pairs == [AllocationAssignement(42, 7.0)]
+        assert pairs == [AllocationAssignment(42, 7.0)]
 
     def test_auto_assign_respects_allocation_cap(self):
         allocation = self._raw_allocation(1, 6.0, '100')
         engine = NoCostQuotaEngine(1, [allocation])
         pairs = engine.auto_assign(100.0, 'TB', 1.0)
-        assert pairs == [AllocationAssignement(1, 6.0)]
+        assert pairs == [AllocationAssignment(1, 6.0)]
 
     def test_auto_assign_update_existing_quota(self):
         """When allocating to an existing allocation, update the existing allocation's quota."""
@@ -96,7 +96,7 @@ class TestNoCostQuotaEngine:
         alloc_2 = self._raw_allocation(2, 10.0, '50', allotments=())
         engine = NoCostQuotaEngine(1, [alloc_1, alloc_2])
         pairs = engine.auto_assign(4.0, 'TB', 1.0)
-        assert pairs == [AllocationAssignement(1, 5.0), AllocationAssignement(2, 2.0)]
+        assert pairs == [AllocationAssignment(1, 5.0), AllocationAssignment(2, 2.0)]
 
     def test_auto_assign_with_remaining_quota_gb_prioritizes_higher_cost(self):
         """Same ordering as TB case: amounts are in GB when quota_unit is GB."""
@@ -106,8 +106,8 @@ class TestNoCostQuotaEngine:
         # 10 TB headroom each = 10_000 GB; 15_000 GB remaining -> 10_000 + 5_000
         pairs = engine.auto_assign(15000.0, 'GB', 100.0)
         assert pairs == [
-            AllocationAssignement(2, 10000.0),
-            AllocationAssignement(1, 5000.0),
+            AllocationAssignment(2, 10000.0),
+            AllocationAssignment(1, 5000.0),
         ]
 
     def test_auto_assign_with_remaining_quota_gb_single_allocation(self):
@@ -115,14 +115,14 @@ class TestNoCostQuotaEngine:
         engine = NoCostQuotaEngine(1, [allocation])
         # 1 TB = 1000 GB cap; 750 GB remaining with 1 GB increment
         pairs = engine.auto_assign(750.0, 'GB', 1.0)
-        assert pairs == [AllocationAssignement(3, 750.0)]
+        assert pairs == [AllocationAssignment(3, 750.0)]
 
     def test_auto_assign_with_remaining_quota_gb_respects_cap(self):
         allocation = self._raw_allocation(1, 0.5, '100')
         engine = NoCostQuotaEngine(1, [allocation])
         # 0.5 TB = 500 GB; huge remaining -> cap at 500 GB, min increment 25
         pairs = engine.auto_assign(1_000_000.0, 'GB', 25.0)
-        assert pairs == [AllocationAssignement(1, 500.0)]
+        assert pairs == [AllocationAssignment(1, 500.0)]
 
     def test_auto_assign_remaining_gb_with_other_users_allotment_in_tb(self):
         """Engine uses TB other allotments when computing GB headroom on the allocation."""
@@ -131,7 +131,7 @@ class TestNoCostQuotaEngine:
         engine = NoCostQuotaEngine(1, [alloc])
         # 10 - 3 = 7 TB = 7000 GB; 9000 GB remaining -> assign 7000 GB (100 GB steps)
         pairs = engine.auto_assign(9000.0, 'GB', 100.0)
-        assert pairs == [AllocationAssignement(1, 7000.0)]
+        assert pairs == [AllocationAssignment(1, 7000.0)]
 
     def test_auto_assign_remaining_gb_with_other_users_allotment_in_tb_quota_limit(self):
         """Engine uses TB other allotments when computing GB headroom on the allocation with limit in quota."""
@@ -140,4 +140,4 @@ class TestNoCostQuotaEngine:
         engine = NoCostQuotaEngine(1, [alloc])
         # 10 - 3 = 7 TB = 7000 GB; 6000 GB remaining -> assign 6000 GB (100 GB steps)
         pairs = engine.auto_assign(6000.0, 'GB', 100.0)
-        assert pairs == [AllocationAssignement(1, 6000.0)]
+        assert pairs == [AllocationAssignment(1, 6000.0)]
