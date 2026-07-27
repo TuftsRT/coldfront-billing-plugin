@@ -8,8 +8,8 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from coldfront_billing.constants import (
-    BILLIG_REPORTS_TOTAL_DEPT_NAME,
-    BILLIG_REPORTS_TOTAL_DESCRIPTION,
+    BILLING_REPORTS_TOTAL_DEPT_NAME,
+    BILLING_REPORTS_TOTAL_DESCRIPTION,
     BILLING_ATTRIBUTE_NAME,
 )
 from coldfront_billing.data.billing import create_billing_allocations
@@ -26,6 +26,12 @@ DESCRIPTION_PREFIX = getattr(
     'COLDFRONT_BILLING_DESCRIPTION_PREFIX',
     'TTS',
 )
+IGNORE_DEPTID_PREFIX_LIST = getattr(
+    settings,
+    'COLDFRONT_BILLING_IGNORE_DEPTID_PREFIX_LIST',
+    [],
+)   
+
 
 
 def create_csv_report() -> tuple[str, str]:
@@ -58,6 +64,8 @@ def create_csv_report() -> tuple[str, str]:
     
             for assignment in sorted(assignments, key=lambda x: x.get('department')):
                 dept_id = assignment.get('department')
+                if any(dept_id.lower().startswith(prefix.lower()) for prefix in IGNORE_DEPTID_PREFIX_LIST):
+                    continue
                 pct = assignment.get('percentage')
                 grant = assignment.get('grant', '')
                 cost = (project_cost * Decimal(int(pct) / 100)).quantize(Decimal('0.01'))  # Round to 2 decimal places
@@ -74,10 +82,10 @@ def create_csv_report() -> tuple[str, str]:
         writer.writerow(
             (
                 ACCOUNT_NAME,
-                BILLIG_REPORTS_TOTAL_DEPT_NAME,
+                BILLING_REPORTS_TOTAL_DEPT_NAME,
                 '',
                 f'-{total_cost:.2f}',
-                f'{month}-{DESCRIPTION_PREFIX}-{BILLIG_REPORTS_TOTAL_DESCRIPTION}',
+                f'{month}-{DESCRIPTION_PREFIX}-{BILLING_REPORTS_TOTAL_DESCRIPTION}',
             )
         )
 
