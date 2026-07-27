@@ -43,20 +43,18 @@ class NoCostQuotaAllocation:
     def max_possible_allocation(self, remaining_quota: Decimal, quota_unit: str, increment: int) -> Decimal:
         quota_unit = StorageUnit.parse(quota_unit)
         possible_quota = remaining_quota + self.user_amount
+        print(f"allocation amount: {self.allocation_amount}")
+        print(f"user amount: {self.user_amount}")
 
         if self.allocation_amount is None:
             # increment is always in GB, so we need to convert it to the quota unit for comparison
-            if quota_unit == StorageUnit.TB:
-                return possible_quota.quantize(Decimal(increment)/Decimal(1000))
-            elif quota_unit == StorageUnit.GB:
-                return possible_quota.quantize(Decimal(increment))
-            else:
-                raise ValueError(f"Unsupported quota unit: {quota_unit}")
+            return possible_quota.quantize(Decimal(increment) * UNIT_TO_TB[StorageUnit.parse("GB")])
 
         tb_to_quota_unit = Decimal('1.0') / UNIT_TO_TB[StorageUnit.parse(quota_unit)]
         allocation_available_tb = max(0, self.allocation_amount - self.other_allotments_amount)
         allocation_available = allocation_available_tb * tb_to_quota_unit
         max_possible = min(possible_quota, allocation_available)
+        print(f"max possible: {max_possible}")
         digits = int(round(-math.log10(increment)))
         return round(math.floor(max_possible / increment) * increment, digits)
 
