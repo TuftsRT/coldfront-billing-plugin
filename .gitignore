@@ -214,3 +214,5 @@ postgres_data/
 
 # IDE specific
 .DS_Store
+
+*.db
