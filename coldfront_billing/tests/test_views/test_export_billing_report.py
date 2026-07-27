@@ -261,3 +261,34 @@ class TestExportBillingReportView:
         rows = _csv_rows(response)
         assert len(rows) == 2
         assert rows[1][3] == '-0.00'
+
+    @patch('coldfront_billing.reports.csv.get_month_abbr', return_value='MAR')
+    @patch('coldfront_billing.reports.csv.IGNORE_DEPTID_PREFIX_LIST', new=['ABC'])
+    def test_skips_deptid_with_prefix(
+        self,
+        _mock_month,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            quota_value='2',
+        )
+        CostCenterAssignment.objects.create(project=project, assignments=[{'department': 'ABC_DEPT_A', 'percentage': 100}])
+
+        client.force_login(superuser)
+        response = client.get(reverse('reports_export'))
+
+        assert response.status_code == 200
+        rows = _csv_rows(response)
+        assert len(rows) == 2
+        assert rows[1][3] == '-0.00'
