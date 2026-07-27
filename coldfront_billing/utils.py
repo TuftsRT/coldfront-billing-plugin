@@ -74,3 +74,19 @@ def calculate_next_run(
 
 class NoStorageException(Exception):
     pass
+
+
+def elide_middle(text: str, max_length: int = 20, marker: str ="...") -> str:
+    if len(text) <= max_length:
+        return text
+    if max_length < len(marker) + 2:
+        raise ValueError("max_length must be at least len(marker) + 2")
+
+    marker_len = len(marker)
+    chars_left = (max_length - marker_len + 1) // 2
+    chars_right = (max_length - marker_len) // 2
+
+    start = text[:chars_left]
+    end = text[-chars_right:] if chars_right > 0 else ""
+
+    return f"{start}{marker}{end}"
