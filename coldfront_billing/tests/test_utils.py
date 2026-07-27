@@ -11,6 +11,7 @@ from coldfront_billing.utils import (
     get_month_abbr,
     parse_float,
     validate_emails,
+    elide_middle
 )
 
 
@@ -65,3 +66,15 @@ class TestGetMonthAbbr:
         abbr = get_month_abbr()
         assert len(abbr) == 3
         assert abbr.isupper()
+
+
+class TestElide:
+    def test_elide_middle(self):
+        assert elide_middle('abcdef', 5) == 'a...f'
+        assert elide_middle('abcdef', 6) == 'abcdef'
+        assert elide_middle('abcdef', 7) == 'abcdef'
+        assert elide_middle('abcdefghijklmnopqrst', 8) == 'abc...st'
+        with pytest.raises(ValueError):
+            elide_middle('abcdef', 3)
+        with pytest.raises(ValueError):
+            elide_middle('abcdef', 4)

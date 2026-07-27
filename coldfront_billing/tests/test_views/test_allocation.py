@@ -334,6 +334,7 @@ class TestUpdateAllocationDetailsView:
         assert response.status_code == 404
 
 
+@pytest.mark.skip(reason="AllocationCreateView is overridden by a different plugin")
 @pytest.mark.django_db
 @pytest.mark.usefixtures('configure_urls')
 class TestAllocationCreateView:

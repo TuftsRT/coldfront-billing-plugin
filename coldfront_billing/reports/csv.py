@@ -14,7 +14,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data.billing import create_billing_allocations
 from coldfront_billing.prefetch import get_projects_prefetch
-from coldfront_billing.utils import get_month_abbr
+from coldfront_billing.utils import get_month_abbr, elide_middle
 
 ACCOUNT_NAME = getattr(
     settings,
@@ -52,12 +52,14 @@ def create_csv_report() -> tuple[str, str]:
                 continue
 
             user_id = project.pi.username
-            description = f'{month}-{DESCRIPTION_PREFIX}-{user_id}-{project.title}'
-
-            for assignement in sorted(assignments, key=lambda x: x.get('department')):
-                dept_id = assignement.get('department')
-                pct = assignement.get('percentage')
-                grant = assignement.get('grant', '')
+            # description is limited to 30 characters, so we need to elide the project title if it's too long
+            description = f'{month}-{DESCRIPTION_PREFIX}-{user_id}-'
+            description += elide_middle(project.title, max_length=30 - len(description))
+    
+            for assignment in sorted(assignments, key=lambda x: x.get('department')):
+                dept_id = assignment.get('department')
+                pct = assignment.get('percentage')
+                grant = assignment.get('grant', '')
                 cost = (project_cost * Decimal(int(pct) / 100)).quantize(Decimal('0.01'))  # Round to 2 decimal places
                 total_cost += cost
                 writer.writerow(

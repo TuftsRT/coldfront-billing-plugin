@@ -214,4 +214,5 @@ postgres_data/
 
 # IDE specific
 .DS_Store
-coldfront.db
+
+*.db
