@@ -2,7 +2,7 @@ from coldfront.core.project.models import Project
 
 from coldfront_billing.allotments import create_or_update_allotment
 from coldfront_billing.data.quota import NoCostQuotaEngine
-from coldfront_billing.enum import AllocationStatus
+from coldfront_billing.enums import AllocationStatus
 from coldfront_billing.prefetch import (
     get_filtered_allocations_prefetch,
     get_projects_prefetch,

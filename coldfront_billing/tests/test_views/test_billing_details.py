@@ -1,7 +1,8 @@
 import pytest
+from decimal import Decimal
 from django.urls import reverse
 
-from coldfront_billing.enum import AllocationStatus
+from coldfront_billing.enums import AllocationStatus
 from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 
 
@@ -206,4 +207,4 @@ class TestBillingDetailsView:
         assert 'project' in response.context
         assert 'allocations' in response.context
         assert 'total_cost' in response.context
-        assert isinstance(response.context['total_cost'], float)
+        assert isinstance(response.context['total_cost'], Decimal)

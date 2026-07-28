@@ -8,13 +8,13 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.enum import AllocationStatus
+from coldfront_billing.enums import AllocationStatus
 
 
 def create_mock_allotment(amount, units='TB'):
     """Create a mock no-cost quota allotment object."""
     allotment = Mock()
-    allotment.amount = amount
+    allotment.amount_tb = amount
     allotment.no_cost_quota = Mock()
     allotment.no_cost_quota.units = units
     return allotment
@@ -89,7 +89,7 @@ def create_mock_pi(username='pi_user'):
 def create_ncq_allotment(amount, units='TB', user_id=1):
     """Mock no-cost quota allotment with user_id (for PricedAllocation / engine tests)."""
     allotment = Mock()
-    allotment.amount = amount
+    allotment.amount_tb = amount
     allotment.no_cost_quota = Mock()
     allotment.no_cost_quota.units = units
     allotment.no_cost_quota.user_id = user_id

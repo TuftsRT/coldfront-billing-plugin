@@ -15,7 +15,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.enum import AllocationStatus, ProjectStatus
+from coldfront_billing.enums import AllocationStatus, ProjectStatus
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 from coldfront_billing.utils import NoStorageException
 

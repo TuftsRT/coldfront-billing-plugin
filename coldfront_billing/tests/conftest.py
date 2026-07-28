@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List, Optional
 
 import pytest
@@ -38,7 +39,7 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
 )
-from coldfront_billing.enum import AllocationStatus, ProjectStatus
+from coldfront_billing.enums import AllocationStatus, ProjectStatus
 
 
 @pytest.fixture
@@ -317,8 +318,10 @@ def no_cost_quota(user, db):
         quota_type='tier_1',
         description='Tier 1 storage',
         amount=100.0,
+        amount_tb=Decimal('100.0'),
         units='TB',
-        minimum_increment=1.0,  # Use 1.0 to avoid float modulo issues in tests
+        increment_gb=10,
+        minimum_increment=0.01,
     )
 
 

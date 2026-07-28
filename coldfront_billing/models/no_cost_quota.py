@@ -1,9 +1,9 @@
-import math
-
+from decimal import Decimal
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import ProjectUser
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from coldfront_billing.constants import (
@@ -13,8 +13,8 @@ from coldfront_billing.constants import (
     QUOTA_ATTR_NAME,
 )
 from coldfront_billing.data import BillingQuota
-from coldfront_billing.enum import ProjectStatus
-from coldfront_billing.models.common import ALLOWED_UNITS, QuotaBase
+from coldfront_billing.enums import ProjectStatus
+from coldfront_billing.models.common import UNITS_CHOICES, QuotaBase
 
 User = get_user_model()
 
@@ -40,19 +40,14 @@ class NoCostQuota(QuotaBase):
     def clean(self):
         super().clean()
 
-        allowed_units = ALLOWED_UNITS
+        allowed_units = dict(UNITS_CHOICES)
         if self.units not in allowed_units:
             raise ValidationError(
                 {'units': f'Invalid units: {self.units}. Allowed: {", ".join(allowed_units.keys())}.'}
             )
 
-        if self.amount < self.minimum_increment:
-            raise ValidationError({'amount': 'Amount cannot be smaller than minimum allocation increment.'})
-
-        if self.minimum_increment < (required := allowed_units[self.units]):
-            raise ValidationError(
-                {'minimum_increment': f'Minimum allocation increment must be ≥ {required} for {self.units}.'}
-            )
+        if self.amount_tb * Decimal(1000) < Decimal(self.increment_gb):
+            raise ValidationError({'amount': 'Amount cannot be smaller than allocation increment.'})
 
     def __str__(self):
         return f'{str(self.user)} - {self.quota_type}'
@@ -71,7 +66,16 @@ class NoCostQuotaAllotment(models.Model):
         related_name='no_cost_quota_allotments',
         help_text='Allocation for a resource with no-cost quota type',
     )
-    amount = models.FloatField(help_text='Allocated quota amount in TB')
+    amount = models.FloatField(help_text='Allocated quota amount in TB') # deprecated, replaced by amount_tb
+
+    amount_tb = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        help_text='Allotted quota amount',
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(Decimal('0.000'))]
+    )  # 3 decimal places to support GB precision (e.g., 0.001 TB = 1 GB)
+
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -80,6 +84,10 @@ class NoCostQuotaAllotment(models.Model):
             models.UniqueConstraint(
                 fields=['no_cost_quota', 'allocation'],
                 name='uniq_nocostquotaallotment_quota_allocation',
+            ),
+            models.CheckConstraint(
+                check=models.Q(amount_tb__gte=Decimal('0.000')),
+                name='amount_tb_must_be_positive'
             )
         ]
 
@@ -110,44 +118,52 @@ class NoCostQuotaAllotment(models.Model):
                 raise ValidationError(
                     {'allocation': f"Allocation's resource does not have {NO_COST_QUOTA_TYPE_ATTR_NAME}='{quota_type}'"}
                 )
-            if self.amount < 0:
-                raise ValidationError({'amount': 'Allotment amount must be greater or equal 0'})
-            min_inc = self.no_cost_quota.minimum_increment
+            
+            min_inc = Decimal(self.no_cost_quota.increment_gb)
+            if self.amount_tb * Decimal(1000) < min_inc:
+                raise ValidationError({'amount': 'Amount cannot be smaller than allocation increment.'})
+            
+            # Ensure the amount is a multiple of increment_gb
+            if self.no_cost_quota.units == 'TB':
+                min_inc = Decimal(self.no_cost_quota.increment_gb) / Decimal(1000)  # Convert GB to TB
+            else:
+                min_inc = Decimal(self.no_cost_quota.increment_gb)  # Already in GB
             minimum = f'{min_inc} {self.no_cost_quota.units}'
-            if 0 < self.amount < min_inc:
-                raise ValidationError({'amount': f'Allotment amount must be ≥ minimum increment ({minimum})'})
-            # Ensure the amount is a multiple of minimum_increment (with float tolerance)
-            if min_inc > 0 and not math.isclose(
-                round(self.amount / min_inc) * min_inc,
-                self.amount,
-                abs_tol=1e-7,
-            ):
+            if not self.amount_tb % min_inc == 0:
                 raise ValidationError(
-                    {'amount': f'Allotment amount must be a multiple of minimum increment ({minimum})'}
+                    {'amount': f'Allotment amount must be a multiple of increment ({minimum})'}
                 )
 
-            amount = f'{self.amount} {self.no_cost_quota.units}'
-            if self.amount > (ncq_amount := self.no_cost_quota.amount):
+            if self.no_cost_quota.units == 'TB':
+                allotment_amount = self.amount_tb
+            else:
+                allotment_amount = self.amount_tb * Decimal(1000)  # Convert TB to GB for comparison
+            amount = f'{allotment_amount} {self.no_cost_quota.units}'
+            if self.amount_tb > (ncq_amount := self.no_cost_quota.amount_tb):
+                if self.no_cost_quota.units == 'TB':
+                    ncq_amount = self.no_cost_quota.amount_tb
+                else:
+                    ncq_amount = self.no_cost_quota.amount_tb * Decimal(1000)  # Convert TB to GB for comparison
                 no_cost_quota = f'{ncq_amount} {self.no_cost_quota.units}'
                 raise ValidationError(
                     {
                         'amount': f'No cost quota allotment size ({amount}) is bigger than no-cost quota size ({no_cost_quota})'
                     }
                 )
-            allocation_quota_value = self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
+            allocation_quota_value = self.allocation.get_attribute(QUOTA_ATTR_NAME)
 
             if not allocation_quota_value:
                 return
 
-            allocation_quota = BillingQuota.create(allocation_quota_value, 'TB')
-            allotment_quota = BillingQuota.create(self.amount, self.no_cost_quota.units)
+            allocation_quota = BillingQuota.create(Decimal(allocation_quota_value), 'TB')
+            allotment_quota = BillingQuota.create(self.amount_tb, self.no_cost_quota.units)
 
-            if (alottment_size := allotment_quota.normalized_amount) > (
-                alloc_size := allocation_quota.normalized_amount
+            if (allotment_size := allotment_quota.amount_tb) > (
+                alloc_size := allocation_quota.amount_tb
             ):
                 raise ValidationError(
                     {
-                        'amount': f'No cost quota allotment size ({alottment_size}) is bigger than allocation size ({alloc_size} TB)'
+                        'amount': f'No cost quota allotment size ({allotment_size}) is bigger than allocation size ({alloc_size} TB)'
                     }
                 )
 

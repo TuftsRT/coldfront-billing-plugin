@@ -1,3 +1,4 @@
+from decimal import Decimal
 from urllib.parse import urlparse
 
 from coldfront.core.allocation.models import (
@@ -181,7 +182,7 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            quota_tb = float(request.GET['quota_in_terabyte'])
+            quota_tb = Decimal(request.GET['quota_in_terabyte'])
         except (KeyError, TypeError, ValueError):
             return JsonResponse({'error': 'quota_in_terabyte is required and must be a number.'}, status=400)
         if quota_tb < 0:

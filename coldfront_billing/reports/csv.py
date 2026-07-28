@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime
 from io import StringIO
+from decimal import Decimal
 
 from coldfront.core.project.models import Project
 from django.conf import settings
@@ -67,7 +68,7 @@ def create_csv_report() -> tuple[str, str]:
                     continue
                 pct = assignment.get('percentage')
                 grant = assignment.get('grant', '')
-                cost = round(project_cost * (int(pct) / 100), 2)
+                cost = (project_cost * Decimal(int(pct) / 100)).quantize(Decimal('0.01'))  # Round to 2 decimal places
                 total_cost += cost
                 writer.writerow(
                     (

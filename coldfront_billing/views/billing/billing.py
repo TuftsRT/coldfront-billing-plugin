@@ -15,7 +15,7 @@ from coldfront_billing.constants import (
     MAX_COST_CENTER_ASSIGNMENTS,
 )
 from coldfront_billing.data.billing import create_billing_allocations
-from coldfront_billing.enum import ProjectStatus
+from coldfront_billing.enums import ProjectStatus
 from coldfront_billing.forms import BillingSearchForm
 from coldfront_billing.prefetch import get_projects_prefetch
 from coldfront_billing.utils import NoStorageException
