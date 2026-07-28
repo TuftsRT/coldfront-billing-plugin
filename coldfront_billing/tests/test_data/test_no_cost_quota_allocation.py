@@ -33,14 +33,14 @@ class TestNoCostQuotaAllocation:
 
     def test_user_amount_with_users_allotment(self):
         """Test user_amount returns the amount when users_allotment is set."""
-        users_allotment = BillingQuota(amount=5.0, unit=StorageUnit.TB)
+        users_allotment = BillingQuota(amount=Decimal('5.0'), unit=StorageUnit.TB)
         allocation = NoCostQuotaAllocation(
             user_id=1,
             allocation_amount=Decimal('10.0'),
             users_allotment=users_allotment,
             other_allotments=[],
         )
-        assert allocation.user_amount == 5.0
+        assert allocation.user_amount.amount == 5
 
     def test_user_amount_without_users_allotment(self):
         """Test user_amount returns 0 when users_allotment is None."""
@@ -50,7 +50,7 @@ class TestNoCostQuotaAllocation:
             users_allotment=None,
             other_allotments=[],
         )
-        assert allocation.user_amount == 0
+        assert allocation.user_amount.amount == 0
 
     def test_user_allotment_amount_with_users_allotment_tb(self):
         """Test user_allotment_amount returns normalized TB amount."""
@@ -192,7 +192,7 @@ class TestNoCostQuotaAllocation:
             user_id=1,
             allocation_amount=Decimal('5.0'),
             users_allotment=None,
-            other_allotments=[BillingQuota(amount=10.0, unit=StorageUnit.TB)],
+            other_allotments=[BillingQuota(amount=Decimal('10.0'), unit=StorageUnit.TB)],
         )
         # allocation_available_tb = max(0, 5 - 10) = 0
         result = allocation.max_possible_allocation(remaining_quota=Decimal('5.0'), quota_unit='TB', increment=1000)
@@ -207,7 +207,7 @@ class TestNoCostQuotaAllocation:
             other_allotments=[],
         )
         # allocation_available = 1 TB = 1000 GB, min(500, 1000) = 500
-        result = allocation.max_possible_allocation(remaining_quota=Decimal('500.0'), quota_unit='GB', increment=1000)
+        result = allocation.max_possible_allocation(remaining_quota=Decimal('500.0'), quota_unit='GB', increment=10)
         assert result == Decimal('500.0')
 
     def test_max_possible_allocation_remaining_gb_limited_by_allocation_tb_cap(self):
@@ -224,7 +224,7 @@ class TestNoCostQuotaAllocation:
 
     def test_max_possible_allocation_remaining_gb_adds_user_allotment_raw_gb(self):
         """With quota_unit GB, user_amount is raw allotment amount (use GB-stored allotment for consistency)."""
-        users_allotment = BillingQuota(amount=100.0, unit=StorageUnit.GB)
+        users_allotment = BillingQuota(amount=Decimal('100.0'), unit=StorageUnit.GB)
         allocation = NoCostQuotaAllocation(
             user_id=1,
             allocation_amount=Decimal('1.0'),  # 1 TB = 1000 GB on allocation
@@ -232,7 +232,7 @@ class TestNoCostQuotaAllocation:
             other_allotments=[],
         )
         # possible_quota = 400 + 100 = 500 GB; cap 1000 GB -> 500 GB
-        result = allocation.max_possible_allocation(remaining_quota=400.0, quota_unit='GB', increment=1000)
+        result = allocation.max_possible_allocation(remaining_quota=Decimal('400.0'), quota_unit='GB', increment=1)
         assert result == 500.0
 
     def test_max_possible_allocation_remaining_gb_floors_to_min_increment(self):
@@ -242,7 +242,7 @@ class TestNoCostQuotaAllocation:
             users_allotment=None,
             other_allotments=[],
         )
-        result = allocation.max_possible_allocation(remaining_quota=955.0, quota_unit='GB', increment=100)
+        result = allocation.max_possible_allocation(remaining_quota=Decimal('955.0'), quota_unit='GB', increment=100)
         assert result == 900.0
 
     def test_max_possible_allocation_remaining_gb_other_allotments_tb_reduce_headroom(self):
@@ -254,46 +254,46 @@ class TestNoCostQuotaAllocation:
             other_allotments=[BillingQuota(amount=Decimal('2.5'), unit=StorageUnit.TB)],
         )
         # 6 - 2.5 = 3.5 TB -> 3500 GB; remaining 5000 GB -> min = 3500 GB
-        result = allocation.max_possible_allocation(5000.0, quota_unit='GB', increment=1000)
+        result = allocation.max_possible_allocation(Decimal('5000.0'), quota_unit='GB', increment=1)
         assert result == 3500.0
 
     def test_max_possible_allocation_remaining_gb_multiple_other_allotments_tb(self):
         """Several TB other allotments sum in TB (normalized) then subtract from allocation cap."""
         allocation = NoCostQuotaAllocation(
             user_id=1,
-            allocation_amount=8.0,
+            allocation_amount=Decimal('8.0'),
             users_allotment=None,
             other_allotments=[
-                BillingQuota(amount=1.0, unit=StorageUnit.TB),
-                BillingQuota(amount=2.0, unit=StorageUnit.TB),
+                BillingQuota(amount=Decimal('1.0'), unit=StorageUnit.TB),
+                BillingQuota(amount=Decimal('2.0'), unit=StorageUnit.TB),
             ],
         )
         # 8 - 3 = 5 TB = 5000 GB
-        result = allocation.max_possible_allocation(10000.0, quota_unit='GB', increment=1000)
+        result = allocation.max_possible_allocation(Decimal('10000.0'), quota_unit='GB', increment=1)
         assert result == 5000.0
 
     def test_max_possible_allocation_remaining_gb_other_tb_fills_allocation_returns_zero(self):
         """When TB others use the full allocation TB, no GB can be assigned."""
         allocation = NoCostQuotaAllocation(
             user_id=1,
-            allocation_amount=4.0,
+            allocation_amount=Decimal('4.0'),
             users_allotment=None,
-            other_allotments=[BillingQuota(amount=4.0, unit=StorageUnit.TB)],
+            other_allotments=[BillingQuota(amount=Decimal('4.0'), unit=StorageUnit.TB)],
         )
-        result = allocation.max_possible_allocation(2000.0, quota_unit='GB', increment=1000)
+        result = allocation.max_possible_allocation(Decimal('2000.0'), quota_unit='GB', increment=1000)
         assert result == 0.0
 
     def test_max_possible_allocation_remaining_gb_with_user_gb_and_other_tb(self):
         """GB remaining + user raw GB amount, capped by (allocation TB - other TB) converted to GB."""
-        users_allotment = BillingQuota(amount=50.0, unit=StorageUnit.GB)
+        users_allotment = BillingQuota(amount=Decimal('50.0'), unit=StorageUnit.GB)
         allocation = NoCostQuotaAllocation(
             user_id=1,
-            allocation_amount=2.0,
+            allocation_amount=Decimal('2.0'),
             users_allotment=users_allotment,
-            other_allotments=[BillingQuota(amount=0.5, unit=StorageUnit.TB)],
+            other_allotments=[BillingQuota(amount=Decimal('0.5'), unit=StorageUnit.TB)],
         )
         # Headroom 1.5 TB = 1500 GB; possible_quota = 200 + 50 = 250 GB
-        result = allocation.max_possible_allocation(200.0, quota_unit='GB', increment=1000)
+        result = allocation.max_possible_allocation(Decimal('200.0'), quota_unit='GB', increment=1)
         assert result == 250.0
 
     def test_max_possible_allocation_allocation_amount_none_remaining_gb_rounds(self):
@@ -304,8 +304,8 @@ class TestNoCostQuotaAllocation:
             users_allotment=None,
             other_allotments=[],
         )
-        result = allocation.max_possible_allocation(remaining_quota=1234.567, quota_unit='GB', increment=1000)
-        assert result == 1234.57
+        result = allocation.max_possible_allocation(remaining_quota=Decimal('1234.567'), quota_unit='GB', increment=10)
+        assert result == Decimal('1235')
 
     def test_create_with_user_in_allotments(self):
         """Test create extracts user allotment for matching user_id."""
@@ -354,7 +354,7 @@ class TestNoCostQuotaAllocation:
 
         assert result.users_allotment.amount == Decimal('1000.0')
         assert result.users_allotment.unit == StorageUnit.GB
-        assert result.users_allotment.normalized_amount == Decimal('1.0')
+        assert result.users_allotment.amount_tb == Decimal('1.0')
         assert result.allocation_amount == Decimal('5.0')
 
     def test_create_without_quota_attribute_sets_allocation_amount_none(self):

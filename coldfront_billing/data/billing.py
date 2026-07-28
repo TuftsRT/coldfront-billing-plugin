@@ -31,14 +31,14 @@ class BillingAllocation:
         return total_cost
 
     def get_predicted_cost(self, user_remaining_quota_tb: Decimal) -> tuple[Decimal, Decimal]:
-        total_no_cost_quota = sum(ncq.normalized_amount for ncq in self.no_cost_quotas)
+        total_no_cost_quota = sum(ncq.amount_tb for ncq in self.no_cost_quotas)
         unpaid_quota = max(self.quota_tb - total_no_cost_quota, Decimal(0))
         applied_quota = Decimal(0) if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
         billable_quota = max(unpaid_quota - applied_quota, Decimal(0))
         return self.calculate_cost(billable_quota), applied_quota
 
     def calculate_cost(self, quota_tb: Decimal) -> Decimal:
-        calculation = quota_tb * self.cost_per_tb
+        calculation = quota_tb.quantize(Decimal('0.1'), rounding='ROUND_CEILING') * self.cost_per_tb.quantize(Decimal('0.01'), rounding='ROUND_CEILING')
         return calculation.quantize(Decimal('0.01'))  # Round to 2 decimal places
 
     @classmethod

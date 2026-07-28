@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, Dict
 
 from coldfront.core.allocation.models import Allocation
@@ -62,7 +63,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        quota_remaining = round(self.quota.remaining, 2)
+        quota_remaining = Decimal(self.quota.remaining).quantize(Decimal('0.01'))
         quota_units = self.quota.units
 
         auto_assign_allocations = self.get_queryset().filter(
@@ -70,10 +71,10 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         )
 
         ncq_engine = NoCostQuotaEngine(self.quota.user_id, auto_assign_allocations)
-        assignements = ncq_engine.auto_assign(
+        assignments = ncq_engine.auto_assign(
             quota_remaining,
             quota_units,
-            self.quota.minimum_increment,
+            self.quota.increment_gb,
         )
 
         allocation_objs = list(self.filtered_allocations)
@@ -94,12 +95,12 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
 
             other_total_quota = ncq_allocation.other_allotments_amount
             max_possible = ncq_allocation.max_possible_allocation(
-                quota_remaining, quota_units, self.quota.minimum_increment
+                quota_remaining, quota_units, self.quota.increment_gb
             )
-            user_amount = ncq_allocation.user_amount
+            user_amount = ncq_allocation.user_amount.amount
             first_resource = next(iter(allocation.resources.all()), None)
 
-            auto_assign_allocation = next((a for a in assignements if a.allocation_id == allocation.id), None)
+            auto_assign_allocation = next((a for a in assignments if a.allocation_id == allocation.id), None)
             auto_assign_amount = auto_assign_allocation.amount if auto_assign_allocation else 0
 
             allocations.append(
@@ -129,7 +130,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
                 'quota_remaining': quota_remaining,
                 'search_form': AllocationSearchForm(self.request.GET),
                 'auto_assign_preview': auto_assign_preview,
-                'assignements': assignements,
+                'assignements': assignments,
                 'back': self.request.GET.get('back', ''),
                 'show_auto_assign': len(auto_assign_allocations) > 0 or self.request.user.is_superuser,
             }

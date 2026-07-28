@@ -20,8 +20,8 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=10,
-            cost_per_tb=100,
+            quota_tb=Decimal('10'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
         )
         # 10 - 3 = 7 TB billable, ceil(7) * 100 = 700
@@ -32,8 +32,8 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=5,
-            cost_per_tb=100,
+            quota_tb=Decimal('5'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[BillingQuota(amount=Decimal('1000.0'), unit=StorageUnit.GB)],
         )
         # 5 - 1 = 4 TB billable, 4 * 100 = 400
@@ -44,24 +44,23 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=10,
-            cost_per_tb=100,
+            quota_tb=Decimal('10'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[
                 BillingQuota(amount=Decimal('2.0'), unit=StorageUnit.TB),
                 BillingQuota(amount=Decimal('450.0'), unit=StorageUnit.GB),  # 0.5 TB
             ],
         )
         # 10 - 2.45 = 7.55 TB billable, ceil(7.55) -> 7.6 * 100 = 760 
-        # todo: do we want to round up to nearest 0.1 TB 
-        assert billing.total_cost == 755
+        assert billing.total_cost == 760
 
     def test_total_cost_no_cost_quota_exceeds_quota_returns_zero(self):
         """Test total_cost is zero when no_cost_quotas exceed quota."""
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=5,
-            cost_per_tb=100,
+            quota_tb=Decimal('5'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[BillingQuota(amount=Decimal('10.0'), unit=StorageUnit.TB)],
         )
         # max(5 - 10, 0) = 0, 0 * 100 = 0
@@ -72,8 +71,8 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=5,
-            cost_per_tb=100,
+            quota_tb=Decimal('5'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[],
         )
         assert billing.total_cost == 500
@@ -83,8 +82,8 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=10,
-            cost_per_tb=100,
+            quota_tb=Decimal('10'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
         )
         # unpaid_quota = 7 TB; user applies 2 TB -> billable 5 TB -> ceil(5) * 100
@@ -97,8 +96,8 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=10,
-            cost_per_tb=100,
+            quota_tb=Decimal('10'),
+            cost_per_tb=Decimal('100'),
             no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
         )
         predicted, applied = billing.get_predicted_cost(Decimal('100.0'))

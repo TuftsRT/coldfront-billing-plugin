@@ -21,10 +21,10 @@ class TestBillingAllocation:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=5,
-            cost_per_tb=100,
+            quota_tb=Decimal('5'),
+            cost_per_tb=Decimal('100'),
         )
-        assert billing.total_cost == 500
+        assert billing.total_cost == Decimal('500')
 
     def test_total_cost_with_fractional_quota_rounds_up(self):
         """Test that float quota values are rounded up using ceil."""
@@ -32,7 +32,7 @@ class TestBillingAllocation:
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('5.03'),
-            cost_per_tb=100,
+            cost_per_tb=Decimal('100'),
         )
         assert billing.total_cost == 510
 
@@ -42,19 +42,19 @@ class TestBillingAllocation:
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('5.0'),
-            cost_per_tb=100,
+            cost_per_tb=Decimal('100'),
         )
         assert billing.total_cost == 500
 
     def test_total_cost_with_fractional_cost(self):
-        """Test total cost with float cost per TB."""
+        """Test total cost with decimal cost per TB."""
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('5'),
             cost_per_tb=Decimal('99.51'),
         )
-        assert billing.total_cost == 500
+        assert billing.total_cost == Decimal('497.55')  # 5 * 99.51 = 497.55, rounded to 2 decimal places
 
     def test_calculate_cost_integer_quota(self):
         """ceil is applied in tenths; whole TB matches simple product."""
@@ -64,7 +64,7 @@ class TestBillingAllocation:
             quota_tb=Decimal('5'),
             cost_per_tb=Decimal('100'),
         )
-        assert billing.calculate_cost(5) == 500.0
+        assert billing.calculate_cost(Decimal('5')) == 500.0
 
     def test_calculate_cost_ceils_quota_to_next_tenth(self):
         """Quota below next tenth is ceiled (e.g. 5.01 TB -> 5.1 TB billable)."""
@@ -72,7 +72,7 @@ class TestBillingAllocation:
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('0'),
-            cost_per_tb=100,
+            cost_per_tb=Decimal('100'),
         )
         assert billing.calculate_cost(Decimal('5.01')) == 510.0
         assert billing.calculate_cost(Decimal('5.03')) == 510.0
@@ -82,7 +82,7 @@ class TestBillingAllocation:
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('0'),
-            cost_per_tb=100,
+            cost_per_tb=Decimal('100'),
         )
         assert billing.calculate_cost(Decimal('5.0')) == 500.0
         assert billing.calculate_cost(Decimal('5.1')) == 510.0
@@ -92,7 +92,7 @@ class TestBillingAllocation:
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('0'),
-            cost_per_tb=100,
+            cost_per_tb=Decimal('100'),
         )
         assert billing.calculate_cost(Decimal('0')) == 0.0
 
@@ -101,9 +101,9 @@ class TestBillingAllocation:
             allocation_id=1,
             project_id=1,
             quota_tb=Decimal('0'),
-            cost_per_tb=Decimal('99.51'),
+            cost_per_tb=Decimal('99.515'),
         )
-        assert billing.calculate_cost(Decimal('5')) == 500.0
+        assert billing.calculate_cost(Decimal('5')) == Decimal('497.60')
 
     def test_calculate_cost_fractional_quota_with_cost(self):
         billing = BillingAllocation(
@@ -413,7 +413,7 @@ class TestBillingAllocation:
         assert result.cost_per_tb == DEFAULT_COST  # Uses default
 
     def test_total_cost_with_parsed_float_values_1(self):
-        """Test total_cost calculation with float values from parse."""
+        """Test total_cost calculation with decimal values from parse."""
         storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='150.5')])
         allocation = create_mock_allocation(
             quota_attrs=[Mock(value='7.3')],
@@ -421,11 +421,11 @@ class TestBillingAllocation:
         )
 
         billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
-        # round up with 1 digit (7.3) = 7.3, int(150.5) = 150, so 7.3 * 150 = 1200
-        assert billing.total_cost == 1095
+        # round up with 1 digit (7.3) = 7.3, 150.5, so 7.3 * 150.5 = 1098.65
+        assert billing.total_cost == Decimal('1098.65')
 
     def test_total_cost_with_parsed_float_values_2(self):
-        """Test total_cost calculation with float values from parse."""
+        """Test total_cost calculation with decimal values from parse."""
         storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='150.5')])
         allocation = create_mock_allocation(
             quota_attrs=[Mock(value='7.32')],
@@ -433,8 +433,8 @@ class TestBillingAllocation:
         )
 
         billing = BillingAllocation.parse(allocation, DEFAULT_QUOTA, DEFAULT_COST)
-        # round up with 1 digit (7.32) = 7.4, int(150.5) = 150, so 7.4 * 150 = 1200
-        assert billing.total_cost == 1110
+        # round up with 1 digit (7.32) = 7.4, 150.5, so 7.4 * 150.5 = 1113.7
+        assert billing.total_cost == Decimal('1113.70')
 
     def test_parse_includes_extra_project_title_and_pi_name(self):
         """Test parse populates extra.project_title and extra.pi_name from project."""

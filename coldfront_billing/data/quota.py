@@ -1,5 +1,4 @@
 from decimal import Decimal, InvalidOperation
-import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, Self
@@ -21,8 +20,12 @@ class BillingQuota:
     unit: StorageUnit
 
     @property
-    def normalized_amount(self) -> Decimal:
+    def amount_tb(self) -> Decimal:
         return self.amount * UNIT_TO_TB[self.unit]
+
+    @property
+    def amount_gb(self) -> Decimal:
+        return self.amount_tb / UNIT_TO_TB[StorageUnit.GB]
 
     @staticmethod
     def create(amount: Decimal, unit: str, *_, **__) -> 'BillingQuota':
@@ -37,41 +40,52 @@ class NoCostQuotaAllocation:
     other_allotments: list[BillingQuota]
 
     @property
-    def user_amount(self) -> Decimal:
-        return self.users_allotment.amount if self.users_allotment else Decimal(0)
+    def user_amount(self) -> BillingQuota:
+        return self.users_allotment if self.users_allotment else BillingQuota(Decimal(0), StorageUnit.TB)
 
     def max_possible_allocation(self, remaining_quota: Decimal, quota_unit: str, increment: int) -> Decimal:
-        quota_unit = StorageUnit.parse(quota_unit)
-        possible_quota = remaining_quota + self.user_amount
-        print(f"allocation amount: {self.allocation_amount}")
-        print(f"user amount: {self.user_amount}")
+        """
+        Calculate the maximum possible allocation for this quota.
 
+        Args:
+            remaining_quota (Decimal): The remaining quota in TB.
+            quota_unit (str): The unit of the quota (e.g., 'GB', 'TB').
+            increment (int): The minimum increment for allocation in GB.
+
+        Returns:
+            Decimal: The maximum possible allocation in the given quota unit.
+        """
+        quota_unit = StorageUnit.parse(quota_unit)
+        if quota_unit == StorageUnit.TB:
+            possible_quota = remaining_quota + self.user_amount.amount_tb
+        else:
+            possible_quota = remaining_quota + self.user_amount.amount_gb
+        increment_in_units = Decimal(increment) * UNIT_TO_TB[StorageUnit.parse("GB")] / UNIT_TO_TB[quota_unit]
         if self.allocation_amount is None:
             # increment is always in GB, so we need to convert it to the quota unit for comparison
-            return possible_quota.quantize(Decimal(increment) * UNIT_TO_TB[StorageUnit.parse("GB")])
+            return possible_quota.quantize(increment_in_units)
 
-        tb_to_quota_unit = Decimal('1.0') / UNIT_TO_TB[StorageUnit.parse(quota_unit)]
+        tb_to_quota_unit = Decimal('1.0') / UNIT_TO_TB[quota_unit]
         allocation_available_tb = max(0, self.allocation_amount - self.other_allotments_amount)
         allocation_available = allocation_available_tb * tb_to_quota_unit
         max_possible = min(possible_quota, allocation_available)
-        print(f"max possible: {max_possible}")
-        digits = int(round(-math.log10(increment)))
-        return round(math.floor(max_possible / increment) * increment, digits)
+        # increment_in_units is already calculated
+        return (max_possible // increment_in_units) * increment_in_units
 
     @property
     def user_allotment_amount(self) -> Decimal:
         # returns the amount of existing user allotment on this allocation in TB
-        return self.users_allotment.normalized_amount if self.users_allotment else Decimal('0')
+        return self.users_allotment.amount_tb if self.users_allotment else Decimal('0')
 
     @property
     def other_allotments_amount(self) -> Decimal:
-        return sum((a.normalized_amount for a in self.other_allotments), Decimal('0'))
+        return sum((a.amount_tb for a in self.other_allotments), Decimal('0'))
 
     @classmethod
     def create(cls, user_id: int, allocation: Any) -> Self:
         def create_no_cost_quota(allotment: Any) -> BillingQuota:
             return BillingQuota.create(
-                allotment.amount,
+                allotment.amount_tb,
                 allotment.no_cost_quota.units,
             )
 
@@ -137,13 +151,13 @@ class NoCostQuotaEngine:
             if remaining_quota == 0:
                 break
             if (
-                allocation.allocation_amount == allocation.user_amount + allocation.other_allotments_amount
+                allocation.allocation_amount == allocation.user_amount.amount_tb + allocation.other_allotments_amount
                 or allocation.allocation_amount is None
             ):
                 continue
             max_possible = allocation.max_possible_allocation(remaining_quota, quota_unit, min_increment)
             if max_possible > 0:
-                remaining_quota -= max_possible - allocation.user_allotment_amount
+                remaining_quota -= max_possible - allocation.user_amount.amount_tb
                 allocation_assignments.append(AllocationAssignment(allocation.allocation_id, max_possible))
 
         return allocation_assignments
@@ -173,8 +187,8 @@ def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list
             raise Exception('The allocation id is invalid.')
 
         try:
-            amount = Decimal(str(amount_str).replace(',', '.'))
-        except (ValueError, TypeError):
+            amount = Decimal(amount_str.replace(',', '.')).quantize(Decimal('0.01'))
+        except (ValueError, TypeError, InvalidOperation):
             raise Exception('The amount of allocation is invalid.')
 
         assignments.append(AllocationAssignment(allocation_id, amount))

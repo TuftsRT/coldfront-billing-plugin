@@ -1,7 +1,7 @@
 """Unit tests for no_cost_quota views: manage, assign, single allotment, and bulk auto-assign."""
 
 from urllib.parse import urlencode
-
+from decimal import Decimal
 import pytest
 from django.urls import reverse
 
@@ -134,8 +134,10 @@ class TestNoCostQuotaAllotmentView:
             quota_type='tier_1',
             description='PI quota',
             amount=50.0,
+            amount_tb=Decimal('50.0'),
             units='TB',
             minimum_increment=0.1,
+            increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
             project_with_billing_user,
@@ -216,7 +218,7 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota=no_cost_quota,
             allocation=allocation,
         )
-        assert allotment.amount == 2.0
+        assert allotment.amount_tb == Decimal('2.0')
         assert (
             NoCostQuotaAllotment.objects.filter(
                 no_cost_quota=no_cost_quota,
@@ -244,8 +246,10 @@ class TestNoCostQuotaAllotmentView:
             quota_type='tier_2',
             description='Tier 2 storage in GB',
             amount=1000.0,
+            amount_tb=Decimal('1000.0'),  # 1 TB = 1000 GB
             units='GB',
             minimum_increment=100,
+            increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
             project_with_billing_user,
@@ -372,8 +376,10 @@ class TestNoCostQuotaAllotmentView:
             quota_type='tier_1',
             description='PI quota',
             amount=50.0,
+            amount_tb=Decimal('50.0'),
             units='TB',
             minimum_increment=0.1,
+            increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
             project_with_billing_user,
@@ -414,8 +420,10 @@ class TestNoCostQuotaAllotmentView:
             quota_type='tier_1',
             description='PI quota',
             amount=50.0,
+            amount_tb=Decimal('50.0'),
             units='TB',
             minimum_increment=0.1,
+            increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
             project_with_billing_user,
@@ -506,8 +514,10 @@ class TestAutoAssignAllotmentsView:
             quota_type='tier_1',
             description='PI quota',
             amount=50.0,
+            amount_tb=Decimal('50.0'),
             units='TB',
             minimum_increment=0.1,
+            increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
             project_with_billing_user,
@@ -608,8 +618,8 @@ class TestAutoAssignAllotmentsView:
         assert response.status_code == 302
         assert response.url == reverse('manage_no_cost_quota')
 
-        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_a).amount == 2.0
-        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_b).amount == 3.0
+        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_a).amount_tb == Decimal('2.0')
+        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_b).amount_tb == Decimal('3.0')
 
     def test_valid_bulk_post_updates_existing_allotments(
         self,
@@ -638,6 +648,7 @@ class TestAutoAssignAllotmentsView:
             no_cost_quota=no_cost_quota,
             allocation=allocation,
             amount=1.0,
+            amount_tb=Decimal('1.0'),
         )
         response = post_auto_assign_allotments(
             client,
@@ -647,5 +658,5 @@ class TestAutoAssignAllotmentsView:
         )
         assert response.status_code == 302
         allotment = NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=allocation)
-        assert allotment.amount == 5.0
+        assert allotment.amount_tb == Decimal('5.0')
         assert NoCostQuotaAllotment.objects.filter(no_cost_quota=no_cost_quota, allocation=allocation).count() == 1

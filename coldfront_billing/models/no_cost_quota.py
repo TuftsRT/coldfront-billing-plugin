@@ -158,8 +158,8 @@ class NoCostQuotaAllotment(models.Model):
             allocation_quota = BillingQuota.create(Decimal(allocation_quota_value), 'TB')
             allotment_quota = BillingQuota.create(self.amount_tb, self.no_cost_quota.units)
 
-            if (allotment_size := allotment_quota.normalized_amount) > (
-                alloc_size := allocation_quota.normalized_amount
+            if (allotment_size := allotment_quota.amount_tb) > (
+                alloc_size := allocation_quota.amount_tb
             ):
                 raise ValidationError(
                     {
