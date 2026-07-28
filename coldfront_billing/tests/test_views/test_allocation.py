@@ -340,7 +340,7 @@ class TestAllocationCreateView:
     """Test suite for AllocationCreateView (redirect to quota page for paid storage)."""
 
     @override_settings(INVOICE_ENABLED=False)
-    @pytest.skip(reason="Skipping test due to redirect applied in different plugin.")
+    @pytest.mark.skip(reason="Skipping test due to redirect applied in different plugin.")
     def test_paid_storage_allocation_redirects_to_update_details(
         self,
         client,
