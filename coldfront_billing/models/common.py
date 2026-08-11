@@ -39,7 +39,7 @@ class QuotaBase(models.Model):
         default='TB',
         help_text='Units for the quota (default: TB). Allowed: TB, GB.',
     ) # affects how amount and minimum_increment are displayed and validated
-    minimum_increment = models.FloatField(help_text='Minimum allocation increment') #deprecated, replaced by minimum_increment_gb
+    minimum_increment = models.FloatField(help_text='Minimum allocation increment') #deprecated, replaced by increment_gb
     increment_gb = models.IntegerField(
         help_text='Allocation increment',
         default=10,
