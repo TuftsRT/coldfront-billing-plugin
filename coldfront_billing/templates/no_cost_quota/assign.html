@@ -194,8 +194,8 @@ Assign No-Cost Quota
                     <div class="form-group">
                         <label for="assignQuotaAmount">Quota amount ({{ quota.units }})</label>
                         <input type="number" class="form-control" id="assignQuotaAmount"
-                               name="amount" step="{{ quota.minimum_increment }}" min="0"
-                               placeholder="Multiple of {{ quota.minimum_increment|floatformat:-2 }} {{ quota.units }}"
+                               name="amount_tb" step="{{ quota.increment_gb }}" min="0"
+                               placeholder="Multiple of {{ quota.increment_gb }} {{ quota.units }}"
                                required>
                     </div>
                 </div>
@@ -233,7 +233,7 @@ Assign No-Cost Quota
                 <input type="hidden" name="quota_id" value="{{ quota.pk }}">
                 {% for a in assignements %}
                 <input type="hidden" name="allocation_id" value="{{ a.allocation_id }}">
-                <input type="hidden" name="amount" value="{{ a.amount }}">
+                <input type="hidden" name="amount" value="{{ a.amount_tb }}">
                 {% endfor %}
                 <div class="modal-header">
                     <h5 class="modal-title" id="autoAssignQuotaModalLabel">Auto-assign preview</h5>

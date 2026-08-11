@@ -25,7 +25,6 @@ class QuotaBase(models.Model):
         help_text='Human-readable description of the quota type',
     )
     quota_type = models.CharField(max_length=64, help_text='Storage quota name')
-    amount = models.FloatField(help_text='Total quota amount') # deprecated, replaced by amount_tb
     amount_tb = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -39,7 +38,6 @@ class QuotaBase(models.Model):
         default='TB',
         help_text='Units for the quota (default: TB). Allowed: TB, GB.',
     ) # affects how amount and minimum_increment are displayed and validated
-    minimum_increment = models.FloatField(help_text='Minimum allocation increment') #deprecated, replaced by increment_gb
     increment_gb = models.IntegerField(
         help_text='Allocation increment',
         default=10,

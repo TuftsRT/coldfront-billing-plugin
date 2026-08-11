@@ -67,10 +67,8 @@ def user_groups_changed(sender, instance: User, action, reverse, model, pk_set, 
             quota_type=group.quota_type,
             defaults={
                 'description': group.description or group.group.name,
-                'amount': group.amount,
                 'amount_tb': group.amount_tb,
                 'units': group.units,
-                'minimum_increment': group.minimum_increment,
                 'increment_gb': group.increment_gb,
             },
         )

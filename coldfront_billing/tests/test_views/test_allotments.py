@@ -133,10 +133,8 @@ class TestNoCostQuotaAllotmentView:
             user=pi_user,
             quota_type='tier_1',
             description='PI quota',
-            amount=50.0,
             amount_tb=Decimal('50.0'),
             units='TB',
-            minimum_increment=0.1,
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -184,7 +182,7 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota=no_cost_quota,
             allocation=allocation,
         )
-        assert allotment.amount == 5.0
+        assert allotment.amount_tb == Decimal('5.0')
 
     def test_valid_post_updates_existing_allotment(
         self,
@@ -245,10 +243,8 @@ class TestNoCostQuotaAllotmentView:
             user=user,
             quota_type='tier_2',
             description='Tier 2 storage in GB',
-            amount=1000.0,
             amount_tb=Decimal('1000.0'),  # 1 TB = 1000 GB
             units='GB',
-            minimum_increment=100,
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -269,7 +265,7 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota=gb_quota,
             allocation=allocation,
         )
-        assert allotment.amount == 100.0
+        assert allotment.amount_tb == Decimal(100.0)
 
     def test_unauthenticated_user_cannot_delete_allotment(
         self,
@@ -298,7 +294,7 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount=5.0,
+            amount_tb=Decimal('5.0'),
         )
         response = client.post(
             reverse('no_cost_quota_manage_allotment'),
@@ -349,7 +345,7 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount=5.0,
+            amount_tb=Decimal('5.0'),
         )
         response = post_delete_allotment(client, user, allotment.pk)
         assert response.status_code == 302
@@ -375,10 +371,8 @@ class TestNoCostQuotaAllotmentView:
             user=pi_user,
             quota_type='tier_1',
             description='PI quota',
-            amount=50.0,
             amount_tb=Decimal('50.0'),
             units='TB',
-            minimum_increment=0.1,
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -393,7 +387,7 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=other_quota,
             allocation=allocation,
-            amount=5.0,
+            amount_tb=Decimal('5.0'),
         )
         response = post_delete_allotment(client, user, allotment.pk)
         assert response.status_code == 302
@@ -419,10 +413,8 @@ class TestNoCostQuotaAllotmentView:
             user=pi_user,
             quota_type='tier_1',
             description='PI quota',
-            amount=50.0,
             amount_tb=Decimal('50.0'),
             units='TB',
-            minimum_increment=0.1,
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -437,7 +429,7 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=pi_quota,
             allocation=allocation,
-            amount=5.0,
+            amount_tb=Decimal('5.0'),
         )
         response = post_delete_allotment(client, superuser, allotment.pk)
         assert response.status_code == 302
@@ -513,10 +505,8 @@ class TestAutoAssignAllotmentsView:
             user=pi_user,
             quota_type='tier_1',
             description='PI quota',
-            amount=50.0,
             amount_tb=Decimal('50.0'),
             units='TB',
-            minimum_increment=0.1,
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -647,7 +637,6 @@ class TestAutoAssignAllotmentsView:
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount=1.0,
             amount_tb=Decimal('1.0'),
         )
         response = post_auto_assign_allotments(

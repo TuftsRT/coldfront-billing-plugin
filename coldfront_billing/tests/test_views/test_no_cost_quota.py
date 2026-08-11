@@ -59,10 +59,8 @@ class TestManageNoCostQuotasView:
             user=pi_user,
             quota_type='tier_1',
             description='PI quota',
-            amount=50.0,
             amount_tb=Decimal('50.0'),
             units='TB',
-            minimum_increment=0.1,
             increment_gb=100,
         )
         response = _get_manage_response(client, user)
@@ -82,10 +80,8 @@ class TestManageNoCostQuotasView:
             user=user,
             quota_type='tier_2',
             description='Tier 2 storage in GB',
-            amount=1000.0,
             amount_tb=Decimal('1.0'),
             units='GB',
-            minimum_increment=100,
             increment_gb=100,
         )
         response = _get_manage_response(client, user)
@@ -198,10 +194,8 @@ class TestAssignNoCostQuotasView:
             user=pi_user,
             quota_type='tier_1',
             description='PI quota',
-            amount=50.0,
             amount_tb=Decimal('50.0'),
             units='TB',
-            minimum_increment=0.1,
             increment_gb=100,
         )
         response = get_assign_response(client, user, other_quota.pk)
@@ -320,7 +314,6 @@ class TestAssignNoCostQuotasView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount=5.0,
             amount_tb=Decimal('5.0'),
         )
         response = get_assign_response(client, user, no_cost_quota.pk)

@@ -25,7 +25,7 @@ class CostCenterAssignmentAdmin(admin.ModelAdmin):
 
 @admin.register(NoCostQuota)
 class NoCostQuotaAdmin(admin.ModelAdmin):
-    list_display = ['user', 'quota_type', 'description', 'amount', 'units', 'minimum_increment', 'created', 'updated']
+    list_display = ['user', 'quota_type', 'description', 'amount_tb', 'units', 'increment_gb', 'created', 'updated']
     list_filter = ['quota_type', 'created', 'updated']
     search_fields = ['user__username', 'user__email', 'quota_type']
     readonly_fields = ['created', 'updated']
@@ -34,7 +34,7 @@ class NoCostQuotaAdmin(admin.ModelAdmin):
 
 @admin.register(NoCostQuotaAllotment)
 class NoCostQuotaAllotmentAdmin(admin.ModelAdmin):
-    list_display = ['no_cost_quota', 'allocation', 'amount', 'created', 'updated']
+    list_display = ['no_cost_quota', 'allocation', 'amount_tb', 'created', 'updated']
     list_filter = ['no_cost_quota__quota_type', 'created', 'updated']
     search_fields = ['no_cost_quota__user__username', 'allocation__project__title']
     readonly_fields = ['created', 'updated']
@@ -43,7 +43,7 @@ class NoCostQuotaAllotmentAdmin(admin.ModelAdmin):
 
 @admin.register(NoCostQuotaGroup)
 class NoCostQuotaGroupAdmin(admin.ModelAdmin):
-    list_display = ['group', 'quota_type', 'description', 'amount', 'units', 'minimum_increment', 'created', 'updated']
+    list_display = ['group', 'quota_type', 'description', 'amount_tb', 'units', 'increment_gb', 'created', 'updated']
     list_filter = ['quota_type', 'created', 'updated']
     search_fields = ['group__name', 'quota_type']
     readonly_fields = ['created', 'updated']

@@ -60,7 +60,7 @@ def get_no_cost_quota_allotments_prefetch() -> Prefetch:
         queryset=NoCostQuotaAllotment.objects.select_related('no_cost_quota').only(
             'id',
             'allocation_id',
-            'amount',
+            'amount_tb',
             'no_cost_quota_id',
             'no_cost_quota__user_id',
             'no_cost_quota__units',

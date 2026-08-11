@@ -37,10 +37,8 @@ def no_cost_quota_group(db):
         group=group,
         quota_type='tier_1',
         description='Tier 1 storage',
-        amount=15.0,
         amount_tb=Decimal('15.0'),
         units='TB',
-        minimum_increment=1.0,
         increment_gb=1000,
     )
 
@@ -54,10 +52,8 @@ def no_cost_quota_group_tier2(db):
         group=group,
         quota_type='tier_2',
         description='Tier 2 storage',
-        amount=50.0,
         amount_tb=Decimal('50.0'),
         units='TB',
-        minimum_increment=0.5,
         increment_gb=500,
     )
 
@@ -183,7 +179,7 @@ class TestProjectArchivedSignal:
         return NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount=5.0,
+            amount_tb=Decimal('5.0'),
         )
 
     def test_transition_active_to_archived_deletes_allotments_for_project(
@@ -475,7 +471,7 @@ class TestAllocationBecameActiveSignal:
         allocation_change_approved.send(sender=object, allocation_pk=allocation.pk, allocation_change_pk=1)
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        assert allotment.amount == 10.0
+        assert allotment.amount_tb == Decimal('10.0')
         assert not AllocationAttribute.objects.filter(
             allocation=allocation,
             allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
@@ -507,7 +503,6 @@ class TestAllocationBecameActiveSignal:
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=consumer,
-            amount=70.0,
             amount_tb=70.0,
         )
 
@@ -648,13 +643,12 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        first_amount = allotment.amount
-
+        first_amount = allotment.amount_tb
         allocation.justification = 'still active'
         allocation.save()
 
         allotment.refresh_from_db()
-        assert allotment.amount == first_amount
+        assert allotment.amount_tb == first_amount
 
 
 @pytest.fixture
@@ -864,7 +858,6 @@ class TestAllocationQuotaApprovedNotification:
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount=10.0,
             amount_tb=Decimal('10.0'),
         )
 

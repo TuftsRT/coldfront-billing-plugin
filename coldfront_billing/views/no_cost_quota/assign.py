@@ -112,7 +112,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
                     'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
                     'existing_amount': f'{user_amount:g}' if user_amount else '',
                     'max_possible': max_possible,
-                    'minimum_increment': self.quota.minimum_increment,
+                    'minimum_increment': self.quota.increment_gb,
                     'allotment_id': user_allotment_pk or '',
                     'inactive': allocation.status.name != AllocationStatus.ACTIVE,
                     'auto_assign_amount': auto_assign_amount,

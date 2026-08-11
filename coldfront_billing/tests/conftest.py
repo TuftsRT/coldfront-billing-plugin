@@ -317,11 +317,9 @@ def no_cost_quota(user, db):
         user=user,
         quota_type='tier_1',
         description='Tier 1 storage',
-        amount=100.0,
         amount_tb=Decimal('100.0'),
         units='TB',
         increment_gb=10,
-        minimum_increment=0.01,
     )
 
 

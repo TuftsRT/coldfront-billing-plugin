@@ -66,7 +66,6 @@ class NoCostQuotaAllotment(models.Model):
         related_name='no_cost_quota_allotments',
         help_text='Allocation for a resource with no-cost quota type',
     )
-    amount = models.FloatField(help_text='Allocated quota amount in TB') # deprecated, replaced by amount_tb
 
     amount_tb = models.DecimalField(
         max_digits=12,
