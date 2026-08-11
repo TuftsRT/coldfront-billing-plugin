@@ -36,7 +36,7 @@ class ManageAllotmentView(LoginRequiredMixin, View):
             messages.success(request, 'No-Cost Quota allotment deleted.')
             return redirect(REDIRECT)
 
-        amount_str = post.get('amount', '').strip()
+        amount_str = post.get('amount_tb', '').strip()
 
         if not (quota_id := post.get('quota_id')) or not (allocation_id := post.get('allocation_id')):
             messages.error(request, 'Invalid request: missing quota or allocation.')
