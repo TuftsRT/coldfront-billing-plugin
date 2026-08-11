@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_CEILING
+from decimal import Decimal, ROUND_CEILING, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -46,7 +46,7 @@ class ManageAllotmentView(LoginRequiredMixin, View):
 
         try:
             amount = Decimal(amount_str).quantize(Decimal('0.01'), rounding=ROUND_CEILING)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidOperation):
             messages.error(request, 'Please enter a valid amount.')
             return redirect(assign_url)
 
