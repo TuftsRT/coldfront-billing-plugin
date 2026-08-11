@@ -28,10 +28,8 @@ class TestAutoAssignQuota:
             user=pi_user,
             quota_type='tier_1',
             description='PI tier',
-            amount=20.0,
             amount_tb=20.0,
             units='TB',
-            minimum_increment=1.0,
             increment_gb=1000,
         )
         allocation, _ = add_no_cost_quota_storage_allocation(

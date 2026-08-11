@@ -58,8 +58,7 @@ class TestCreateUpdateAllotment:
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('1.0'),
-            amount=1.0
+            amount_tb=Decimal('1.0')
         )
         result = create_update_allotment(allocation, Decimal('3.0'), no_cost_quota)
         assert result == 'Updated'
@@ -88,8 +87,7 @@ class TestCreateUpdateAllotment:
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('1.0'),
-            amount=1.0
+            amount_tb=Decimal('1.0')
         )
         create_update_allotment(allocation, Decimal('2.0'), no_cost_quota, append=True)
         assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal('3.0')

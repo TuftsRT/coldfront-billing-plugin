@@ -11,8 +11,7 @@ def create_update_allotment(allocation: Allocation, amount: Decimal, quota: NoCo
         allotment, created = NoCostQuotaAllotment.objects.get_or_create(
             no_cost_quota=quota,
             allocation=allocation,
-            defaults={'amount_tb': amount,
-                    'amount': float(amount)},
+            defaults={'amount_tb': amount},
         )
 
         if not created:
