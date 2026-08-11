@@ -11,8 +11,6 @@ from coldfront_billing.utils import first_or_none
 UNIT_TO_TB = {
     StorageUnit.TB: Decimal('1.0'),
     StorageUnit.GB: Decimal('0.001'),
-    StorageUnit.TB: Decimal('1.0'),
-    StorageUnit.GB: Decimal('0.001'),
 }
 
 

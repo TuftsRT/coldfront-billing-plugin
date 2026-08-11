@@ -13,7 +13,7 @@ from coldfront_billing.constants import (
     QUOTA_ATTR_NAME,
 )
 from coldfront_billing.data import BillingQuota
-from coldfront_billing.enums import ProjectStatus
+from coldfront_billing.enums import ProjectStatus, StorageUnit
 from coldfront_billing.models.common import UNITS_CHOICES, QuotaBase
 
 User = get_user_model()
@@ -155,7 +155,7 @@ class NoCostQuotaAllotment(models.Model):
             if not allocation_quota_value:
                 return
 
-            allocation_quota = BillingQuota.create(Decimal(allocation_quota_value), 'TB')
+            allocation_quota = BillingQuota.create(Decimal(allocation_quota_value).quantize(Decimal('0.01')), StorageUnit.TB)
             allotment_quota = BillingQuota.create(self.amount_tb, self.no_cost_quota.units)
 
             if (allotment_size := allotment_quota.amount_tb) > (
