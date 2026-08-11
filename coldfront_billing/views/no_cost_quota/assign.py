@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_FLOOR, Decimal
 from typing import Any, Dict
 
 from coldfront.core.allocation.models import Allocation
@@ -63,7 +63,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        quota_remaining = Decimal(self.quota.remaining).quantize(Decimal('0.01'))
+        quota_remaining = Decimal(self.quota.remaining).quantize(Decimal('0.01'), rounding=ROUND_FLOOR)
         quota_units = self.quota.units
 
         auto_assign_allocations = self.get_queryset().filter(
