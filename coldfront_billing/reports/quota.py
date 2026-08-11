@@ -1,3 +1,5 @@
+from decimal import ROUND_FLOOR, Decimal
+
 from coldfront.core.project.models import Project
 
 from coldfront_billing.allotments import create_or_update_allotment
@@ -24,7 +26,7 @@ def auto_assign_quota() -> tuple[str, str]:
 
     for user_id in {p.pi_id for p in projects if p.pi_id}:
         for quota in quota_with_remaining.filter(user_id=user_id):
-            remaining = round(quota.remaining, 2)
+            remaining = Decimal(quota.remaining).quantize(Decimal('0.01'), rounding=ROUND_FLOOR)
             if remaining <= 0:
                 continue
 
@@ -39,17 +41,17 @@ def auto_assign_quota() -> tuple[str, str]:
                 continue
 
             engine = NoCostQuotaEngine(quota.user_id, auto_assign_allocations)
-            assignements = engine.auto_assign(
+            assignments = engine.auto_assign(
                 remaining,
                 quota.units,
-                quota.minimum_increment,
+                quota.increment_gb,
             )
 
-            if not assignements:
+            if not assignments:
                 continue
 
             processed += 1
-            for assignment in assignements:
+            for assignment in assignments:
                 create_or_update_allotment(assignment.allocation_id, assignment.amount, quota)
                 assignments_applied += 1
 
