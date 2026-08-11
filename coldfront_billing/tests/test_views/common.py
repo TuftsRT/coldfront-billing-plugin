@@ -43,7 +43,7 @@ def post_create_allotment(client, user, quota_id, allocation_id, amount):
         data={
             'quota_id': quota_id,
             'allocation_id': allocation_id,
-            'amount': amount,
+            'amount_tb': amount,
         },
     )
 
