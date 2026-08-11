@@ -112,7 +112,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
                     'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
                     'existing_amount': f'{user_amount:g}' if user_amount else '',
                     'max_possible': max_possible,
-                    'minimum_increment': self.quota.increment_gb,
+                    'increment_tb': self.quota.increment_gb / 1000,
                     'allotment_id': user_allotment_pk or '',
                     'inactive': allocation.status.name != AllocationStatus.ACTIVE,
                     'auto_assign_amount': auto_assign_amount,
@@ -122,7 +122,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         key_func, reverse = self.get_object_ordering()
         allocations = sorted(allocations, key=key_func, reverse=reverse)
         auto_assign_preview = [row for row in allocations if row['auto_assign_amount'] > 0]
-
+        self.quota.increment_tb = self.quota.increment_gb / 1000
         return (
             context
             | {
@@ -130,7 +130,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
                 'quota_remaining': quota_remaining,
                 'search_form': AllocationSearchForm(self.request.GET),
                 'auto_assign_preview': auto_assign_preview,
-                'assignements': assignments,
+                'assignments': assignments,
                 'back': self.request.GET.get('back', ''),
                 'show_auto_assign': len(auto_assign_allocations) > 0 or self.request.user.is_superuser,
             }
