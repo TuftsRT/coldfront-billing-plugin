@@ -78,8 +78,7 @@ Complete Storage Allocation
                     </div>
                 </div>
             {% endif %}
-            <a class="btn btn-secondary" href="{% url 'allocation-detail' allocation.pk %}" role="button">Back to
-                Allocation</a>
+            <a class="btn btn-secondary" href="{% url 'project-detail' allocation.project.pk %}" role="button">Cancel</a>
             <button class="btn btn-primary" type="submit">Complete Request</button>
         </form>
     </div>
