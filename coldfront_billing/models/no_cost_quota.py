@@ -47,7 +47,7 @@ class NoCostQuota(QuotaBase):
             )
 
         if self.amount_tb * Decimal(1000) < Decimal(self.increment_gb):
-            raise ValidationError({'amount': 'Amount cannot be smaller than allocation increment.'})
+            raise ValidationError({'amount': f'Amount {self.amount_tb} TB cannot be smaller than allocation increment {self.increment_gb} GB.'})
 
     def __str__(self):
         return f'{str(self.user)} - {self.quota_type}'

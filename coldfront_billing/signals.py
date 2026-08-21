@@ -48,7 +48,7 @@ def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
     apply_quota_attr.delete()
 
 
-@receiver(m2m_changed, sender=User.groups.through)
+@receiver(m2m_changed, sender=User.groups.through, dispatch_uid='user_groups_changed_ncq')
 def user_groups_changed(sender, instance: User, action, reverse, model, pk_set, **kwargs):
     """
     When a user is added to the no-cost-quota group, create a NoCostQuota for them
@@ -74,7 +74,7 @@ def user_groups_changed(sender, instance: User, action, reverse, model, pk_set, 
         )
 
 
-@receiver(pre_save, sender=Allocation)
+@receiver(pre_save, sender=Allocation, dispatch_uid='allocation_became_active_ncq')
 def allocation_became_active(sender, instance: Allocation, **kwargs):
     if not instance.pk:
         return
@@ -88,7 +88,7 @@ def allocation_became_active(sender, instance: Allocation, **kwargs):
         send_allocation_notification(instance)
 
 
-@receiver(allocation_change_approved)
+@receiver(allocation_change_approved, dispatch_uid='allocation_change_request_approved_ncq')
 def allocation_change_request_approved(sender, allocation_pk, **kwargs):
     """After staff approve an allocation change request, apply no-cost quota allotment if user requested it."""
     allocation = Allocation.objects.get(pk=allocation_pk)
@@ -99,7 +99,7 @@ def allocation_change_request_approved(sender, allocation_pk, **kwargs):
     )
 
 
-@receiver(pre_save, sender=Project)
+@receiver(pre_save, sender=Project, dispatch_uid='project_archived_ncq')
 def project_archived(sender, instance: Project, **kwargs):
     # New object, nothing to compare yet
     if not instance.pk:
@@ -114,11 +114,11 @@ def project_archived(sender, instance: Project, **kwargs):
         NoCostQuotaAllotment.objects.filter(allocation__project=instance).delete()
 
 
-@receiver(post_save, sender=BillingScheduleSettings)
+@receiver(post_save, sender=BillingScheduleSettings, dispatch_uid='billing_settings_saved_ncq')
 def billing_settings_saved(sender, instance, **kwargs):
     sync_billing_schedule(instance)
 
 
-@receiver(post_delete, sender=BillingScheduleSettings)
+@receiver(post_delete, sender=BillingScheduleSettings, dispatch_uid='billing_settings_deleted_ncq')
 def billing_settings_deleted(sender, instance, **kwargs):
     sync_billing_schedule(None)
