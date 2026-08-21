@@ -87,7 +87,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
 
             user_allotment = next((a for a in all_allotments if a.no_cost_quota.user_id == self.quota.user_id), None)
             if allocation.status.name != AllocationStatus.ACTIVE and (
-                user_allotment is None or user_allotment.amount == 0
+                user_allotment is None or user_allotment.amount_tb == 0
             ):
                 continue  # skip inactive allocations without user allotment
 

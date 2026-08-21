@@ -111,28 +111,28 @@
                             'Storage quota: <strong>' +
                             quotaVal +
                             ' TB</strong><br>' +
-                            'Cost per TB: <strong>' +
-                            perTb +
-                            '$</strong><br>' +
-                            'Estimated total cost: <strong>' +
-                            total +
-                            '$</strong><br><br>' +
-                            'You have possibility to apply <strong>' +
+                            'Monthly Cost per TB: <strong>$' +
+                            perTb.toFixed(2) +
+                            '</strong><br>' +
+                            'Estimated total cost: <strong>$' +
+                            total.toFixed(2) +
+                            '</strong><br><br>' +
+                            'You may apply <strong>' +
                             applied +
-                            ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>' +
-                            reduced +
-                            '$</strong>';
+                            ' TB</strong> of no-cost quota, <br>reducing estimated cost to <strong>$' +
+                            reduced.toFixed(2) +
+                            ' monthly.</strong>';
                     } else {
                         summaryEl.innerHTML =
                             'Storage quota: <strong>' +
                             quotaVal +
                             ' TB</strong><br>' +
-                            'Cost per TB: <strong>' +
-                            perTb +
-                            '$</strong><br>' +
-                            'Estimated total cost: <strong>' +
-                            total +
-                            '$</strong>';
+                            'Monthly Cost per TB: <strong>$' +
+                            perTb.toFixed(2) +
+                            '</strong><br>' +
+                            'Estimated total cost: <strong>$' +
+                            total.toFixed(2) +
+                            '</strong>';
                     }
                     showModal(modalEl);
                 })

@@ -12,9 +12,9 @@ class AllocationDetailsForm(forms.Form):
     quota_in_terabyte = forms.DecimalField(
         label='Storage Quota (TB)',
         required=True,
-        min_value=0,
-        widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0', 'class': 'form-control'}),
-        help_text='Specify the storage quota in terabytes for your allocation.',
+        min_value=0.1,
+        widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1', 'class': 'form-control'}),
+        help_text='Specify the storage quota in terabytes for your allocation. The minimum allowed value is 0.1 TB.',
     )
     cost_center = forms.ModelChoiceField(
         queryset=CostCenter.objects.filter(cost_center_type='department').order_by('name'),
