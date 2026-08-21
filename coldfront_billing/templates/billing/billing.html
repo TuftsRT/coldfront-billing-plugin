@@ -154,7 +154,8 @@ Billing
 <div class="modal fade" id="costCentersModal" tabindex="-1" role="dialog"
      aria-labelledby="costCentersModalLabel" aria-hidden="true"
      data-update-url="{% url 'update_cost_center_assignment' %}"
-     data-autocomplete-url="{% url 'autocomplete_cost_center' %}">
+     data-autocomplete-url="{% url 'autocomplete_cost_center' %}"
+     data-delete-url="{% url 'delete_cost_center_assignment' %}">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
 
@@ -193,7 +194,7 @@ Billing
 
                 <button type="button" class="btn btn-sm btn-primary"
                         id="add-row-btn">
-                    <i class="fas fa-plus"></i> Add cost assignmnent
+                    <i class="fas fa-plus"></i> Add cost assignment
                 </button>
 
                 <!-- Total Calculations -->

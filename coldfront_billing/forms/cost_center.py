@@ -38,7 +38,7 @@ class CostCenterAssignmentForm(forms.Form):
         if not assignments_data:
             raise forms.ValidationError('At least one assignment is required.')
 
-        assignements: list[dict[str, Any]] = []
+        assignments: list[dict[str, Any]] = []
 
         for i, row in enumerate(assignments_data):
             if not isinstance(row, dict):
@@ -54,10 +54,10 @@ class CostCenterAssignmentForm(forms.Form):
             if type(pct) is not int:
                 raise forms.ValidationError(f'Percentage for {dept!r} must be an integer.')
 
-            assignements.append({'department': dept, 'percentage': pct, **({'grant': grant} if grant else {})})
+            assignments.append({'department': dept, 'percentage': pct, **({'grant': grant} if grant else {})})
 
         for cost_center in ('department', 'grant'):
-            values_set = {item.get(cost_center) for item in assignements if item.get(cost_center) is not None}
+            values_set = {item.get(cost_center) for item in assignments if item.get(cost_center) is not None}
 
             valid_values = set(
                 CostCenter.objects.filter(name__in=values_set, cost_center_type=cost_center).values_list(
@@ -70,7 +70,7 @@ class CostCenterAssignmentForm(forms.Form):
                 raise forms.ValidationError(f'Unknown {cost_center}(s): {invalid_list}.')
 
         try:
-            validated = CostCenterSchema.model_validate({'assignments': assignements})
+            validated = CostCenterSchema.model_validate({'assignments': assignments})
         except PydanticValidationError as e:
             first = e.errors()[0] if e.errors() else None
             msg = first.get('msg', 'Invalid assignments.') if first else 'Invalid assignments.'

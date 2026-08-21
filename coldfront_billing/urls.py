@@ -15,6 +15,11 @@ urlpatterns = [
         name='update_cost_center_assignment',
     ),
     path(
+        'cost-center-assignment/delete/',
+        views.CostCenterAssignmentDeleteView.as_view(),
+        name='delete_cost_center_assignment',
+    ),
+    path(
         'cost-center-autocomplete',
         views.CostCenterAutocompleteView.as_view(),
         name='autocomplete_cost_center',

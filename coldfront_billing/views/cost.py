@@ -65,6 +65,40 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             return JsonResponse(error_response.to_dict(), status=400)
 
 
+class CostCenterAssignmentDeleteView(LoginRequiredMixin, View):
+    """Deleting cost center assignments View."""
+
+    def check_permission(self, project: Project) -> bool:
+        if self.request.user.is_superuser:
+            return True
+
+        return project.projectuser_set.filter(
+            user=self.request.user,
+            role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+            status__name=ProjectStatus.ACTIVE,
+        ).exists()
+
+    def post(self, request: HttpRequest) -> JsonResponse:
+        try:
+            project_id = request.POST.get('project_id')
+            project = get_object_or_404(Project, id=project_id)
+
+            if not self.check_permission(project):
+                error_response = ApiErrorResponseDTO(error='You do not have permission to modify this project.')
+                return JsonResponse(error_response.to_dict(), status=403)
+
+            cost_center_assignment = get_object_or_404(CostCenterAssignment, project=project)
+            cost_center_assignment.delete()
+
+            success_response = ApiSuccessResponseDTO(message='Cost center assignment deleted successfully.')
+            return JsonResponse(success_response.to_dict())
+
+        except Exception as cause:
+            logger.error(f'Error deleting cost center assignment: {str(cause)}')
+            error_response = ApiErrorResponseDTO(error='An error occurred while deleting the cost center assignment.')
+            return JsonResponse(error_response.to_dict(), status=400)
+
+
 class CostCenterAutocompleteView(LoginRequiredMixin, View):
     def get(self, request):
         query = request.GET.get('q', '').strip()
