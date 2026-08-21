@@ -114,7 +114,7 @@
                             'Monthly Cost per TB: <strong>$' +
                             perTb.toFixed(2) +
                             '</strong><br>' +
-                            'Estimated total cost: <strong>$' +
+                            'Estimated monthly cost: <strong>$' +
                             total.toFixed(2) +
                             '</strong><br><br>' +
                             'You may apply <strong>' +

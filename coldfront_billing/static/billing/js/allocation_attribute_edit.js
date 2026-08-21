@@ -137,12 +137,12 @@ document.addEventListener('DOMContentLoaded', function () {
                   'Final storage quota: <strong>' +
                   newQuota +
                   ' TB</strong><br>' +
-                  'Cost per TB: <strong>' +
-                  costPerTb +
-                  '$</strong><br>' +
-                  'Estimated cost change: <strong>' +
-                  formatSignedNumber(-quotaCost) +
-                  '$</strong>'
+                  'Monthly Cost per TB: <strong>$' +
+                  costPerTb.toFixed(2) +
+                  '</strong><br>' +
+                  'Estimated cost change: <strong>-$' +
+                  quotaCost.toFixed(2) +
+                  '</strong>'
               );
               return;
             }
@@ -166,17 +166,17 @@ document.addEventListener('DOMContentLoaded', function () {
                   'Final storage quota: <strong>' +
                   newQuota +
                   ' TB</strong><br>' +
-                  'Cost per TB: <strong>' +
-                  costPerTb +
-                  '$</strong><br>' +
-                  'Estimated total cost: <strong>' +
+                  'Monthly Cost per TB: <strong>$' +
+                  costPerTb.toFixed(2) +
+                  '</strong><br>' +
+                  'Estimated monthly cost: <strong>$' +
                   signedCostDiff +
-                  '$</strong><br><br>' +
-                  'You have possibility to apply <strong>' +
+                  '</strong><br><br>' +
+                  'You may apply <strong>' +
                   appliedQuota +
-                  ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>' +
+                  ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>$' +
                   reducedCost +
-                  '$</strong>'
+                  ' monthly</strong>'
               );
             } else {
               summaryEl.html(
@@ -185,12 +185,12 @@ document.addEventListener('DOMContentLoaded', function () {
                   'Final storage quota: <strong>' +
                   newQuota +
                   ' TB</strong><br>' +
-                  'Cost per TB: <strong>' +
-                  costPerTb +
-                  '$</strong><br>' +
-                  'Estimated total cost: <strong>' +
-                  signedCostDiff +
-                  '$</strong>'
+                  'Monthly Cost per TB: <strong>$' +
+                  costPerTb.toFixed(2) +
+                  '</strong><br>' +
+                  'Estimated monthly cost: <strong>$' +
+                  signedCostDiff.toFixed(2) +
+                  '</strong>'
               );
             }
           })
