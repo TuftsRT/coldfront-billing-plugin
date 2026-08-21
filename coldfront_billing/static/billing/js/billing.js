@@ -129,7 +129,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        if (hasDuplicateDepts) {
+        if (rowsWithDeptCount === 0) {
+            saveBtn.prop('disabled', false);
+            saveBtn.text('Delete All Assignments');
+            errorEl.removeClass('d-none').text('No departments selected. Saving will delete all assignments for this project.');
+        } else if (hasDuplicateDepts) {
             saveBtn.prop('disabled', true);
             errorEl.removeClass('d-none').text('Each pair department/grant can only be selected once.');
         } else if (hasDeptWithoutPercent) {
@@ -142,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
             saveBtn.prop('disabled', true);
             errorEl.removeClass('d-none').text('Maximum ' + maxCostCenters + ' cost centers allowed.');
         } else {
+            saveBtn.text('Save Changes');
             saveBtn.prop('disabled', false);
             errorEl.addClass('d-none');
         }
@@ -327,31 +332,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 hasMissingPercent = true;
             }
         });
+        if (rows.length !== 0) {
+            if (hasDuplicate) {
+                showFormError('Each department/grant pair can only be selected once.');
+                return;
+            }
+            if (hasMissingPercent) {
+                showFormError('Please enter percentage for all rows with a selected department.');
+                return;
+            }
 
-        if (hasDuplicate) {
-            showFormError('Each department/grant pair can only be selected once.');
-            return;
-        }
-        if (hasMissingPercent) {
-            showFormError('Please enter percentage for all rows with a selected department.');
-            return;
-        }
-
-        if (totalPercentage !== 100) {
-            return;
-        }
+            if (totalPercentage !== 100) {
+                return;
+            }
+         }
 
         // Disable save button to prevent double submission
         var saveBtn = $(this);
         saveBtn.prop('disabled', true).text('Saving...');
 
         // Prepare the URL
-        var finalUrl = $('#costCentersModal').data('update-url');
-
-
-        // --- SINGLE AJAX REQUEST ---
-        $.ajax({
-            url: finalUrl,
+        var ajaxBody = {
+            url: $('#costCentersModal').data('update-url'),
             method: 'POST',
             dataType: 'json',
             data: {
@@ -359,7 +361,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 assignments: JSON.stringify(assignmentsPayload)
             },
             headers: {'X-CSRFToken': csrfToken}, // Django-friendly
-        })
+        }
+
+        if (rows.length === 0) {
+            ajaxBody.url = $('#costCentersModal').data('delete-url');
+            ajaxBody.data = {
+                project_id: projectId
+            };
+        }
+
+        // --- SINGLE AJAX REQUEST ---
+        $.ajax(ajaxBody)
             .done((response) => {
                 var message = response?.message ?? 'Cost center assignment updated successfully.';
                 sessionStorage.setItem(BILLING_SUCCESS_KEY, message);

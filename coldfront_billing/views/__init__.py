@@ -1,6 +1,6 @@
 from .allocation import AllocationCostPreviewView, BillingAllocationChangeView, UpdateAllocationDetailsView
 from .billing import BillingDetailsView, BillingView
-from .cost import CostCenterAssignmentUpdateView, CostCenterAutocompleteView
+from .cost import CostCenterAssignmentUpdateView, CostCenterAutocompleteView, CostCenterAssignmentDeleteView
 from .no_cost_quota import (
     AssignNoCostQuotasView,
     AutoAssignAllotmentsView,
@@ -22,6 +22,7 @@ __all__ = [
     'BillingDetailsView',
     'CostCenterAssignmentUpdateView',
     'CostCenterAutocompleteView',
+    'CostCenterAssignmentDeleteView',
     'ExportBillingReportView',
     'ManageAllotmentView',
     'ManageNoCostQuotasView',
