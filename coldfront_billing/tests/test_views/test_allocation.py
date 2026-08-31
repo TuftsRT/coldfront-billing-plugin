@@ -1,7 +1,6 @@
-"""Unit tests for UpdateAllocationDetailsView and AllocationCreateView."""
+"""Unit tests for UpdateAllocationDetailsView, AllocationCreateView, AllocationCostPreviewView, and DeleteIncompleteAllocationView."""
 
 import pytest
-from decimal import Decimal
 from django.test import override_settings
 from django.urls import reverse
 
@@ -481,3 +480,324 @@ class TestAllocationCostPreviewView:
         assert data['quota_tb'] == '10'
         assert data['cost_per_tb'] == '100'
         assert 'total_cost' in data
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures('configure_urls')
+class TestDeleteIncompleteAllocationView:
+    """Test suite for DeleteIncompleteAllocationView."""
+
+    @staticmethod
+    def _post_delete_allocation(client, user, allocation_pk):
+        """Helper to POST the delete allocation request."""
+        client.force_login(user)
+        url = reverse('delete_incomplete_allocation', kwargs={'pk': allocation_pk})
+        return client.post(url)
+
+    def test_unauthenticated_user_redirected_to_login(
+        self,
+        client,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that unauthenticated users are redirected to login."""
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        url = reverse('delete_incomplete_allocation', kwargs={'pk': allocation.pk})
+        response = client.post(url)
+        assert response.status_code == 302
+        assert '/login' in response.url
+
+    def test_superuser_can_delete_new_allocation(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that superusers can delete allocations with New status."""
+        from coldfront.core.allocation.models import Allocation
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        allocation_id = allocation.pk
+        project_id = allocation.project_id
+
+        response = self._post_delete_allocation(client, superuser, allocation_id)
+
+        assert response.status_code == 302
+        assert response.url == reverse('project-detail', kwargs={'pk': project_id})
+        assert not Allocation.objects.filter(pk=allocation_id).exists()
+
+    def test_user_without_permission_gets_forbidden(
+        self,
+        client,
+        user,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that users without allocation permission get 403."""
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        response = self._post_delete_allocation(client, user, allocation.pk)
+        assert response.status_code == 403
+
+    def test_user_with_allocation_permission_can_delete(
+        self,
+        client,
+        pi_user,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+        project_user_status_active,
+    ):
+        """Test that users with allocation permission can delete New allocations."""
+        from coldfront.core.allocation.models import Allocation, AllocationUser, AllocationUserStatusChoice
+        from coldfront.core.project.models import ProjectUser, ProjectUserRoleChoice
+
+        # Set up PI as a user on the allocation
+        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name='Manager')
+        ProjectUser.objects.create(
+            project=project,
+            user=pi_user,
+            role=manager_role,
+            status=project_user_status_active,
+        )
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+
+        # Add user to allocation
+        alloc_user_status, _ = AllocationUserStatusChoice.objects.get_or_create(name='Active')
+        AllocationUser.objects.create(
+            allocation=allocation,
+            user=pi_user,
+            status=alloc_user_status,
+        )
+
+        allocation_id = allocation.pk
+        project_id = allocation.project_id
+
+        response = self._post_delete_allocation(client, pi_user, allocation_id)
+
+        assert response.status_code == 302
+        assert response.url == reverse('project-detail', kwargs={'pk': project_id})
+        assert not Allocation.objects.filter(pk=allocation_id).exists()
+
+    def test_cannot_delete_active_allocation(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that allocations with Active status cannot be deleted."""
+        from coldfront.core.allocation.models import Allocation
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        allocation_id = allocation.pk
+
+        response = self._post_delete_allocation(client, superuser, allocation_id)
+
+        assert response.status_code == 302
+        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        # Allocation should still exist
+        assert Allocation.objects.filter(pk=allocation_id).exists()
+
+    def test_cannot_delete_rejected_allocation(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that allocations with Rejected status cannot be deleted."""
+        from coldfront.core.allocation.models import Allocation, AllocationStatusChoice
+
+        allocation_status_rejected, _ = AllocationStatusChoice.objects.get_or_create(name='Rejected')
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_rejected,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        allocation_id = allocation.pk
+
+        response = self._post_delete_allocation(client, superuser, allocation_id)
+
+        assert response.status_code == 302
+        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        # Allocation should still exist
+        assert Allocation.objects.filter(pk=allocation_id).exists()
+
+    def test_delete_shows_success_message(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that successful deletion shows success message."""
+        from django.contrib.messages import get_messages
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+
+        response = self._post_delete_allocation(client, superuser, allocation.pk)
+
+        # Follow redirect to get the message
+        response = client.get(response.url)
+        messages = list(get_messages(response.wsgi_request))
+        assert len(messages) > 0
+        assert any('cancelled' in str(msg).lower() for msg in messages)
+
+    def test_delete_shows_error_message_for_non_new_status(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that deleting non-New allocation shows error message."""
+        from django.contrib.messages import get_messages
+
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+
+        response = self._post_delete_allocation(client, superuser, allocation.pk)
+
+        # Follow redirect to get the message
+        response = client.get(response.url)
+        messages = list(get_messages(response.wsgi_request))
+        assert len(messages) > 0
+        assert any('only incomplete' in str(msg).lower() for msg in messages)
+
+    def test_delete_redirects_to_project_detail(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that delete redirects to project detail page."""
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        project_id = allocation.project_id
+
+        response = self._post_delete_allocation(client, superuser, allocation.pk)
+
+        assert response.status_code == 302
+        assert response.url == reverse('project-detail', kwargs={'pk': project_id})
+
+    def test_nonexistent_allocation_returns_404(
+        self,
+        client,
+        superuser,
+    ):
+        """Test that accessing nonexistent allocation returns 404."""
+        client.force_login(superuser)
+        url = reverse('delete_incomplete_allocation', kwargs={'pk': 99999})
+        response = client.post(url)
+        assert response.status_code == 404
+
+    def test_get_request_not_allowed(
+        self,
+        client,
+        superuser,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """Test that GET requests are not allowed (only POST)."""
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            with_quota=False,
+        )
+        client.force_login(superuser)
+        url = reverse('delete_incomplete_allocation', kwargs={'pk': allocation.pk})
+        response = client.get(url)
+        # View inherits from View, so GET should return 405 Method Not Allowed
+        assert response.status_code == 405
