@@ -68,6 +68,22 @@
                 return;
             }
 
+            function formatCurrency(value) {
+                const decimals = 2;
+                const parsed = parseFloat(value);
+            
+                // Check if the parsing failed (yields NaN)
+                if (isNaN(parsed)) {
+                    return `$${(0).toFixed(decimals)}`;
+                }
+                
+                if (parsed < 0) {
+                    return `-$${Math.abs(parsed).toFixed(decimals)}`;
+                } else {
+                    return `$${parsed.toFixed(decimals)}`;
+                }
+            }
+
             var base = form.dataset.costPreviewUrl;
             var sep = base.indexOf('?') >= 0 ? '&' : '?';
             var url = base + sep + 'quota_in_terabyte=' + encodeURIComponent(quotaStr);
@@ -111,27 +127,27 @@
                             'Storage quota: <strong>' +
                             quotaVal +
                             ' TB</strong><br>' +
-                            'Monthly Cost per TB: <strong>$' +
-                            perTb.toFixed(2) +
+                            'Monthly Cost per TB: <strong>' +
+                            formatCurrency(perTb) +
                             '</strong><br>' +
-                            'Estimated monthly cost: <strong>$' +
-                            total.toFixed(2) +
+                            'Estimated total cost: <strong>' +
+                            formatCurrency(total) +
                             '</strong><br><br>' +
                             'You may apply <strong>' +
                             applied +
-                            ' TB</strong> of no-cost quota, <br>reducing estimated cost to <strong>$' +
-                            reduced.toFixed(2) +
+                            ' TB</strong> of no-cost quota, <br>reducing estimated cost to <strong>' +
+                            formatCurrency(reduced) +
                             ' monthly.</strong>';
                     } else {
                         summaryEl.innerHTML =
                             'Storage quota: <strong>' +
                             quotaVal +
                             ' TB</strong><br>' +
-                            'Monthly Cost per TB: <strong>$' +
-                            perTb.toFixed(2) +
+                            'Monthly Cost per TB: <strong>' +
+                            formatCurrency(perTb) +
                             '</strong><br>' +
-                            'Estimated total cost: <strong>$' +
-                            total.toFixed(2) +
+                            'Estimated total cost: <strong>' +
+                            formatCurrency(total) +
                             '</strong>';
                     }
                     showModal(modalEl);
