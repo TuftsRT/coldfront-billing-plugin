@@ -78,8 +78,10 @@ Complete Storage Allocation
                     </div>
                 </div>
             {% endif %}
-            <a class="btn btn-secondary" href="{% url 'delete_incomplete_allocation' allocation.pk %}" role="button">Cancel</a>
+            <!-- enter key uses the first button in the form (Complete Request) -->
             <button class="btn btn-primary" type="submit">Complete Request</button>
+            <!-- Cancel button submits the form to delete the incomplete allocation -->
+            <button id="cancel-btn" class="btn btn-secondary" formaction="{% url 'delete_incomplete_allocation' allocation.pk %}" type="submit">Cancel</button>
         </form>
     </div>
 </div>

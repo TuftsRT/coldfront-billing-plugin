@@ -42,6 +42,9 @@
         var lastQuotaId = null;
 
         form.addEventListener('submit', function (e) {
+            if (e.submitter && e.submitter.id === 'cancel-btn') {
+                return; 
+            }
             if (skipPreview) {
                 skipPreview = false;
                 return;
