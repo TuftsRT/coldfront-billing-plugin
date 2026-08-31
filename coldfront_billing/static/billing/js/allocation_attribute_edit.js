@@ -31,6 +31,26 @@ document.addEventListener('DOMContentLoaded', function () {
       return parsed;
     }
 
+    function formatCurrency(value) {
+        if (!Number.isFinite(value)) {
+          return String(value);
+        }
+        
+        const decimals = 2;
+        const parsed = parseFloat(value);
+    
+        // Check if the parsing failed (yields NaN)
+        if (isNaN(parsed)) {
+            return `$${(0).toFixed(decimals)}`;
+        }
+        
+        if (parsed < 0) {
+            return `-$${Math.abs(parsed).toFixed(decimals)}`;
+        } else {
+            return `$${parsed.toFixed(decimals)}`;
+        }
+    }
+
     function formatSignedNumber(value) {
       if (!Number.isFinite(value)) {
         return String(value);
@@ -137,12 +157,12 @@ document.addEventListener('DOMContentLoaded', function () {
                   'Final storage quota: <strong>' +
                   newQuota +
                   ' TB</strong><br>' +
-                  'Cost per TB: <strong>' +
-                  costPerTb +
-                  '$</strong><br>' +
+                  'Monthly Cost per TB: <strong>' +
+                  formatCurrency(costPerTb) +
+                  '</strong><br>' +
                   'Estimated cost change: <strong>' +
-                  formatSignedNumber(-quotaCost) +
-                  '$</strong>'
+                  formatCurrency(-quotaCost) +
+                  ' monthly.</strong>'
               );
               return;
             }
@@ -166,17 +186,17 @@ document.addEventListener('DOMContentLoaded', function () {
                   'Final storage quota: <strong>' +
                   newQuota +
                   ' TB</strong><br>' +
-                  'Cost per TB: <strong>' +
-                  costPerTb +
-                  '$</strong><br>' +
+                  'Monthly Cost per TB: <strong>' +
+                  formatCurrency(costPerTb) +
+                  '</strong><br>' +
                   'Estimated total cost: <strong>' +
-                  signedCostDiff +
-                  '$</strong><br><br>' +
-                  'You have possibility to apply <strong>' +
+                  formatCurrency(signedCostDiff) +
+                  '</strong><br><br>' +
+                  'You may apply <strong>' +
                   appliedQuota +
                   ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>' +
-                  reducedCost +
-                  '$</strong>'
+                  formatCurrency(reducedCost) +
+                  ' monthly.</strong>'
               );
             } else {
               summaryEl.html(
@@ -185,12 +205,12 @@ document.addEventListener('DOMContentLoaded', function () {
                   'Final storage quota: <strong>' +
                   newQuota +
                   ' TB</strong><br>' +
-                  'Cost per TB: <strong>' +
-                  costPerTb +
-                  '$</strong><br>' +
+                  'Monthly Cost per TB: <strong>' +
+                  formatCurrency(costPerTb) +
+                  '</strong><br>' +
                   'Estimated total cost: <strong>' +
-                  signedCostDiff +
-                  '$</strong>'
+                  formatCurrency(signedCostDiff) +
+                  ' monthly.</strong>'
               );
             }
           })
