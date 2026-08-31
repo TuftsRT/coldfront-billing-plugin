@@ -270,6 +270,12 @@ def allocation_status_active(db) -> AllocationStatusChoice:
 
 
 @pytest.fixture
+def allocation_status_new(db) -> AllocationStatusChoice:
+    """Create a New allocation status."""
+    return AllocationStatusChoice.objects.get_or_create(name='New')[0]
+
+
+@pytest.fixture
 def cost_attribute_type(db) -> ResourceAttributeType:
     """Create a cost attribute type for resources."""
     # First create the base AttributeType
