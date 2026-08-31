@@ -66,6 +66,26 @@ class AllocationCreateView(ColdfrontAllocationCreateView):
         return redirect_response
 
 
+class DeleteIncompleteAllocationView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """View to delete an incomplete allocation request."""
+
+    def test_func(self):
+        allocation = get_object_or_404(Allocation, pk=self.kwargs['pk'])
+        if self.request.user.has_perm('allocation.can_view_all_allocations'):
+            return True
+        return allocation.has_perm(self.request.user, AllocationPermission.USER)
+
+    def post(self, request, *args, **kwargs):
+        allocation = get_object_or_404(Allocation, pk=kwargs['pk'])
+        project_id = allocation.project_id
+        if allocation.status.name == 'New':
+            allocation.delete()
+            messages.success(request, 'Incomplete allocation request has been cancelled.')
+        else:
+            messages.error(request, 'Only incomplete allocation requests can be cancelled.') 
+        return redirect(reverse('project-detail', kwargs={'pk': project_id}))
+    
+
 class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     """View for update storage quota to complete a storage allocation request."""
 

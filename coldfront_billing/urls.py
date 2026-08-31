@@ -30,6 +30,11 @@ urlpatterns = [
         name='update_allocation_details',
     ),
     path(
+        'allocation/<int:pk>/delete-incomplete/',
+        views.DeleteIncompleteAllocationView.as_view(),
+        name='delete_incomplete_allocation',
+    ),
+    path(
         'allocation/<int:pk>/allocation-cost-preview/',
         views.AllocationCostPreviewView.as_view(),
         name='allocation_cost_preview',

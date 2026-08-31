@@ -1,4 +1,4 @@
-from .allocation import AllocationCostPreviewView, BillingAllocationChangeView, UpdateAllocationDetailsView
+from .allocation import AllocationCostPreviewView, BillingAllocationChangeView, UpdateAllocationDetailsView, DeleteIncompleteAllocationView
 from .billing import BillingDetailsView, BillingView
 from .cost import CostCenterAssignmentUpdateView, CostCenterAutocompleteView, CostCenterAssignmentDeleteView
 from .no_cost_quota import (
@@ -31,4 +31,5 @@ __all__ = [
     'AllocationCostPreviewView',
     'BillingAllocationChangeView',
     'UpdateAllocationDetailsView',
+    'DeleteIncompleteAllocationView',
 ]
