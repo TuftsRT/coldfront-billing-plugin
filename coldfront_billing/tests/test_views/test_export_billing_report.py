@@ -5,11 +5,11 @@ from io import StringIO
 from unittest.mock import patch
 
 import pytest
-from coldfront.core.project.models import Project
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 
+from coldfront.core.project.models import Project
 from coldfront_billing.models import BillingScheduleSettings, CostCenterAssignment
 from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 from coldfront_billing.utils import NoStorageException
@@ -108,8 +108,9 @@ class TestExportBillingReportView:
         create_mod = 'coldfront_billing.reports.csv'
         with (
             patch(f'{create_mod}.get_month_abbr', return_value='MAR'),
-            patch(f'{create_mod}.ACCOUNT_NAME', 'ACC1'),
-            patch(f'{create_mod}.DESCRIPTION_PREFIX', 'PRE'),
+            patch(f'{create_mod}.BILLING_DEBIT_ACCOUNT_NAME', 'ACC1'),
+            patch(f'{create_mod}.BILLING_CREDIT_ACCOUNT_NAME', 'ACC2'),
+            patch(f'{create_mod}.BILLING_DESCRIPTION_PREFIX', 'PRE'),
         ):
             response = client.get(reverse('reports_export'))
 
@@ -121,7 +122,7 @@ class TestExportBillingReportView:
         desc = f'MAR-PRE-{pi_user.username}-{project.title}'
         assert rows[1] == ['ACC1', 'DEPT_A', 'DEPT_X', '300.00', desc]
         assert rows[2] == ['ACC1', 'DEPT_B', '', '200.00', desc]
-        assert rows[3] == ['ACC1', 'C800260', '', '-500.00', 'MAR-PRE-Storage Charges']
+        assert rows[3] == ['ACC2', 'C800260', '', '-500.00', 'MAR-PRE-Storage Charges']
 
     def test_superuser_csv_single_total_row_for_multiple_projects(
         self,
@@ -179,8 +180,9 @@ class TestExportBillingReportView:
         create_mod = 'coldfront_billing.reports.csv'
         with (
             patch(f'{create_mod}.get_month_abbr', return_value='MAR'),
-            patch(f'{create_mod}.ACCOUNT_NAME', 'ACC1'),
-            patch(f'{create_mod}.DESCRIPTION_PREFIX', 'PRE'),
+            patch(f'{create_mod}.BILLING_DEBIT_ACCOUNT_NAME', 'ACC1'),
+            patch(f'{create_mod}.BILLING_CREDIT_ACCOUNT_NAME', 'ACC2'),
+            patch(f'{create_mod}.BILLING_DESCRIPTION_PREFIX', 'PRE'),
         ):
             response = client.get(reverse('reports_export'))
 
@@ -200,7 +202,7 @@ class TestExportBillingReportView:
 
         total_rows = [row for row in rows if row[1] == 'C800260']
         assert len(total_rows) == 1
-        assert total_rows[0] == ['ACC1', 'C800260', '', '-800.00', 'MAR-PRE-Storage Charges']
+        assert total_rows[0] == ['ACC2', 'C800260', '', '-800.00', 'MAR-PRE-Storage Charges']
         assert rows[-1] == total_rows[0]
 
     @patch('coldfront_billing.reports.csv.get_month_abbr', return_value='MAR')
@@ -263,7 +265,7 @@ class TestExportBillingReportView:
         assert rows[1][3] == '-0.00'
 
     @patch('coldfront_billing.reports.csv.get_month_abbr', return_value='MAR')
-    @patch('coldfront_billing.reports.csv.IGNORE_DEPTID_PREFIX_LIST', new=['ABC'])
+    @patch('coldfront_billing.reports.csv.BILLING_IGNORE_DEPTID_PREFIX_LIST', ['ABC'])
     def test_skips_deptid_with_prefix(
         self,
         _mock_month,

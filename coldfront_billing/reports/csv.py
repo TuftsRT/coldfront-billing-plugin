@@ -4,34 +4,20 @@ from io import StringIO
 from decimal import Decimal
 
 from coldfront.core.project.models import Project
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from coldfront_billing.constants import (
     BILLING_REPORTS_TOTAL_DEPT_NAME,
     BILLING_REPORTS_TOTAL_DESCRIPTION,
     BILLING_ATTRIBUTE_NAME,
+    BILLING_DEBIT_ACCOUNT_NAME,
+    BILLING_CREDIT_ACCOUNT_NAME,
+    BILLING_DESCRIPTION_PREFIX,
+    BILLING_IGNORE_DEPTID_PREFIX_LIST,
 )
 from coldfront_billing.data.billing import create_billing_allocations
 from coldfront_billing.prefetch import get_projects_prefetch
 from coldfront_billing.utils import get_month_abbr, elide_middle
-
-ACCOUNT_NAME = getattr(
-    settings,
-    'COLDFRONT_BILLING_ACCOUNT_NAME',
-    1234,
-)
-DESCRIPTION_PREFIX = getattr(
-    settings,
-    'COLDFRONT_BILLING_DESCRIPTION_PREFIX',
-    'TTS',
-)
-IGNORE_DEPTID_PREFIX_LIST = getattr(
-    settings,
-    'COLDFRONT_BILLING_IGNORE_DEPTID_PREFIX_LIST',
-    [],
-)   
-
 
 
 def create_csv_report() -> tuple[str, str]:
@@ -59,12 +45,12 @@ def create_csv_report() -> tuple[str, str]:
 
             user_id = project.pi.username
             # description is limited to 30 characters, so we need to elide the project title if it's too long
-            description = f'{month}-{DESCRIPTION_PREFIX}-{user_id}-'
+            description = f'{month}-{BILLING_DESCRIPTION_PREFIX}-{user_id}-'
             description += elide_middle(project.title, max_length=30 - len(description))
     
             for assignment in sorted(assignments, key=lambda x: x.get('department')):
                 dept_id = assignment.get('department')
-                if any(dept_id.lower().startswith(prefix.lower()) for prefix in IGNORE_DEPTID_PREFIX_LIST):
+                if any(dept_id.lower().startswith(prefix.lower()) for prefix in BILLING_IGNORE_DEPTID_PREFIX_LIST):
                     continue
                 pct = assignment.get('percentage')
                 grant = assignment.get('grant', '')
@@ -72,7 +58,7 @@ def create_csv_report() -> tuple[str, str]:
                 total_cost += cost
                 writer.writerow(
                     (
-                        ACCOUNT_NAME,
+                        BILLING_DEBIT_ACCOUNT_NAME,
                         dept_id,
                         grant,
                         f'{cost:.2f}',
@@ -81,11 +67,11 @@ def create_csv_report() -> tuple[str, str]:
                 )
         writer.writerow(
             (
-                ACCOUNT_NAME,
+                BILLING_CREDIT_ACCOUNT_NAME,
                 BILLING_REPORTS_TOTAL_DEPT_NAME,
                 '',
                 f'-{total_cost:.2f}',
-                f'{month}-{DESCRIPTION_PREFIX}-{BILLING_REPORTS_TOTAL_DESCRIPTION}',
+                f'{month}-{BILLING_DESCRIPTION_PREFIX}-{BILLING_REPORTS_TOTAL_DESCRIPTION}',
             )
         )
 
