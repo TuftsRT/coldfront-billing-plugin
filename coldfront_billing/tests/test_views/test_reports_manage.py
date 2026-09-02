@@ -1,10 +1,13 @@
 """Tests for ManageReportsView."""
 
 import pytest
+from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 
 from coldfront_billing.models import BillingScheduleSettings
+from coldfront_billing.tests.conftest import add_storage_allocation_to_project
+from coldfront_billing.views.reports.missing_billing_codes import billing_code_report
 
 
 def _manage_url():
@@ -50,3 +53,35 @@ class TestManageReportsView:
         assert response.status_code == 302
         settings = BillingScheduleSettings.objects.get(pk=1)
         assert settings.notification_email == 'billing@tufts.com'
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures('configure_urls')
+class TestBillingCodeReportView:
+    def test_superuser_can_access_report(self, project, storage_resource_type, allocation_status_active, cost_attribute_type, quota_attribute_type):
+        add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            cost_value='25',
+            quota_value='10',
+        )
+
+        request = RequestFactory().get('/billing/reports/missing-billing-code/')
+        request.user = project.pi
+        response = billing_code_report(request)
+
+        assert response.status_code == 200
+        assert response.context_data['month']
+        assert response.context_data['missing_billing_code']
+
+    def test_billing_role_user_can_access_report(self, user, project_with_billing_user):
+        request = RequestFactory().get('/billing/reports/missing-billing-code/')
+        request.user = user
+        response = billing_code_report(request)
+
+        assert response.status_code == 200
+        assert 'missing_billing_code' in response.context_data
+        assert 'total_cost' in response.context_data
