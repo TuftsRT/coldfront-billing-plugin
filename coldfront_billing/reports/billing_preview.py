@@ -13,7 +13,7 @@ from coldfront.core.project.models import Project
 from ..models import CostCenterAssignment
 from ..constants import BILLING_ATTRIBUTE_NAME
 from ..data.billing import create_billing_allocations
-from ..prefetch import get_projects_prefetch
+from ..prefetch import get_billing_visible_projects_query, get_projects_prefetch
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,10 @@ def missing_billing_code_report(username: str = None, username_exact: bool = Fal
     month = localdate().strftime("%Y-%m")
     if username:
         if username_exact:
-            projects = get_projects_prefetch(Project.objects.filter(pi__username=username))
+            projects = get_projects_prefetch(Project.objects.filter(get_billing_visible_projects_query(username)))
         else:
             projects = get_projects_prefetch(Project.objects.filter(pi__username__istartswith=username))
-    else:   
+    else:
         projects = get_projects_prefetch(Project.objects.all().order_by('pi__username', 'title'))
     total_cost = 0
     missing_billing_code = []
@@ -61,16 +61,25 @@ def get_cost_previews(username=None, billing_code=None, username_exact: bool = F
     missing_billing_code = []
     if billing_code and username:
         if username_exact:
-            c = CostCenterAssignment.objects.filter(project__pi__username=username).annotate(json_as_text=Cast('assignments', TextField())).filter(json_as_text__icontains=f"\"{billing_code}")
+            projects = get_projects_prefetch(
+                Project.objects.filter(
+                    get_billing_visible_projects_query(username)).annotate(
+                        json_as_text=Cast('cost_center_assignment__assignments', TextField())).filter(
+                            json_as_text__icontains=f"\"{billing_code}")).order_by('pi__username', 'title')
         else:
-            c = CostCenterAssignment.objects.filter(project__pi__username__istartswith=username).annotate(json_as_text=Cast('assignments', TextField())).filter(json_as_text__icontains=f"\"{billing_code}")
-        projects = get_projects_prefetch(Project.objects.filter(cost_center_assignment__in=c).order_by('pi__username', 'title'))
+            projects = get_projects_prefetch(
+                Project.objects.filter(pi__username__istartswith=username).annotate(
+                    json_as_text=Cast('cost_center_assignment__assignments', TextField())).filter(
+                        json_as_text__icontains=f"\"{billing_code}")).order_by('pi__username', 'title')
+
     elif billing_code:
-        c = CostCenterAssignment.objects.annotate(json_as_text=Cast('assignments', TextField())).filter(json_as_text__icontains=f"\"{billing_code}")
-        projects = get_projects_prefetch(Project.objects.filter(cost_center_assignment__in=c).order_by('pi__username', 'title'))
+        projects = get_projects_prefetch(
+            Project.objects.all().annotate(
+                json_as_text=Cast('cost_center_assignment__assignments', TextField())).filter(
+                    json_as_text__icontains=f"\"{billing_code}")).order_by('pi__username', 'title')
     elif username:
         if username_exact:
-            projects = get_projects_prefetch(Project.objects.filter(pi__username=username).order_by('pi__username', 'title'))
+            projects = get_projects_prefetch(Project.objects.filter(get_billing_visible_projects_query(username))).order_by('pi__username', 'title')
         else:
             projects = get_projects_prefetch(Project.objects.filter(pi__username__istartswith=username).order_by('pi__username', 'title'))
     else:   

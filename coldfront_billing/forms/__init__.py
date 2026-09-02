@@ -3,6 +3,7 @@ from .billing import BillingSearchForm
 from .cost_center import CostCenterAssignmentForm
 from .no_cost_quota import NoCostQuotaSearchForm
 from .schedule import BillingScheduleSettingsForm
+from .reports import ReportFilterForm
 
 __all__ = [
     'AllocationDetailsForm',
@@ -11,4 +12,5 @@ __all__ = [
     'BillingSearchForm',
     'CostCenterAssignmentForm',
     'NoCostQuotaSearchForm',
+    'ReportFilterForm',
 ]
