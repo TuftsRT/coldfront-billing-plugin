@@ -1,7 +1,7 @@
-from coldfront.core.allocation.models import Allocation, AllocationAttribute
-from coldfront.core.project.models import Project
-from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 from django.db.models import Prefetch, Q, QuerySet
+from coldfront.core.allocation.models import Allocation, AllocationAttribute
+from coldfront.core.project.models import Project, ProjectUser
+from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 
 from coldfront_billing.constants import (
     ALLOTMENTS_ATTRIBUTE_NAME,
@@ -131,8 +131,33 @@ def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation
     )
 
 
+def get_billing_visible_projects_query(username: str) -> Q:
+    """Q object matching projects a username can see billing data for: projects
+    they are PI of, plus projects where they hold an active Billing/Manager role.
+    Mirrors the access check in has_billing_perm()."""
+    return Q(pi__username=username) | Q(
+        projectuser__user__username=username,
+        projectuser__role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+        projectuser__status__name=ProjectStatus.ACTIVE,
+    )
+
+
 def is_paid_storage_allocation(allocation: Allocation) -> bool:
     return allocation.resources.filter(
         resource_type__name='Storage',
         requires_payment=True,
     ).exists()
+
+
+def has_billing_perm(user) -> bool:
+    allowed_proj_statuses = (ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED)
+    is_manager = ProjectUser.objects.filter(
+        user=user,
+        project__status__name__in=allowed_proj_statuses,
+        role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+        status__name=ProjectStatus.ACTIVE,
+    ).exists()
+    is_pi = Project.objects.filter(
+        pi=user, status__name__in=allowed_proj_statuses
+    ).exists()
+    return is_manager or is_pi
