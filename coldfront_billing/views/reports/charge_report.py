@@ -8,6 +8,7 @@ from django.views.decorators.http import require_GET
 from ...forms import ReportFilterForm
 from ...prefetch import has_billing_perm
 from ...reports import get_cost_previews
+from ...utils import sanitize_csv_value
 from ...views.utils import csv_response
 
 logger = logging.getLogger(__name__)
@@ -58,12 +59,12 @@ def charge_report(request):
                     'header': ['DeptId', 'Project Number', 'Cost', 'Project Description', 'UTLN', 'Full Name'],
                     'rows': [
                         [
-                            entry['department'],
-                            entry['grant'],
+                            sanitize_csv_value(entry['department']),
+                            sanitize_csv_value(entry['grant']),
                             entry['project_cost'],
-                            entry['project'].title,
-                            entry['project'].pi.username,
-                            f'{entry["project"].pi.first_name} {entry["project"].pi.last_name}',
+                            sanitize_csv_value(entry['project'].title),
+                            sanitize_csv_value(entry['project'].pi.username),
+                            sanitize_csv_value(f'{entry["project"].pi.first_name} {entry["project"].pi.last_name}'),
                         ]
                         for entry in data['charge_report']
                     ],

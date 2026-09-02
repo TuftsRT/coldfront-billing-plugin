@@ -8,6 +8,7 @@ from django.views.decorators.http import require_GET
 from ...forms import ReportFilterForm
 from ...prefetch import has_billing_perm
 from ...reports import missing_billing_code_report
+from ...utils import sanitize_csv_value
 from ...views.utils import csv_response
 
 logger = logging.getLogger(__name__)
@@ -55,8 +56,8 @@ def billing_code_report(request):
                     'rows': [
                         [
                             entry['project'].id,
-                            entry['project'].title,
-                            entry['project'].pi.username,
+                            sanitize_csv_value(entry['project'].title),
+                            sanitize_csv_value(entry['project'].pi.username),
                             entry['project_cost'],
                             data['total_cost'],
                             data['month'],

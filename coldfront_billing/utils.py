@@ -76,17 +76,33 @@ class NoStorageException(Exception):
     pass
 
 
-def elide_middle(text: str, max_length: int = 20, marker: str ="...") -> str:
+def elide_middle(text: str, max_length: int = 20, marker: str = '...') -> str:
     if len(text) <= max_length:
         return text
     if max_length < len(marker) + 2:
-        raise ValueError("max_length must be at least len(marker) + 2")
+        raise ValueError('max_length must be at least len(marker) + 2')
 
     marker_len = len(marker)
     chars_left = (max_length - marker_len + 1) // 2
     chars_right = (max_length - marker_len) // 2
 
     start = text[:chars_left]
-    end = text[-chars_right:] if chars_right > 0 else ""
+    end = text[-chars_right:] if chars_right > 0 else ''
 
-    return f"{start}{marker}{end}"
+    return f'{start}{marker}{end}'
+
+
+def sanitize_csv_value(value: str) -> str:
+    """
+    Sanitize a value for CSV output by escaping quotes and wrapping in quotes if necessary.
+    """
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.strip()
+    for i in ['=', '+', '-', '@', '|']:
+        if value.startswith(i):
+            value = f"'{value}"
+    if '"' in value or ',' in value:
+        value = value.replace('"', '""')
+        return f'"{value}"'
+    return value
