@@ -1,23 +1,23 @@
 import csv
 from datetime import datetime
-from io import StringIO
 from decimal import Decimal
+from io import StringIO
 
 from coldfront.core.project.models import Project
 from django.core.exceptions import ObjectDoesNotExist
 
 from coldfront_billing.constants import (
-    BILLING_REPORTS_TOTAL_DEPT_NAME,
-    BILLING_REPORTS_TOTAL_DESCRIPTION,
     BILLING_ATTRIBUTE_NAME,
-    BILLING_DEBIT_ACCOUNT_NAME,
     BILLING_CREDIT_ACCOUNT_NAME,
+    BILLING_DEBIT_ACCOUNT_NAME,
     BILLING_DESCRIPTION_PREFIX,
     BILLING_IGNORE_DEPTID_PREFIX_LIST,
+    BILLING_REPORTS_TOTAL_DEPT_NAME,
+    BILLING_REPORTS_TOTAL_DESCRIPTION,
 )
 from coldfront_billing.data.billing import create_billing_allocations
 from coldfront_billing.prefetch import get_projects_prefetch
-from coldfront_billing.utils import get_month_abbr, elide_middle
+from coldfront_billing.utils import elide_middle, get_month_abbr, sanitize_csv_value
 
 
 def create_csv_report() -> tuple[str, str]:
@@ -47,7 +47,7 @@ def create_csv_report() -> tuple[str, str]:
             # description is limited to 30 characters, so we need to elide the project title if it's too long
             description = f'{month}-{BILLING_DESCRIPTION_PREFIX}-{user_id}-'
             description += elide_middle(project.title, max_length=30 - len(description))
-    
+
             for assignment in sorted(assignments, key=lambda x: x.get('department')):
                 dept_id = assignment.get('department')
                 if any(dept_id.lower().startswith(prefix.lower()) for prefix in BILLING_IGNORE_DEPTID_PREFIX_LIST):
@@ -59,10 +59,10 @@ def create_csv_report() -> tuple[str, str]:
                 writer.writerow(
                     (
                         BILLING_DEBIT_ACCOUNT_NAME,
-                        dept_id,
-                        grant,
+                        sanitize_csv_value(dept_id),
+                        sanitize_csv_value(grant),
                         f'{cost:.2f}',
-                        description,
+                        sanitize_csv_value(description),
                     )
                 )
         writer.writerow(

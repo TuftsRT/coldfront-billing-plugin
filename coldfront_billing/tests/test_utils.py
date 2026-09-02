@@ -10,6 +10,7 @@ from coldfront_billing.utils import (
     first_or_none,
     get_month_abbr,
     parse_float,
+    sanitize_csv_value,
     validate_emails,
     elide_middle
 )
@@ -78,3 +79,68 @@ class TestElide:
             elide_middle('abcdef', 3)
         with pytest.raises(ValueError):
             elide_middle('abcdef', 4)
+
+
+class TestSanitizeCsvValue:
+    def test_plain_value_is_unchanged(self):
+        assert sanitize_csv_value('plain value') == 'plain value'
+
+    def test_strips_surrounding_whitespace(self):
+        assert sanitize_csv_value('  spaced  ') == 'spaced'
+
+    @pytest.mark.parametrize('value, expected', [
+        (123, '123'),
+        (3.14, '3.14'),
+        (None, 'None'),
+    ])
+    def test_non_string_values_are_coerced_to_string(self, value, expected):
+        assert sanitize_csv_value(value) == expected
+
+    def test_empty_string_is_unchanged(self):
+        assert sanitize_csv_value('') == ''
+
+    def test_whitespace_only_string_becomes_empty(self):
+        assert sanitize_csv_value('   ') == ''
+
+    @pytest.mark.parametrize('prefix', ['=', '+', '-', '@', '|'])
+    def test_dangerous_leading_character_is_neutralized_with_a_quote_prefix(self, prefix):
+        """Excel/Sheets/LibreOffice treat a leading =, +, -, @, or | as the start
+        of a formula; prefixing with a straight quote forces text interpretation."""
+        value = f'{prefix}cmd|calc'
+        assert sanitize_csv_value(value) == f"'{prefix}cmd|calc"
+
+    @pytest.mark.parametrize('payload', [
+        '=SUM(A1:A2)',
+        '=cmd|" /C calc"!A0',
+        '+1+1',
+        '-2+3',
+        '@SUM(1+1)',
+        '|calc',
+        '=HYPERLINK("http://evil.example","click me")',
+    ])
+    def test_common_csv_injection_payloads_no_longer_start_with_a_dangerous_character(self, payload):
+        result = sanitize_csv_value(payload)
+        assert not result.lstrip('"').startswith(('=', '+', '-', '@', '|'))
+
+    def test_dangerous_character_not_at_start_is_left_alone(self):
+        assert sanitize_csv_value('a=b+c-d@e|f') == 'a=b+c-d@e|f'
+
+    def test_only_the_leading_character_triggers_escaping_once(self):
+        # every character in the danger list appears, but only the leading '='
+        # should result in a single quote prefix being added
+        assert sanitize_csv_value('=+-@|') == "'=+-@|"
+
+    def test_value_with_comma_is_wrapped_in_quotes(self):
+        assert sanitize_csv_value('value,with,comma') == '"value,with,comma"'
+
+    def test_value_with_double_quote_is_wrapped_and_quotes_doubled(self):
+        assert sanitize_csv_value('value"with"quote') == '"value""with""quote"'
+
+    def test_value_without_comma_or_quote_is_not_wrapped(self):
+        assert sanitize_csv_value('no special characters here') == 'no special characters here'
+
+    def test_formula_prefix_combined_with_comma_is_both_escaped_and_quoted(self):
+        assert sanitize_csv_value('=1,2') == '"\'=1,2"'
+
+    def test_formula_prefix_combined_with_embedded_quote_is_both_escaped_and_quoted(self):
+        assert sanitize_csv_value('=cmd|" /C calc"!A0') == '"\'=cmd|"" /C calc""!A0"'
