@@ -67,9 +67,9 @@ urlpatterns = [
         name='reports_billing_history',
     ),
     path('billing/reports/send', views.SendReportView.as_view(), name='reports_send'),
-    path('billing/reports/missing-billing-code/', views.billing_code_report, name='missing-billing-code-report'),
+    path('reports/missing-billing-code/', views.billing_code_report, name='missing-billing-code-report'),
     path(
-        'billing/reports/charge-report/',
+        'reports/charge-report/',
         views.charge_report,
         name='charge-report',
     ),
