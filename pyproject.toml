@@ -30,6 +30,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-django",
+    "pytest-cov",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -75,3 +76,8 @@ markers = [
     "django_db: marks tests as requiring database access",
 ]
 testpaths = ["coldfront_billing/tests"]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]
