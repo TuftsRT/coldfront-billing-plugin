@@ -16,8 +16,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: uv sync --extra dev
+      - name: Install dependencies (including dev)
+        run: uv sync
 
       - name: Run tests
         run: uv run pytest --cov=coldfront_billing --cov-report=term coldfront_billing/tests
