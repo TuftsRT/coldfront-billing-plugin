@@ -1,6 +1,14 @@
 from decimal import Decimal
 from urllib.parse import urlparse
 
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.views import View
+from django.views.generic import FormView
+
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttribute,
@@ -11,13 +19,6 @@ from coldfront.core.allocation.views import AllocationChangeView as ColdfrontAll
 from coldfront.core.allocation.views import AllocationCreateView as ColdfrontAllocationCreateView
 from coldfront.core.project.models import Project
 from coldfront.core.resource.models import ResourceType
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
-from django.views import View
-from django.views.generic import FormView
 
 from coldfront_billing.constants import (
     ALLOCATION_QUOTA_ATTRIBUTE_NAME,
@@ -34,6 +35,7 @@ from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,
     get_paid_storage_resources_prefetch,
     get_quota_attr_prefetch,
+    has_billing_perm_for_project,
     is_paid_storage_allocation,
 )
 from coldfront_billing.utils import first_or_none
@@ -73,7 +75,7 @@ class DeleteIncompleteAllocationView(LoginRequiredMixin, UserPassesTestMixin, Vi
         allocation = get_object_or_404(Allocation, pk=self.kwargs['pk'])
         if self.request.user.has_perm('allocation.can_view_all_allocations'):
             return True
-        return allocation.has_perm(self.request.user, AllocationPermission.USER)
+        return allocation.has_perm(self.request.user, AllocationPermission.MANAGER)
 
     def post(self, request, *args, **kwargs):
         allocation = get_object_or_404(Allocation, pk=kwargs['pk'])
@@ -82,9 +84,9 @@ class DeleteIncompleteAllocationView(LoginRequiredMixin, UserPassesTestMixin, Vi
             allocation.delete()
             messages.success(request, 'Incomplete allocation request has been cancelled.')
         else:
-            messages.error(request, 'Only incomplete allocation requests can be cancelled.') 
+            messages.error(request, 'Only incomplete allocation requests can be cancelled.')
         return redirect(reverse('project-detail', kwargs={'pk': project_id}))
-    
+
 
 class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     """View for update storage quota to complete a storage allocation request."""
@@ -98,7 +100,7 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
         allocation = get_object_or_404(Allocation, pk=self.kwargs['pk'])
         if self.request.user.has_perm('allocation.can_view_all_allocations'):
             return True
-        return allocation.has_perm(self.request.user, AllocationPermission.USER)
+        return allocation.has_perm(self.request.user, AllocationPermission.MANAGER)
 
     def dispatch(self, request, *args, **kwargs):
         self.allocation = get_object_or_404(
@@ -135,13 +137,26 @@ class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormV
         grant = form.cleaned_data.get('grant')
 
         try:
+            # storing requested storage quota size
             attr_type = AllocationAttributeType.objects.get(name=QUOTA_ATTR_NAME)
             self.allocation.allocationattribute_set.create(
                 allocation_attribute_type=attr_type,
                 value=str(quota),
             )
-
+            # storing NoCostQuota id if the user has opted to apply
+            # this id is later picked up by a signal that applies the quota to the allocation
+            # in coldfront_billing.signals._apply_no_cost_quota_allotment_if_requested
+            # we can only safely store the NoCostQuota id here if we verify that the user has permissions to apply it
             if apply_quota_value := self.request.POST.get('apply_allocation_quota', '').strip():
+                if not (
+                    self.request.user.has_perm('allocation.can_view_all_allocations')
+                    or has_billing_perm_for_project(self.request.user, self.allocation.project)
+                ):
+                    messages.warning(
+                        self.request,
+                        'You do not have permission to apply the NoCostQuota.',
+                    )
+                    return redirect(reverse('project-detail', kwargs={'pk': self.allocation.project_id}))
                 try:
                     apply_attr_type = AllocationAttributeType.objects.get(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME)
                 except AllocationAttributeType.DoesNotExist:
@@ -280,11 +295,20 @@ class BillingAllocationChangeView(ColdfrontAllocationChangeView):
                 )
             else:
                 allocation = get_object_or_404(Allocation, pk=pk)
-                AllocationAttribute.objects.update_or_create(
-                    allocation=allocation,
-                    allocation_attribute_type=apply_attr_type,
-                    defaults={'value': apply_quota_raw},
-                )
+                if not (
+                    self.request.user.has_perm('allocation.can_view_all_allocations')
+                    or has_billing_perm_for_project(request.user, allocation.project)
+                ):
+                    messages.warning(
+                        request,
+                        'You do not have permission to apply a quota to this allocation.',
+                    )
+                else:
+                    AllocationAttribute.objects.update_or_create(
+                        allocation=allocation,
+                        allocation_attribute_type=apply_attr_type,
+                        defaults={'value': apply_quota_raw},
+                    )
         return response
 
     @staticmethod
