@@ -24,14 +24,6 @@ dependencies = [
     "pydantic>=2.0.0,<3",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pre-commit",
-    "ruff",
-    "pytest",
-    "pytest-django",
-    "pytest-cov",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = ["coldfront_billing"]
@@ -79,5 +71,10 @@ testpaths = ["coldfront_billing/tests"]
 
 [dependency-groups]
 dev = [
+    "pre-commit",
+    "ruff",
+    "pytest",
+    "pytest-django",
     "pytest-cov>=7.1.0",
+    "pytest-xdist>=3.8.0",
 ]
