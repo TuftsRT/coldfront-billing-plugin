@@ -20,4 +20,4 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run tests
-        run: uv run pytest coldfront_billing/tests
+        run: uv run pytest --cov=coldfront_billing --cov-report=xml coldfront_billing/tests
