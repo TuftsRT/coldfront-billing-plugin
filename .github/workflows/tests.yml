@@ -25,4 +25,5 @@ jobs:
       - name: Upload code coverage
         uses: actions/upload-code-coverage@v1
         with:
-          path: coverage.xml
+          file: coverage.xml
+          language: Python
