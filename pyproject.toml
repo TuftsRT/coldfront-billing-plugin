@@ -4,10 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "coldfront-billing"
-version = "0.0.1"
+version = "2.1.0"
 requires-python = ">=3.9"
 authors = [
-    { name = "Merixstudio" }
+    { name = "Merixstudio" },
+    { name = "Chris Barnett", email = "christopher.barnett@tufts.edu"}
 ]
 description = "Coldfront Billing Plugin"
 readme = "README.md"
@@ -49,6 +50,17 @@ inline-quotes = "single"
 indent-style = "space"
 docstring-code-format = true
 quote-style = "single"
+
+[tool.ruff.lint.isort]
+sections = { "coldfront-main" = ["coldfront"] }
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "coldfront-main",
+    "first-party",
+    "local-folder",
+]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "coldfront_billing.tests.settings"

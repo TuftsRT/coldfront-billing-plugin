@@ -1,9 +1,10 @@
 from django.db.models import Prefetch, Q, QuerySet
+
 from coldfront.core.allocation.models import Allocation, AllocationAttribute
 from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.resource.models import Resource, ResourceAttribute, ResourceType
 
-from coldfront_billing.constants import (
+from .constants import (
     ALLOTMENTS_ATTRIBUTE_NAME,
     BILLING_ATTRIBUTE_NAME,
     BILLING_ROLE_NAME,
@@ -15,9 +16,9 @@ from coldfront_billing.constants import (
     QUOTA_ATTRIBUTE_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.enums import AllocationStatus, ProjectStatus
-from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
-from coldfront_billing.utils import NoStorageException
+from .enums import AllocationStatus, ProjectStatus
+from .models import NoCostQuota, NoCostQuotaAllotment
+from .utils import NoStorageException
 
 
 def get_cost_attr_prefetch() -> Prefetch:
@@ -150,6 +151,10 @@ def is_paid_storage_allocation(allocation: Allocation) -> bool:
 
 
 def has_billing_perm(user) -> bool:
+    """
+    Check if the user has billing permissions for ANY active or archived projects.
+    Not to be used for checking billing permissions for a specific project; use has_billing_perm_for_project() instead.
+    """
     allowed_proj_statuses = (ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED)
     is_manager = ProjectUser.objects.filter(
         user=user,
@@ -157,7 +162,37 @@ def has_billing_perm(user) -> bool:
         role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
         status__name=ProjectStatus.ACTIVE,
     ).exists()
-    is_pi = Project.objects.filter(
-        pi=user, status__name__in=allowed_proj_statuses
-    ).exists()
+    is_pi = Project.objects.filter(pi=user, status__name__in=allowed_proj_statuses).exists()
     return is_manager or is_pi
+
+
+def has_billing_perm_for_project(user, project: Project) -> bool:
+    """
+    Check if the user has billing permissions for a specific project.
+    The user must be either the PI of the project or hold an active Billing/Manager role in the project.
+    """
+    if project.pi == user:
+        return True
+    return ProjectUser.objects.filter(
+        user=user,
+        project=project,
+        role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+        status__name=ProjectStatus.ACTIVE,
+    ).exists()
+
+
+def has_no_cost_quota_permission(user, no_cost_quota) -> bool:
+    """
+    Check if the user has permission to use a specific no-cost quota.
+    The user must be either the owner of the quota or hold an active Billing/Manager role in a project owned by the quota's owner.
+    """
+    if no_cost_quota.user == user:
+        return True
+    ncq_owner_projects = ProjectUser.objects.filter(
+        project__pi=no_cost_quota.user,
+        project__status__name=ProjectStatus.ACTIVE,
+        user=user,
+        role__name__in=[BILLING_ROLE_NAME, MANAGER_ROLE_NAME],
+        status__name=ProjectStatus.ACTIVE,
+    )
+    return ncq_owner_projects.exists()
