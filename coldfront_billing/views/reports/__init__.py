@@ -4,6 +4,7 @@ from .history import BillingScheduleHistoryListView
 from .mail import SendReportView
 from .manage import ManageReportsView
 from .missing_billing_codes import billing_code_report
+from .nocostquota import no_cost_quotas_report_view
 
 __all__ = [
     'BillingScheduleHistoryListView',
@@ -12,4 +13,5 @@ __all__ = [
     'SendReportView',
     'billing_code_report',
     'charge_report',
+    'no_cost_quotas_report_view',
 ]

@@ -19,6 +19,7 @@ from .reports import (
     SendReportView,
     billing_code_report,
     charge_report,
+    no_cost_quotas_report_view,
 )
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     'DeleteIncompleteAllocationView',
     'billing_code_report',
     'charge_report',
+    'no_cost_quotas_report_view',
 ]

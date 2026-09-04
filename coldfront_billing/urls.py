@@ -73,4 +73,9 @@ urlpatterns = [
         views.charge_report,
         name='charge-report',
     ),
+    path(
+        'reports/no-cost-quotas/',
+        views.no_cost_quotas_report_view,
+        name='no-cost-quotas-report',
+    ),
 ]
