@@ -5,9 +5,8 @@ from django.db.models import Q, QuerySet
 from django.views.generic import ListView
 
 from coldfront_billing.forms import NoCostQuotaSearchForm
-from coldfront_billing.models import NoCostQuota
+from coldfront_billing.models import NoCostQuota, quota_with_remaining
 from coldfront_billing.views.mixins import NoCostQuotaStateMixin
-from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
 class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaStateMixin, ListView):

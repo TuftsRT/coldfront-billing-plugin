@@ -30,7 +30,7 @@ from coldfront_billing.constants import (
 )
 from coldfront_billing.data.billing import BillingAllocation
 from coldfront_billing.forms import AllocationDetailsForm
-from coldfront_billing.models import CostCenterAssignment
+from coldfront_billing.models import CostCenterAssignment, quota_with_remaining
 from coldfront_billing.prefetch import (
     get_no_cost_quota_allotments_prefetch,
     get_paid_storage_resources_prefetch,
@@ -39,7 +39,6 @@ from coldfront_billing.prefetch import (
     is_paid_storage_allocation,
 )
 from coldfront_billing.utils import first_or_none
-from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
 def project_has_cost_center_assignment(project: Project) -> bool:

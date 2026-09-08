@@ -1,13 +1,14 @@
 from decimal import ROUND_FLOOR, Decimal
 from typing import Any, Dict
 
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.project.models import Project
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q, QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView
+
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.project.models import Project
 
 from coldfront_billing.constants import (
     ALLOTMENTS_ATTRIBUTE_NAME,
@@ -16,9 +17,9 @@ from coldfront_billing.data import NoCostQuotaAllocation
 from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.enums import AllocationStatus
 from coldfront_billing.forms import AllocationSearchForm
+from coldfront_billing.models import quota_with_remaining
 from coldfront_billing.prefetch import get_filtered_allocations_prefetch
 from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin
-from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
 class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, ListView):
@@ -94,9 +95,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
             user_allotment_pk = user_allotment.pk if user_allotment else None
 
             other_total_quota = ncq_allocation.other_allotments_amount
-            max_possible = ncq_allocation.max_possible_allocation(
-                quota_remaining, quota_units, self.quota.increment_gb
-            )
+            max_possible = ncq_allocation.max_possible_allocation(quota_remaining, quota_units, self.quota.increment_gb)
             user_amount = ncq_allocation.user_amount.amount
             first_resource = next(iter(allocation.resources.all()), None)
 

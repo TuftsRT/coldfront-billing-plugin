@@ -3,8 +3,9 @@ from datetime import datetime
 from decimal import Decimal
 from io import StringIO
 
-from coldfront.core.project.models import Project
 from django.core.exceptions import ObjectDoesNotExist
+
+from coldfront.core.project.models import Project
 
 from coldfront_billing.constants import (
     BILLING_ATTRIBUTE_NAME,

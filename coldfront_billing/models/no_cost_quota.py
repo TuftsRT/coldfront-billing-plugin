@@ -1,10 +1,15 @@
 from decimal import Decimal
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.project.models import ProjectUser
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Case, DecimalField, F, Q, Sum, Value, When
+from django.db.models.functions import Coalesce
+from django.utils.functional import SimpleLazyObject
+
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.project.models import ProjectUser
 
 from coldfront_billing.constants import (
     BILLING_ROLE_NAME,
@@ -12,8 +17,8 @@ from coldfront_billing.constants import (
     NO_COST_QUOTA_TYPE_ATTR_NAME,
     QUOTA_ATTR_NAME,
 )
-from coldfront_billing.data import BillingQuota
-from coldfront_billing.enums import ProjectStatus, StorageUnit
+from coldfront_billing.data import UNIT_TO_TB, BillingQuota
+from coldfront_billing.enums import AllocationStatus, ProjectStatus, StorageUnit
 from coldfront_billing.models.common import UNITS_CHOICES, QuotaBase
 
 User = get_user_model()
@@ -47,7 +52,11 @@ class NoCostQuota(QuotaBase):
             )
 
         if self.amount_tb * Decimal(1000) < Decimal(self.increment_gb):
-            raise ValidationError({'amount': f'Amount {self.amount_tb} TB cannot be smaller than allocation increment {self.increment_gb} GB.'})
+            raise ValidationError(
+                {
+                    'amount': f'Amount {self.amount_tb} TB cannot be smaller than allocation increment {self.increment_gb} GB.'
+                }
+            )
 
     def __str__(self):
         return f'{str(self.user)} - {self.quota_type}'
@@ -72,7 +81,7 @@ class NoCostQuotaAllotment(models.Model):
         decimal_places=3,
         help_text='Allotted quota amount',
         default=Decimal('0.000'),
-        validators=[MinValueValidator(Decimal('0.000'))]
+        validators=[MinValueValidator(Decimal('0.000'))],
     )  # 3 decimal places to support GB precision (e.g., 0.001 TB = 1 GB)
 
     created = models.DateTimeField(auto_now_add=True)
@@ -84,10 +93,7 @@ class NoCostQuotaAllotment(models.Model):
                 fields=['no_cost_quota', 'allocation'],
                 name='uniq_nocostquotaallotment_quota_allocation',
             ),
-            models.CheckConstraint(
-                check=models.Q(amount_tb__gte=Decimal('0.000')),
-                name='amount_tb_must_be_positive'
-            )
+            models.CheckConstraint(check=models.Q(amount_tb__gte=Decimal('0.000')), name='amount_tb_must_be_positive'),
         ]
 
     def clean(self):
@@ -117,11 +123,11 @@ class NoCostQuotaAllotment(models.Model):
                 raise ValidationError(
                     {'allocation': f"Allocation's resource does not have {NO_COST_QUOTA_TYPE_ATTR_NAME}='{quota_type}'"}
                 )
-            
+
             min_inc = Decimal(self.no_cost_quota.increment_gb)
             if self.amount_tb * Decimal(1000) < min_inc:
                 raise ValidationError({'amount': 'Amount cannot be smaller than allocation increment.'})
-            
+
             # Ensure the amount is a multiple of increment_gb
             if self.no_cost_quota.units == 'TB':
                 min_inc = Decimal(self.no_cost_quota.increment_gb) / Decimal(1000)  # Convert GB to TB
@@ -129,9 +135,7 @@ class NoCostQuotaAllotment(models.Model):
                 min_inc = Decimal(self.no_cost_quota.increment_gb)  # Already in GB
             minimum = f'{min_inc} {self.no_cost_quota.units}'
             if not self.amount_tb % min_inc == 0:
-                raise ValidationError(
-                    {'amount': f'Allotment amount must be a multiple of increment ({minimum})'}
-                )
+                raise ValidationError({'amount': f'Allotment amount must be a multiple of increment ({minimum})'})
 
             if self.no_cost_quota.units == 'TB':
                 allotment_amount = self.amount_tb
@@ -154,12 +158,12 @@ class NoCostQuotaAllotment(models.Model):
             if not allocation_quota_value:
                 return
 
-            allocation_quota = BillingQuota.create(Decimal(allocation_quota_value).quantize(Decimal('0.01')), StorageUnit.TB)
+            allocation_quota = BillingQuota.create(
+                Decimal(allocation_quota_value).quantize(Decimal('0.01')), StorageUnit.TB
+            )
             allotment_quota = BillingQuota.create(self.amount_tb, self.no_cost_quota.units)
 
-            if (allotment_size := allotment_quota.amount_tb) > (
-                alloc_size := allocation_quota.amount_tb
-            ):
+            if (allotment_size := allotment_quota.amount_tb) > (alloc_size := allocation_quota.amount_tb):
                 raise ValidationError(
                     {
                         'amount': f'No cost quota allotment size ({allotment_size}) is bigger than allocation size ({alloc_size} TB)'
@@ -168,3 +172,36 @@ class NoCostQuotaAllotment(models.Model):
 
     def __str__(self):
         return f'Allotment from {self.no_cost_quota_id} on  {str(self.allocation_id)}'
+
+
+def to_tb(expr):
+    return Case(
+        When(units='TB', then=expr),
+        When(units='GB', then=expr * Value(UNIT_TO_TB[StorageUnit.GB])),
+        default=expr,
+        output_field=DecimalField(),
+    )
+
+
+def _build_quota_with_remaining():
+    return NoCostQuota.objects.annotate(
+        used=Coalesce(Sum('allotments__amount_tb'), Value(0.0), output_field=DecimalField()),
+        used_inactive=Coalesce(
+            Sum(
+                'allotments__amount_tb',
+                filter=~Q(allotments__allocation__status__name=AllocationStatus.ACTIVE),
+            ),
+            Value(0.0),
+            output_field=DecimalField(),
+        ),
+    ).annotate(
+        remaining=F('amount_tb') - F('used'),
+        remaining_inactive=F('amount_tb') - F('used_inactive'),
+        amount_normalized=to_tb(F('amount_tb')),
+        remaining_normalized=to_tb(F('remaining')),
+    )
+
+
+# Built lazily: NoCostQuota.objects.annotate(...) touches Django's app registry
+# (via get_fields()), which isn't ready yet while models are still being imported.
+quota_with_remaining = SimpleLazyObject(_build_quota_with_remaining)

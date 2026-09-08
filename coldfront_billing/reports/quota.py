@@ -5,11 +5,11 @@ from coldfront.core.project.models import Project
 from coldfront_billing.allotments import create_or_update_allotment
 from coldfront_billing.data.quota import NoCostQuotaEngine
 from coldfront_billing.enums import AllocationStatus
+from coldfront_billing.models.no_cost_quota import quota_with_remaining
 from coldfront_billing.prefetch import (
     get_filtered_allocations_prefetch,
     get_projects_prefetch,
 )
-from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 
 def auto_assign_quota() -> tuple[str, str]:

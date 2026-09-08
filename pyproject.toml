@@ -55,6 +55,11 @@ section-order = [
     "local-folder",
 ]
 
+[tool.pylint.messages_control]
+disable = [
+    "C0411" # Wrong import order
+]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "coldfront_billing.tests.settings"
 python_files = ["test_*.py"]
