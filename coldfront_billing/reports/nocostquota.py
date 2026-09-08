@@ -132,7 +132,7 @@ def get_oversubscribed_no_cost_quotas():
             print(f'Allocation {allocation.id} does not have required attributes.')
             continue
         ncq_allotment = NoCostQuotaAllotment.objects.filter(allocation=allocation)
-        if not ncq_allotment.exists:
+        if not ncq_allotment.exists():
             continue
         increment = Decimal(ncq_allotment.first().no_cost_quota.increment_gb) / Decimal(1000)
         ncq_allot_total = sum(allot.amount_tb for allot in ncq_allotment)
