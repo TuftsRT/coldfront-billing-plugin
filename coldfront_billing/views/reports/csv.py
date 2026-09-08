@@ -3,8 +3,9 @@ from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotFoun
 from django.views import View
 
 from coldfront_billing.models import BillingScheduleSettings
-from coldfront_billing.reports import auto_assign_quota, create_csv_report
 from coldfront_billing.utils import NoStorageException
+
+from ...reports import auto_assign_quota, create_csv_report
 
 
 class ExportBillingReportView(UserPassesTestMixin, View):

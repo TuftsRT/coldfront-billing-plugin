@@ -5,7 +5,11 @@ from .allocation import (
     UpdateAllocationDetailsView,
 )
 from .billing import BillingDetailsView, BillingView
-from .cost import CostCenterAssignmentDeleteView, CostCenterAssignmentUpdateView, CostCenterAutocompleteView
+from .cost import (
+    CostCenterAssignmentDeleteView,
+    CostCenterAssignmentUpdateView,
+    CostCenterAutocompleteView,
+)
 from .no_cost_quota import (
     AssignNoCostQuotasView,
     AutoAssignAllotmentsView,
@@ -17,9 +21,12 @@ from .reports import (
     ExportBillingReportView,
     ManageReportsView,
     SendReportView,
+    all_allocations_allotments_report,
     billing_code_report,
     charge_report,
+    expired_allocations_report,
     no_cost_quotas_report_view,
+    oversubscribed_allotments_report,
 )
 
 __all__ = [
@@ -43,4 +50,7 @@ __all__ = [
     'billing_code_report',
     'charge_report',
     'no_cost_quotas_report_view',
+    'oversubscribed_allotments_report',
+    'expired_allocations_report',
+    'all_allocations_allotments_report',
 ]

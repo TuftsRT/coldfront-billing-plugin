@@ -1,12 +1,18 @@
 import logging
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.views.decorators.http import require_GET
 
 from coldfront_billing.forms.reports import ReportFilterForm
-from coldfront_billing.reports.nocostquota import no_cost_quotas_report
+from coldfront_billing.reports.billing_preview import get_all_storage_allocations
+from coldfront_billing.reports.nocostquota import (
+    expired_storage_allocations_with_ncq_allotments,
+    get_oversubscribed_no_cost_quotas,
+    no_cost_quotas_report,
+)
+from coldfront_billing.views.utils import csv_response
 
 logger = logging.getLogger(__name__)
 
@@ -49,3 +55,27 @@ def no_cost_quotas_report_view(request):
                 'shared_allotments': data['shared_allotments'],
             },
         )
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_GET
+def oversubscribed_allotments_report(request):
+    data = get_oversubscribed_no_cost_quotas()
+    return TemplateResponse(request, 'reports/oversubscribed_allotments_report.html', {'overages': data})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_GET
+def expired_allocations_report(request):
+    data = expired_storage_allocations_with_ncq_allotments()
+    return TemplateResponse(request, 'reports/expired_allocations_report.html', {'expired_allocations': data})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_GET
+def all_allocations_allotments_report(request):
+    data = get_all_storage_allocations()
+    csv_data = {}
+    csv_data['header'] = data[0].keys() if data else []
+    csv_data['rows'] = [list(item.values()) for item in data]
+    return csv_response(csv_data, filename='allocations_allotments_report.csv')

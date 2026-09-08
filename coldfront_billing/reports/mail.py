@@ -1,7 +1,7 @@
 from django.core.mail import EmailMessage
 
 from coldfront_billing.models import BillingScheduleHistory, BillingScheduleSettings
-from coldfront_billing.reports import create_csv_report
+from coldfront_billing.reports.csv import create_csv_report
 from coldfront_billing.settings import BILLING_EMAIL_FROM
 from coldfront_billing.utils import NoStorageException, get_month_abbr, validate_emails
 

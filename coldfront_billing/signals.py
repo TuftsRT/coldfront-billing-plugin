@@ -1,19 +1,20 @@
 from decimal import Decimal
 
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.allocation.signals import allocation_change_approved
-from coldfront.core.project.models import Project
 from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, post_delete, post_save, pre_save
 from django.dispatch import receiver
+
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.signals import allocation_change_approved
+from coldfront.core.project.models import Project
 
 from coldfront_billing.allotments import create_update_allotment
 from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
 from coldfront_billing.enums import AllocationStatus, ProjectStatus
 from coldfront_billing.models import BillingScheduleSettings, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
+from coldfront_billing.models.no_cost_quota import quota_with_remaining
 from coldfront_billing.notifications import send_allocation_notification
 from coldfront_billing.scheduling import sync_billing_schedule
-from coldfront_billing.views.no_cost_quota.common import quota_with_remaining
 
 User = get_user_model()
 

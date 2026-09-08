@@ -78,4 +78,24 @@ urlpatterns = [
         views.no_cost_quotas_report_view,
         name='no-cost-quotas-report',
     ),
+    path(
+        'reports/oversubscribed-allotments-report/',
+        views.oversubscribed_allotments_report,
+        name='oversubscribed-allotments-report',
+    ),
+    path(
+        'reports/expired-allocations-report/',
+        views.expired_allocations_report,
+        name='expired-allocations-report',
+    ),
+    path(
+        'reports/all-allocations-allotments-report/',
+        views.all_allocations_allotments_report,
+        name='all-allocations-allotments-report',
+    ),
+    path(
+        'reports/no-cost-quotas-report/',
+        views.no_cost_quotas_report_view,
+        name='no-cost-quotas-report',
+    ),
 ]
