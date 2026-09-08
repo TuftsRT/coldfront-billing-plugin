@@ -1,5 +1,5 @@
 import logging
-from decimal import ROUND_CEILING, Decimal
+from decimal import Decimal
 
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.resource.models import Resource
@@ -135,8 +135,8 @@ def get_oversubscribed_no_cost_quotas():
             continue
         increment = Decimal(ncq_allotment.first().no_cost_quota.increment_gb) / Decimal(1000)
         ncq_allot_total = sum(allot.amount_tb for allot in ncq_allotment)
-        total = Decimal(ncq_allot_total).quantize(increment, rounding=ROUND_CEILING)
-        quota_tb = Decimal(int(quota) / 10**12)
+        total = Decimal(ncq_allot_total)
+        quota_tb = Decimal(int(quota) / 10**12).quantize(increment)
         if quota_tb < total:
             exceeded_allotments.append(
                 {
