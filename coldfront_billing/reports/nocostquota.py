@@ -114,7 +114,6 @@ def no_cost_quotas_report(username: str = None, username_exact: bool = False):
 def get_oversubscribed_no_cost_quotas():
     """
     return any NoCostQuotaAllotments that are associated with an allocation where allotment total exceeds allocation quota.
-    # todo: check the rounding on this
     """
     requires_payment = Resource.objects.filter(requires_payment=True, resource_type__name='Storage')
     allocations = Allocation.objects.filter(resources__in=requires_payment, status__name='Active').prefetch_related(
