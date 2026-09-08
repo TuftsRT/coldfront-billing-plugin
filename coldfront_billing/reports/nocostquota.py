@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 
 from coldfront.core.allocation.models import Allocation
 from coldfront.core.resource.models import Resource
@@ -114,7 +114,6 @@ def no_cost_quotas_report(username: str = None, username_exact: bool = False):
 def get_oversubscribed_no_cost_quotas():
     """
     return any NoCostQuotaAllotments that are associated with an allocation where allotment total exceeds allocation quota.
-    # todo: check the rounding on this
     """
     requires_payment = Resource.objects.filter(requires_payment=True, resource_type__name='Storage')
     allocations = Allocation.objects.filter(resources__in=requires_payment, status__name='Active').prefetch_related(
@@ -136,7 +135,7 @@ def get_oversubscribed_no_cost_quotas():
             continue
         increment = Decimal(ncq_allotment.first().no_cost_quota.increment_gb) / Decimal(1000)
         ncq_allot_total = sum(allot.amount_tb for allot in ncq_allotment)
-        total = Decimal(ncq_allot_total).quantize(increment)
+        total = Decimal(ncq_allot_total).quantize(increment, rounding=ROUND_CEILING)
         quota_tb = Decimal(int(quota) / 10**12)
         if quota_tb < total:
             exceeded_allotments.append(
