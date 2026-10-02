@@ -105,7 +105,7 @@ Billing
                           data-container="body"
                           data-html="true"
                           title="Cost centers"
-                          data-content="{{ project.all_cost_centers|linebreaksbr }}">
+                          data-content="{{ project.all_cost_centers|force_escape }}">
                         {{ project.cost_centers }}
                     </span>
                     <span class="d-inline-flex flex-shrink-0"
