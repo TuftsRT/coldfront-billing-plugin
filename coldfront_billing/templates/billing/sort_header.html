@@ -1,0 +1,21 @@
+{% comment %}
+Sortable column header: the label links to sorting by col_name, and clicking it again reverses
+the direction. Usage: {% include "billing/sort_header.html" with col_name="title" col_label="Project" %}
+Uses filter_parameters from the view's get_pagination_params().
+{% endcomment %}
+{% if request.GET.order_by == col_name and request.GET.direction == "des" %}
+<th scope="col" class="text-nowrap" aria-sort="descending">
+    <a href="?order_by={{ col_name }}&direction=asc&{{ filter_parameters }}">{{ col_label }}
+        <i class="fas fa-sort-down" aria-hidden="true"></i><span class="visually-hidden">, sort ascending</span></a>
+</th>
+{% elif request.GET.order_by == col_name %}
+<th scope="col" class="text-nowrap" aria-sort="ascending">
+    <a href="?order_by={{ col_name }}&direction=des&{{ filter_parameters }}">{{ col_label }}
+        <i class="fas fa-sort-up" aria-hidden="true"></i><span class="visually-hidden">, sort descending</span></a>
+</th>
+{% else %}
+<th scope="col" class="text-nowrap">
+    <a href="?order_by={{ col_name }}&direction=asc&{{ filter_parameters }}">{{ col_label }}
+        <i class="fas fa-sort text-body-tertiary" aria-hidden="true"></i><span class="visually-hidden">, sort ascending</span></a>
+</th>
+{% endif %}

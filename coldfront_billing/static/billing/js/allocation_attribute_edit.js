@@ -105,123 +105,152 @@ document.addEventListener('DOMContentLoaded', function () {
       input.trigger('input');
     });
 
-    form.on('submit', function (event) {
-      if (!quotaInput || quotaChangeConfirmed) {
+    const modalEl = document.getElementById('quota-change-confirmation-modal');
+    const modalButtons = noButton.add(confirmButton);
+    let previewRequest = 0;
+
+    function needsConfirmation() {
+      return Boolean(quotaInput) && !quotaChangeConfirmed && quotaInput.val() != quotaOriginalValue;
+    }
+
+    // The submit button opens this modal through Bootstrap's data API (data-bs-toggle="modal"),
+    // because ColdFront doesn't expose Bootstrap's API to open it from script. The click opens
+    // the modal before the form's submit event fires, so this decides whether it opens at all.
+    modalEl.addEventListener('show.bs.modal', function (event) {
+      if (!needsConfirmation()) {
+        event.preventDefault(); // nothing to confirm: the form submits normally
+        return;
+      }
+      if (!form[0].checkValidity()) {
+        event.preventDefault();
+        form[0].reportValidity();
         return;
       }
 
-      if (quotaInput.val() != quotaOriginalValue) {
-        event.preventDefault();
-        summaryEl.text('');
-        applyPrompt.text('');
-        noButton.addClass('d-none');
-        confirmButton.text('Confirm');
-        lastPreviewHasQuotaChoice = false;
-        lastPreviewQuotaId = null;
-        applyHidden.val('');
+      const request = ++previewRequest;
+      summaryEl.text('');
+      applyPrompt.text('');
+      noButton.addClass('d-none');
+      confirmButton.text('Confirm');
+      lastPreviewHasQuotaChoice = false;
+      lastPreviewQuotaId = null;
+      applyHidden.val('');
 
-        const currentQuota = parseQuotaValue(quotaOriginalValue);
-        const newQuota = parseQuotaValue(quotaInput.val());
-        const quotaDiff = currentQuota !== null && newQuota !== null ? newQuota - currentQuota : null;
+      const currentQuota = parseQuotaValue(quotaOriginalValue);
+      const newQuota = parseQuotaValue(quotaInput.val());
+      const quotaDiff = currentQuota !== null && newQuota !== null ? newQuota - currentQuota : null;
 
-        if (!costPreviewUrl || quotaDiff === null || quotaDiff === 0) {
-          summaryEl.text('Please confirm this storage modification to continue.');
-          $('#quota-change-confirmation-modal').modal('show');
-          return;
-        }
+      if (!costPreviewUrl || quotaDiff === null || quotaDiff === 0) {
+        summaryEl.text('Please confirm this storage modification to continue.');
+        return;
+      }
 
-        const absDiff = Math.abs(quotaDiff);
-        const requestedChangeLabel =
-          quotaDiff >= 0
-            ? 'Requested increase: <strong>+ ' + absDiff + ' TB</strong>'
-            : 'Requested decrease: <strong>- ' + absDiff + ' TB</strong>';
-        getCostPreview(absDiff)
-          .then(function (data) {
-            const totalCost = Number(data.total_cost || 0);
-            const signedCostDiff = quotaDiff >= 0 ? totalCost : -totalCost;
-            const costPerTb = Number(data.cost_per_tb || 0);
-            const hasQuotaChoice = data.quota_id != null;
-            const reducedCost = Number(data.reduced_cost || 0);
-            const appliedQuota = Number(data.applied_quota || 0);
+      summaryEl.text('Loading cost preview…');
+      modalButtons.prop('disabled', true);
 
-            if (quotaDiff < 0) {
-              const quotaCost = Number(data.quota_cost || 0);
-              lastPreviewHasQuotaChoice = false;
-              lastPreviewQuotaId = null;
-              noButton.addClass('d-none');
-              applyPrompt.text('');
-              confirmButton.text('Confirm');
-              summaryEl.html(
-                requestedChangeLabel +
-                  '<br>' +
-                  'Final storage quota: <strong>' +
-                  newQuota +
-                  ' TB</strong><br>' +
-                  'Monthly Cost per TB: <strong>' +
-                  formatCurrency(costPerTb) +
-                  '</strong><br>' +
-                  'Estimated cost change: <strong>' +
-                  formatCurrency(-quotaCost) +
-                  ' monthly.</strong>'
-              );
-              return;
-            }
+      const absDiff = Math.abs(quotaDiff);
+      const requestedChangeLabel =
+        quotaDiff >= 0
+          ? 'Requested increase: <strong>+ ' + absDiff + ' TB</strong>'
+          : 'Requested decrease: <strong>- ' + absDiff + ' TB</strong>';
+      getCostPreview(absDiff)
+        .then(function (data) {
+          if (request !== previewRequest) {
+            return;
+          }
+          const totalCost = Number(data.total_cost || 0);
+          const signedCostDiff = quotaDiff >= 0 ? totalCost : -totalCost;
+          const costPerTb = Number(data.cost_per_tb || 0);
+          const hasQuotaChoice = data.quota_id != null;
+          const reducedCost = Number(data.reduced_cost || 0);
+          const appliedQuota = Number(data.applied_quota || 0);
 
-            lastPreviewHasQuotaChoice = hasQuotaChoice;
-            lastPreviewQuotaId = hasQuotaChoice ? String(data.quota_id) : null;
-            if (hasQuotaChoice) {
-              noButton.removeClass('d-none');
-              applyPrompt.text('Would you like to apply the quota?');
-              confirmButton.text('Yes');
-            } else {
-              noButton.addClass('d-none');
-              applyPrompt.text('');
-              confirmButton.text('Confirm');
-            }
-
-            if (hasQuotaChoice && appliedQuota > 0) {
-              summaryEl.html(
-                requestedChangeLabel +
-                  '<br>' +
-                  'Final storage quota: <strong>' +
-                  newQuota +
-                  ' TB</strong><br>' +
-                  'Monthly Cost per TB: <strong>' +
-                  formatCurrency(costPerTb) +
-                  '</strong><br>' +
-                  'Estimated total cost: <strong>' +
-                  formatCurrency(signedCostDiff) +
-                  '</strong><br><br>' +
-                  'You may apply <strong>' +
-                  appliedQuota +
-                  ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>' +
-                  formatCurrency(reducedCost) +
-                  ' monthly.</strong>'
-              );
-            } else {
-              summaryEl.html(
-                requestedChangeLabel +
-                  '<br>' +
-                  'Final storage quota: <strong>' +
-                  newQuota +
-                  ' TB</strong><br>' +
-                  'Monthly Cost per TB: <strong>' +
-                  formatCurrency(costPerTb) +
-                  '</strong><br>' +
-                  'Estimated total cost: <strong>' +
-                  formatCurrency(signedCostDiff) +
-                  ' monthly.</strong>'
-              );
-            }
-          })
-          .catch(function (err) {
-            summaryEl.text(
-              'Could not load cost preview: ' + (err && err.message ? err.message : 'unknown error')
+          if (quotaDiff < 0) {
+            const quotaCost = Number(data.quota_cost || 0);
+            lastPreviewHasQuotaChoice = false;
+            lastPreviewQuotaId = null;
+            noButton.addClass('d-none');
+            applyPrompt.text('');
+            confirmButton.text('Confirm');
+            summaryEl.html(
+              requestedChangeLabel +
+                '<br>' +
+                'Final storage quota: <strong>' +
+                newQuota +
+                ' TB</strong><br>' +
+                'Monthly Cost per TB: <strong>' +
+                formatCurrency(costPerTb) +
+                '</strong><br>' +
+                'Estimated cost change: <strong>' +
+                formatCurrency(-quotaCost) +
+                ' monthly.</strong>'
             );
-          })
-          .finally(function () {
-            $('#quota-change-confirmation-modal').modal('show');
-          });
+            return;
+          }
+
+          lastPreviewHasQuotaChoice = hasQuotaChoice;
+          lastPreviewQuotaId = hasQuotaChoice ? String(data.quota_id) : null;
+          if (hasQuotaChoice) {
+            noButton.removeClass('d-none');
+            applyPrompt.text('Would you like to apply the quota?');
+            confirmButton.text('Yes');
+          } else {
+            noButton.addClass('d-none');
+            applyPrompt.text('');
+            confirmButton.text('Confirm');
+          }
+
+          if (hasQuotaChoice && appliedQuota > 0) {
+            summaryEl.html(
+              requestedChangeLabel +
+                '<br>' +
+                'Final storage quota: <strong>' +
+                newQuota +
+                ' TB</strong><br>' +
+                'Monthly Cost per TB: <strong>' +
+                formatCurrency(costPerTb) +
+                '</strong><br>' +
+                'Estimated total cost: <strong>' +
+                formatCurrency(signedCostDiff) +
+                '</strong><br><br>' +
+                'You may apply <strong>' +
+                appliedQuota +
+                ' TB</strong> of no-cost quota<br>Estimated cost would change to <strong>' +
+                formatCurrency(reducedCost) +
+                ' monthly.</strong>'
+            );
+          } else {
+            summaryEl.html(
+              requestedChangeLabel +
+                '<br>' +
+                'Final storage quota: <strong>' +
+                newQuota +
+                ' TB</strong><br>' +
+                'Monthly Cost per TB: <strong>' +
+                formatCurrency(costPerTb) +
+                '</strong><br>' +
+                'Estimated total cost: <strong>' +
+                formatCurrency(signedCostDiff) +
+                ' monthly.</strong>'
+            );
+          }
+        })
+        .catch(function (err) {
+          if (request !== previewRequest) {
+            return;
+          }
+          summaryEl.text('Could not load cost preview: ' + (err && err.message ? err.message : 'unknown error'));
+        })
+        .finally(function () {
+          if (request === previewRequest) {
+            modalButtons.prop('disabled', false);
+          }
+        });
+    });
+
+    form.on('submit', function (event) {
+      if (needsConfirmation()) {
+        event.preventDefault(); // the modal asks first; its buttons submit the form
       }
     });
 
@@ -232,8 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         applyHidden.val('');
       }
       quotaChangeConfirmed = true;
-      $('#quota-change-confirmation-modal').modal('hide');
-      form[0].submit();
+      form[0].submit(); // leaves the page, so the modal needn't be closed
     }
 
     noButton.on('click', function () {

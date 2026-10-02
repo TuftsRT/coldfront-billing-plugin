@@ -1,25 +1,6 @@
 (function () {
     'use strict';
 
-    function showModal(modalEl) {
-        if (typeof jQuery !== 'undefined' && jQuery.fn.modal) {
-            jQuery(modalEl).modal('show');
-        } else if (window.bootstrap && window.bootstrap.Modal) {
-            window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
-    }
-
-    function hideModal(modalEl) {
-        if (typeof jQuery !== 'undefined' && jQuery.fn.modal) {
-            jQuery(modalEl).modal('hide');
-        } else if (window.bootstrap && window.bootstrap.Modal) {
-            var inst = window.bootstrap.Modal.getInstance(modalEl);
-            if (inst) {
-                inst.hide();
-            }
-        }
-    }
-
     function init() {
         var form = document.getElementById('allocation-details-form');
         if (!form || !form.dataset.costPreviewUrl) {
@@ -41,23 +22,33 @@
         var lastPreviewHadQuotaId = false;
         var lastQuotaId = null;
 
+        // "Complete Request" opens the modal through Bootstrap's data API (data-bs-toggle="modal"),
+        // because ColdFront doesn't expose Bootstrap's API to open it from script. Its click opens
+        // the modal before the form's submit event fires, so this checks the form and cancels the
+        // opening if it's invalid.
+        var previewRequest = 0;
+
         form.addEventListener('submit', function (e) {
             if (e.submitter && e.submitter.id === 'cancel-btn') {
-                return; 
+                return;
             }
             if (skipPreview) {
                 skipPreview = false;
                 return;
             }
-            e.preventDefault();
+            e.preventDefault(); // the modal asks first; its buttons submit the form
+        });
 
+        modalEl.addEventListener('show.bs.modal', function (e) {
             if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+                e.preventDefault();
                 form.reportValidity();
                 return;
             }
 
             var quotaStr = (quotaInput.value || '').trim();
             if (quotaStr === '') {
+                e.preventDefault();
                 quotaInput.setCustomValidity('Please enter a storage quota.');
                 quotaInput.reportValidity();
                 quotaInput.setCustomValidity('');
@@ -65,11 +56,22 @@
             }
             var quotaVal = parseFloat(quotaStr.replace(',', '.'));
             if (isNaN(quotaVal) || quotaVal < 0) {
+                e.preventDefault();
                 quotaInput.setCustomValidity('Enter a valid non-negative storage quota.');
                 quotaInput.reportValidity();
                 quotaInput.setCustomValidity('');
                 return;
             }
+
+            var request = ++previewRequest;
+            lastPreviewHadQuotaId = false;
+            lastQuotaId = null;
+            noBtn.classList.add('d-none');
+            applyPromptEl.textContent = '';
+            yesBtn.textContent = 'Confirm';
+            summaryEl.textContent = 'Loading cost preview…';
+            noBtn.disabled = true;
+            yesBtn.disabled = true;
 
             function formatCurrency(value) {
                 const decimals = 2;
@@ -105,6 +107,9 @@
                     });
                 })
                 .then(function (data) {
+                    if (request !== previewRequest) {
+                        return;
+                    }
                     var total = data.total_cost;
                     var perTb = data.cost_per_tb;
                     var reduced = data.reduced_cost;
@@ -153,9 +158,11 @@
                             formatCurrency(total) +
                             '</strong>';
                     }
-                    showModal(modalEl);
                 })
                 .catch(function (err) {
+                    if (request !== previewRequest) {
+                        return;
+                    }
                     lastPreviewHadQuotaId = false;
                     lastQuotaId = null;
                     noBtn.classList.add('d-none');
@@ -163,15 +170,19 @@
                     yesBtn.textContent = 'Confirm';
                     summaryEl.textContent =
                         'Could not load cost preview: ' + (err && err.message ? err.message : 'unknown error');
-                    showModal(modalEl);
+                })
+                .finally(function () {
+                    if (request === previewRequest) {
+                        noBtn.disabled = false;
+                        yesBtn.disabled = false;
+                    }
                 });
         });
 
         function submitWithApply(apply) {
             applyHidden.value =
                 apply && lastPreviewHadQuotaId && lastQuotaId != null ? String(lastQuotaId) : '';
-            hideModal(modalEl);
-            skipPreview = true;
+            skipPreview = true; // the submit leaves the page, so the modal needn't be closed
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
             } else {

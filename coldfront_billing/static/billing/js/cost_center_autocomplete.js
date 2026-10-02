@@ -105,7 +105,7 @@
                                 var results = data.results || [];
                                 results.forEach(function (name) {
                                     $('<li>')
-                                        .addClass('list-group-item list-group-item-action py-1 px-2 text-left')
+                                        .addClass('list-group-item list-group-item-action py-1 px-2 text-start')
                                         .attr('role', 'option')
                                         .text(name)
                                         .appendTo(list);

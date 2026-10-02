@@ -46,31 +46,31 @@ Complete Storage Allocation
                 <div id="allocation-cost-center-autocomplete"
                      class="mt-3"
                      data-autocomplete-url="{% url 'autocomplete_cost_center' %}">
-                    <div class="form-group">
+                    <div class="mb-3">
                         <label class="form-label" for="allocation-dept-search">{{ form.cost_center.label }}</label>
-                        <div class="autocomplete-wrapper position-relative text-left">
+                        <div class="autocomplete-wrapper position-relative text-start">
                             <input type="text"
                                    id="allocation-dept-search"
                                    class="form-control dept-autocomplete-input"
                                    placeholder="Type at least 3 letters"
                                    autocomplete="off"
                                    aria-describedby="allocation-dept-help">
-                            <ul class="dept-autocomplete-results list-group position-absolute w-100 d-none shadow-sm text-left"
+                            <ul class="dept-autocomplete-results list-group position-absolute w-100 d-none shadow-sm text-start"
                                 style="z-index: 1060; max-height: 220px; overflow-y: auto; top: 100%; margin-top: 2px; text-align: left;"
                                 role="listbox"></ul>
                         </div>
                         <small id="allocation-dept-help" class="form-text text-muted">{{ form.cost_center.help_text }}</small>
                     </div>
-                    <div class="form-group">
+                    <div class="mb-3">
                         <label class="form-label" for="allocation-grant-search">{{ form.grant.label }}</label>
-                        <div class="autocomplete-wrapper position-relative text-left">
+                        <div class="autocomplete-wrapper position-relative text-start">
                             <input type="text"
                                    id="allocation-grant-search"
                                    class="form-control grant-autocomplete-input"
                                    placeholder="Type at least 3 letters"
                                    autocomplete="off"
                                    aria-describedby="allocation-grant-help">
-                            <ul class="grant-autocomplete-results list-group position-absolute w-100 d-none shadow-sm text-left"
+                            <ul class="grant-autocomplete-results list-group position-absolute w-100 d-none shadow-sm text-start"
                                 style="z-index: 1060; max-height: 220px; overflow-y: auto; top: 100%; margin-top: 2px; text-align: left;"
                                 role="listbox"></ul>
                         </div>
@@ -78,8 +78,10 @@ Complete Storage Allocation
                     </div>
                 </div>
             {% endif %}
-            <!-- enter key uses the first button in the form (Complete Request) -->
-            <button class="btn btn-primary" type="submit">Complete Request</button>
+            <!-- enter key uses the first button in the form (Complete Request), so it must stay first:
+                 it opens the cost confirmation modal; allocation_cost_preview.js checks the form first -->
+            <button class="btn btn-primary" type="submit"
+                    data-bs-toggle="modal" data-bs-target="#allocationCostConfirmModal">Complete Request</button>
             <!-- Cancel button submits the form to delete the incomplete allocation -->
             <button id="cancel-btn" class="btn btn-secondary" formaction="{% url 'delete_incomplete_allocation' allocation.pk %}" type="submit">Cancel</button>
         </form>
@@ -91,16 +93,14 @@ Complete Storage Allocation
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="allocationCostConfirmModalTitle">Confirm storage cost</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p id="allocation-cost-modal-summary"></p>
                 <p id="allocation-cost-modal-apply-prompt" class="mb-0"></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-secondary" id="allocation-cost-confirm-no">No</button>
                 <button type="button" class="btn btn-primary" id="allocation-cost-confirm-yes">Confirm</button>
             </div>

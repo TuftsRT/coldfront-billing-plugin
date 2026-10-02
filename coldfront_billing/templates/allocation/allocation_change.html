@@ -12,7 +12,7 @@ Request Allocation Change
 {% block content %}
 {% billing_quota_attr_name as billing_quota_attribute_name %}
 
-<h2>[New] Request change to {{ allocation.get_parent_resource }} for project: {{ allocation.project.title }}</h2>
+<h2>Request change to {{ allocation.get_parent_resource }} for project: {{ allocation.project.title }}</h2>
 <hr>
 
 <p class="text-justify">
@@ -48,7 +48,7 @@ Request Allocation Change
             <table class="table table-bordered table-sm">
               <thead>
                 <tr>
-                  <th scope="col"><span class="sr-only">Attribute</span></th>
+                  <th scope="col"><span class="visually-hidden">Attribute</span></th>
                   <th scope="col">Current Value</th>
                   <th scope="col">Requested Value</th>
                 </tr>
@@ -98,14 +98,16 @@ Request Allocation Change
         height: 5em;
     }
     </style>
-      <div class="form-group">
+      <div class="mb-3">
             <label for="{{ form.justification.id_for_label }}">
                 Reason for Change:
             </label>
             {{ form.justification }}
-            <small class="form-text text-muted">please include some information about the reason for this request. e.g. new lab member, new data set</small>
+            <small class="form-text text-muted">Please include the reason for this request, e.g. new lab member, new data set</small>
         </div>
-      <input class="btn btn-success" type="submit" value="Submit" />
+      {# opens the confirmation modal when the quota changes; allocation_attribute_edit.js decides #}
+      <input class="btn btn-success" type="submit" value="Submit"
+             data-bs-toggle="modal" data-bs-target="#quota-change-confirmation-modal" />
       <a class="btn btn-secondary" href="{% url 'allocation-detail' allocation.pk %}" role="button">Back to
         Allocation</a><br>
     </div>
@@ -125,16 +127,14 @@ Request Allocation Change
         <h5 class="modal-title" id="quota-change-confirmation-modal-label">
           Confirm storage modification cost
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <p id="quota-change-modal-summary"></p>
         <p id="quota-change-modal-apply-prompt" class="mb-0"></p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-secondary d-none" id="quota-change-confirm-no">No</button>
         <button type="button" class="btn btn-danger" id="quota-change-confirm-button">
           Confirm

@@ -12,9 +12,7 @@ Schedule Billing
          style="display: none; position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 28rem; box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);"
          aria-live="polite">
         <span id="send-report-toast-message"></span>
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
     <h2 class="mb-4 border-bottom pb-2">Schedule Billing</h2>
@@ -51,7 +49,7 @@ Schedule Billing
                                 <td>
                                     <div class="form-check mb-0">
                                         {{ form.scheduling_enabled }}
-                                        <label class="form-check-label font-weight-bold sr-only" for="{{ form.scheduling_enabled.id_for_label }}">
+                                        <label class="form-check-label fw-bold visually-hidden" for="{{ form.scheduling_enabled.id_for_label }}">
                                             Scheduling enabled
                                         </label>
                                     </div>
