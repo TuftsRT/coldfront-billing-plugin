@@ -18,14 +18,14 @@ Billing Code Report
   <div class="mb-3" id="accordion">
     <div class="card">
       <div class="card-header">
-        <a id="expand_button" role="button" class="card-link " data-toggle="collapse" href="#collapseOne">
+        <a id="expand_button" role="button" class="card-link " data-bs-toggle="collapse" href="#collapseOne">
           <div>
           <i class="fas fa-filter" aria-hidden="true"></i> Filter
-          <i id="plus_minus" class="fas {{expand_accordion|get_icon}} float-right"></i>
+          <i id="plus_minus" class="fas {{expand_accordion|get_icon}} float-end"></i>
           </div>
         </a>
       </div>
-      <div id="collapseOne" class="collapse {{expand_accordion}} {% if form.username.value %}show{% endif %}" data-parent="#accordion">
+      <div id="collapseOne" class="collapse {{expand_accordion}} {% if form.username.value %}show{% endif %}" data-bs-parent="#accordion">
         <div class="card-body">
           <form id="filter_form" method="GET" autocomplete="off">
                 {{ form.username|as_crispy_field }}
@@ -61,7 +61,7 @@ Billing Code Report
           {% for item in missing_billing_code %}
           <tr>
             <td style="text-align: justify; text-justify: inter-word;">
-              <a href="/project/{{item.project.id}}/" data-toggle="popover" data-trigger="hover" data-content="View project details.">{{ item.project.title }}</a>
+              <a href="/project/{{item.project.id}}/" title="View project details.">{{ item.project.title }}</a>
             </td>
             <td style="text-align: justify; text-justify: inter-word;" class="text-nowrap">{{ item.project.pi.first_name }} {{ item.project.pi.last_name }} ({{ item.project.pi.username }})</td>
             <td>{{ item.project.status.name }}</td>
@@ -77,15 +77,5 @@ Billing Code Report
     {% endif %}
   </div>
 </div>
-
-{% endblock %}
-
-{% block javascript %}
-{{ block.super }}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    $('[data-toggle="popover"]').popover();
-});
-</script> 
 
 {% endblock %}

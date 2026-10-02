@@ -281,4 +281,4 @@ class TestBillingView:
         project_obj = response.context['project_list'][0]
         assert project_obj.all_cost_centers == 'A&lt;b&gt;: 60%<br>DEPT2.G1: 40%'
         # the attribute is escaped once more, since the browser unescapes it before Bootstrap renders it as HTML
-        assert 'data-content="A&amp;lt;b&amp;gt;: 60%&lt;br&gt;DEPT2.G1: 40%"' in response.content.decode()
+        assert 'data-bs-content="A&amp;lt;b&amp;gt;: 60%&lt;br&gt;DEPT2.G1: 40%"' in response.content.decode()

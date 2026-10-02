@@ -16,14 +16,14 @@ Manage No-Cost Quotas
     <div class="card">
         <div class="card-header">
             <a id="expand_button" role="button" class="card-link"
-               data-toggle="collapse" href="#collapseOne">
+               data-bs-toggle="collapse" href="#collapseOne">
                 <i class="fas fa-filter" aria-hidden="true"></i> Filter
                 <i id="plus_minus"
-                   class="fas {{expand_accordion|get_icon}} float-right"></i>
+                   class="fas {{expand_accordion|get_icon}} float-end"></i>
             </a>
         </div>
         <div id="collapseOne" class="collapse {{expand_accordion}}"
-             data-parent="#accordion">
+             data-bs-parent="#accordion">
             <div class="card-body">
                 <form id="filter_form" method="GET"
                       action="{% url 'manage_no_cost_quota' %}" autocomplete="off">
@@ -62,55 +62,55 @@ Manage No-Cost Quotas
                     Owner
                     <a href="?order_by=owner&direction=asc&{{filter_parameters}}">
                         <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Owner asc</span>
+                        <span class="visually-hidden">Sort Owner asc</span>
                     </a>
                     <a href="?order_by=owner&direction=des&{{filter_parameters}}">
                         <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Owner desc</span>
+                        <span class="visually-hidden">Sort Owner desc</span>
                     </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Type
                     <a href="?order_by=quota_type&direction=asc&{{filter_parameters}}">
                         <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Type asc</span>
+                        <span class="visually-hidden">Sort Type asc</span>
                     </a>
                     <a href="?order_by=quota_type&direction=des&{{filter_parameters}}">
                         <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Type desc</span>
+                        <span class="visually-hidden">Sort Type desc</span>
                     </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Description
                     <a href="?order_by=description&direction=asc&{{filter_parameters}}">
                         <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Description asc</span>
+                        <span class="visually-hidden">Sort Description asc</span>
                     </a>
                     <a href="?order_by=description&direction=des&{{filter_parameters}}">
                         <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Description desc</span>
+                        <span class="visually-hidden">Sort Description desc</span>
                     </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Total quota
                     <a href="?order_by=amount&direction=asc&{{filter_parameters}}">
                         <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Total quota asc</span>
+                        <span class="visually-hidden">Sort Total quota asc</span>
                     </a>
                     <a href="?order_by=amount&direction=des&{{filter_parameters}}">
                         <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Total quota desc</span>
+                        <span class="visually-hidden">Sort Total quota desc</span>
                     </a>
                 </th>
                 <th scope="col" class="text-nowrap">
                     Unassigned quota
                     <a href="?order_by=remaining&direction=asc&{{filter_parameters}}">
                         <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Unassigned quota asc</span>
+                        <span class="visually-hidden">Sort Unassigned quota asc</span>
                     </a>
                     <a href="?order_by=remaining&direction=des&{{filter_parameters}}">
                         <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="sr-only">Sort Unassigned quota desc</span>
+                        <span class="visually-hidden">Sort Unassigned quota desc</span>
                     </a>
                 </th>
             </tr>
@@ -127,11 +127,13 @@ Manage No-Cost Quotas
                 <td>
                     {{ quota.remaining|floatformat:-2 }} {{ quota.units }}
                     {% if quota.has_inactive %}
-                    <span class="text-danger js-ncq-inactive-popover text-nowrap"
-                          data-toggle="popover"
-                          data-placement="right"
-                          data-container="body"
-                          data-content="Amount in inactive allocations.">
+                    <span class="text-danger text-nowrap"
+                          tabindex="0"
+                          data-bs-toggle="popover"
+                          data-bs-trigger="hover focus"
+                          data-bs-placement="right"
+                          data-bs-container="body"
+                          data-bs-content="Amount in inactive allocations.">
                         + {{ quota.used_inactive|floatformat:-2 }} {{ quota.units }}
                     </span>
                     {% endif %}
@@ -143,7 +145,7 @@ Manage No-Cost Quotas
         {% include 'common/pagination.html' %}
     </div>
     <p class="mt-2 text-muted">Select a No Cost Quota to assign</p>
-    <div class="text-right mb-3">
+    <div class="text-end mb-3">
         <button type="submit" class="btn btn-primary">Next</button>
     </div>
 </form>
@@ -152,5 +154,4 @@ Manage No-Cost Quotas
     No no-cost quotas to display.
 </div>
 {% endif %}
-<script src="{% static 'billing/js/no_cost_quota_manage.js' %}"></script>
 {% endblock %}

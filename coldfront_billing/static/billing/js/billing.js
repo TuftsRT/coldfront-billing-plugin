@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function () {
     $("#navbar-main > ul > li.active").removeClass("active");
     $("#navbar-project-menu").addClass("active");
     $("#navbar-project").addClass("active");
-    $('[data-toggle="popover"]').popover();
 
     // Show success toast if we just reloaded after a save
     var storedMessage = sessionStorage.getItem(BILLING_SUCCESS_KEY);
@@ -189,7 +188,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Append to table
         costCenterBody.append(newRow);
-        newRow.find('.remove-row-btn').popover({ container: 'body' });
 
         // If data exists (from JSON), fill the fields
         if (data) {
@@ -207,7 +205,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Handle modal data population
-    $('#costCentersModal').on('show.bs.modal', function (event) {
+    // Bootstrap 5 fires its modal events as native DOM events; jQuery's .on() would read
+    // 'show.bs.modal' as a namespaced 'show' event and miss them.
+    document.getElementById('costCentersModal').addEventListener('show.bs.modal', function (event) {
         var button = $(event.relatedTarget); // Button that triggered the modal
 
         // Extract info from data-* attributes
@@ -375,7 +375,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .done((response) => {
                 var message = response?.message ?? 'Cost center assignment updated successfully.';
                 sessionStorage.setItem(BILLING_SUCCESS_KEY, message);
-                $('#costCentersModal').modal('hide');
                 location.reload();
             })
             .fail((xhr) => {
