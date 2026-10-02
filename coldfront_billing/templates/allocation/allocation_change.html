@@ -12,7 +12,7 @@ Request Allocation Change
 {% block content %}
 {% billing_quota_attr_name as billing_quota_attribute_name %}
 
-<h2>[New] Request change to {{ allocation.get_parent_resource }} for project: {{ allocation.project.title }}</h2>
+<h2>Request change to {{ allocation.get_parent_resource }} for project: {{ allocation.project.title }}</h2>
 <hr>
 
 <p class="text-justify">
@@ -103,7 +103,7 @@ Request Allocation Change
                 Reason for Change:
             </label>
             {{ form.justification }}
-            <small class="form-text text-muted">please include some information about the reason for this request. e.g. new lab member, new data set</small>
+            <small class="form-text text-muted">Please include the reason for this request, e.g. new lab member, new data set</small>
         </div>
       {# opens the confirmation modal when the quota changes; allocation_attribute_edit.js decides #}
       <input class="btn btn-success" type="submit" value="Submit"

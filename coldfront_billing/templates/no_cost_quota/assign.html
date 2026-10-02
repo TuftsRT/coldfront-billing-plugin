@@ -193,7 +193,7 @@ Assign No-Cost Quota
                         <label for="assignQuotaAmount">Quota amount ({{ quota.units }})</label>
                         <input type="number" class="form-control" id="assignQuotaAmount"
                                name="amount_tb" step="{{ quota.increment_tb }}" min="0"
-                               placeholder="Multiple of {{ quota.increment_tb }} {{ quota.units }}"
+                               placeholder="Multiple of {{ quota.increment_tb|floatformat:-2 }} {{ quota.units }}"
                                required>
                     </div>
                 </div>

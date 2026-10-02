@@ -282,3 +282,29 @@ class TestBillingView:
         assert project_obj.all_cost_centers == 'A&lt;b&gt;: 60%<br>DEPT2.G1: 40%'
         # the attribute is escaped once more, since the browser unescapes it before Bootstrap renders it as HTML
         assert 'data-bs-content="A&amp;lt;b&amp;gt;: 60%&lt;br&gt;DEPT2.G1: 40%"' in response.content.decode()
+
+    def test_sort_headers_reverse_the_current_sort(
+        self,
+        client,
+        superuser,
+        multiple_projects,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        """The sorted column links to the opposite direction; the others link to ascending."""
+        response = get_billing_response(client, superuser, '?order_by=title&direction=asc&project_title=Project')
+        content = response.content.decode()
+
+        titles = [p.title for p in response.context['project_list']]
+        assert titles == sorted(titles)
+        assert content.count('aria-sort=') == 1
+        assert 'aria-sort="ascending"' in content
+        assert 'href="?order_by=title&direction=des&project_title=Project"' in content
+        assert 'href="?order_by=pi&direction=asc&project_title=Project"' in content
+
+        response = get_billing_response(client, superuser, '?order_by=title&direction=des')
+        content = response.content.decode()
+        assert 'aria-sort="descending"' in content
+        assert 'href="?order_by=title&direction=asc&"' in content

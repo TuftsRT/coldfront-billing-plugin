@@ -4,11 +4,14 @@
 {% load static %}
 
 {% block title %}
-Billing
+Billing Assignment
 {% endblock %}
 
 {% block content %}
-<h2>Billing</h2>
+<h2>Billing Assignment</h2>
+<div class="py-3">
+<p class="lead info-text">Assign cost centers (departments and, optionally, grants) to projects for billing.</p>
+</div>
 <hr>
 {% if expand_accordion == "show" or project_list %}
 <div class="mb-3" id="accordion">
@@ -37,62 +40,29 @@ Billing
 <hr>
 {% endif %}
 {% if project_list %}
-<strong>Projects: {{projects_count}}</strong>
+<strong>Total: {{projects_count}}</strong>
 <div class="table-responsive">
     <table class="table table-sm">
         <thead>
         <tr>
-            <th scope="col" class="text-nowrap">
-                ID
-                <a href="?order_by=id&direction=asc&{{filter_parameters}}"><i
-                        class="fas fa-sort-up" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort ID asc</span></a>
-                <a href="?order_by=id&direction=des&{{filter_parameters}}"><i
-                        class="fas fa-sort-down" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort ID desc</span></a>
-            </th>
-            <th scope="col" class="text-nowrap">
-                PI
-                <a href="?order_by=pi&direction=asc&{{filter_parameters}}"><i
-                        class="fas fa-sort-up" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort PI asc</span></a>
-                <a href="?order_by=pi&direction=des&{{filter_parameters}}"><i
-                        class="fas fa-sort-down" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort PI desc</span></a>
-            </th>
-            <th scope="col" class="text-nowrap">
-                Title
-                <a href="?order_by=title&direction=asc&{{filter_parameters}}"><i
-                        class="fas fa-sort-up" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort Title asc</span></a>
-                <a href="?order_by=title&direction=des&{{filter_parameters}}"><i
-                        class="fas fa-sort-down" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort Title desc</span></a>
-            </th>
-            <th scope="col" class="text-nowrap">
-                Status
-                <a href="?order_by=status&direction=asc&{{filter_parameters}}"><i
-                        class="fas fa-sort-up" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort Status asc</span></a>
-                <a href="?order_by=status&direction=des&{{filter_parameters}}"><i
-                        class="fas fa-sort-down" aria-hidden="true"></i><span
-                        class="visually-hidden">Sort Status desc</span></a>
-            </th>
+            {% include "billing/sort_header.html" with col_name="title" col_label="Project" %}
+            {% include "billing/sort_header.html" with col_name="pi" col_label="PI" %}
+            {% include "billing/sort_header.html" with col_name="status" col_label="Status" %}
             <th scope="col" class="text-nowrap">Monthly cost</th>
-            <th scope="col" class="text-nowrap text-start">Cost centers</th>
+            <th scope="col" class="text-nowrap text-start">Cost centers
+                <span tabindex="0" data-bs-toggle="popover" data-bs-trigger="hover focus"
+                      data-bs-content="Departments and grants assigned to the project.">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i><span class="visually-hidden">Departments and grants assigned to the project.</span>
+                </span>
+            </th>
             <th scope="col" class="text-nowrap"></th>
         </tr>
         </thead>
         <tbody>
         {% for project in project_list %}
         <tr>
-            {% if project.project_code %}
-            <td><a href="/project/{{project.id}}/">{{ project.project_code }}</a></td>
-            {% else %}
-            <td><a href="/project/{{project.id}}/">{{ project.id }}</a></td>
-            {% endif %}
+            <td style="text-align: justify; text-justify: inter-word;"><a href="/project/{{project.id}}/">{{ project.title }}</a></td>
             <td>{{ project.pi.username }}</td>
-            <td style="text-align: justify; text-justify: inter-word;">{{ project.title }}</td>
             <td>{{ project.status.name }}</td>
             <td>{{ project.cost }}</td>
             <td class="text-start align-middle">

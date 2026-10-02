@@ -9,6 +9,9 @@ Manage No-Cost Quotas
 
 {% block content %}
 <h2>Manage No-Cost Quotas</h2>
+<div class="py-3">
+<p class="lead info-text">Eligible users have no-cost quotas, which they can apply to resource allocations to reduce their costs.</p>
+</div>
 <hr>
 
 {% if expand_accordion == "show" or quota_list %}
@@ -39,10 +42,13 @@ Manage No-Cost Quotas
 {% endif %}
 
 <p class="mb-4">
-    Apply portions of {% if request.user.is_superuser %}the selected user's{% else %}your{% endif %} no-cost quotas to
-    active allocations that require payment. Allocations in this list belong to projects where
-    {% if request.user.is_superuser %}the user is{% else %}you are{% endif %} either the owner or have the
+    {% if request.user.is_superuser %}
+    Select a no-cost quota to apply on behalf of its owner to eligible resource allocations in projects where
+    that user is the PI or has the 'Manager' or 'Billing' role.
+    {% else %}
+    Select a no-cost quota to apply to eligible resource allocations in projects where you are the PI or have the
     'Manager' or 'Billing' role.
+    {% endif %}
 </p>
 
 <strong>No-Cost Quotas: {{ page_obj.paginator.count }}</strong>
@@ -58,61 +64,11 @@ Manage No-Cost Quotas
             <thead>
             <tr>
                 <th scope="col"></th>
-                <th scope="col" class="text-nowrap">
-                    Owner
-                    <a href="?order_by=owner&direction=asc&{{filter_parameters}}">
-                        <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Owner asc</span>
-                    </a>
-                    <a href="?order_by=owner&direction=des&{{filter_parameters}}">
-                        <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Owner desc</span>
-                    </a>
-                </th>
-                <th scope="col" class="text-nowrap">
-                    Type
-                    <a href="?order_by=quota_type&direction=asc&{{filter_parameters}}">
-                        <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Type asc</span>
-                    </a>
-                    <a href="?order_by=quota_type&direction=des&{{filter_parameters}}">
-                        <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Type desc</span>
-                    </a>
-                </th>
-                <th scope="col" class="text-nowrap">
-                    Description
-                    <a href="?order_by=description&direction=asc&{{filter_parameters}}">
-                        <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Description asc</span>
-                    </a>
-                    <a href="?order_by=description&direction=des&{{filter_parameters}}">
-                        <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Description desc</span>
-                    </a>
-                </th>
-                <th scope="col" class="text-nowrap">
-                    Total quota
-                    <a href="?order_by=amount&direction=asc&{{filter_parameters}}">
-                        <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Total quota asc</span>
-                    </a>
-                    <a href="?order_by=amount&direction=des&{{filter_parameters}}">
-                        <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Total quota desc</span>
-                    </a>
-                </th>
-                <th scope="col" class="text-nowrap">
-                    Unassigned quota
-                    <a href="?order_by=remaining&direction=asc&{{filter_parameters}}">
-                        <i class="fas fa-sort-up" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Unassigned quota asc</span>
-                    </a>
-                    <a href="?order_by=remaining&direction=des&{{filter_parameters}}">
-                        <i class="fas fa-sort-down" aria-hidden="true"></i>
-                        <span class="visually-hidden">Sort Unassigned quota desc</span>
-                    </a>
-                </th>
+                {% include "billing/sort_header.html" with col_name="owner" col_label="Quota Owner" %}
+                {% include "billing/sort_header.html" with col_name="quota_type" col_label="Quota Type" %}
+                {% include "billing/sort_header.html" with col_name="description" col_label="Description" %}
+                {% include "billing/sort_header.html" with col_name="amount" col_label="Total Quota" %}
+                {% include "billing/sort_header.html" with col_name="remaining" col_label="Unassigned Quota" %}
             </tr>
             </thead>
             <tbody>
@@ -144,7 +100,6 @@ Manage No-Cost Quotas
         </table>
         {% include 'common/pagination.html' %}
     </div>
-    <p class="mt-2 text-muted">Select a No Cost Quota to assign</p>
     <div class="text-end mb-3">
         <button type="submit" class="btn btn-primary">Next</button>
     </div>
