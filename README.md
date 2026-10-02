@@ -14,10 +14,18 @@ A [ColdFront](https://github.com/coldfront/coldfront) plugin that adds storage b
 
 ## Requirements
 
-- Python ≥ 3.9
-- ColdFront ≥ 1.1.7, < 2
-- Django 4.2+
+- Python ≥ 3.10
+- ColdFront ≥ 1.1.9, < 2 (Bootstrap 5)
+- Django 5.2+
 - [django-q2](https://django-q2.readthedocs.io/) (optional, required for scheduled reports)
+
+Version 3 targets ColdFront 1.1.9, whose templates use Bootstrap 5. For ColdFront 1.1.7/1.1.8
+(Bootstrap 4), use the 2.x releases from the `bootstrap4` branch.
+
+The plugin's templates and scripts use Bootstrap 5's `data-bs-*` attributes and don't call
+Bootstrap from JavaScript: ColdFront's bundle doesn't expose Bootstrap's API (there is no
+`window.bootstrap` or `$.fn.modal`). Popovers are set up by ColdFront at page load, so they only
+work on elements present when the page loads.
 
 ## Installation
 
