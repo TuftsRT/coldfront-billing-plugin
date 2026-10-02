@@ -17,6 +17,24 @@ from coldfront_billing.views.utils import csv_response
 logger = logging.getLogger(__name__)
 
 
+def _serialize_no_cost_quotas_report(data):
+    # the rows hold the Allocation instance for the template; JSON gets its id and project instead
+    def row(entry):
+        allocation = entry['allocation']
+        return {
+            'allocation_id': allocation.id,
+            'project_id': allocation.project.id,
+            'project_title': allocation.project.title,
+            **{key: value for key, value in entry.items() if key != 'allocation'},
+        }
+
+    return {
+        'allocations': [row(entry) for entry in data['allocations']],
+        'shared_allotments': [row(entry) for entry in data['shared_allotments']],
+        'errors': data['errors'],
+    }
+
+
 @login_required
 @require_GET
 def no_cost_quotas_report_view(request):
@@ -32,7 +50,7 @@ def no_cost_quotas_report_view(request):
             data = no_cost_quotas_report()
 
         if content_type == 'json':
-            return JsonResponse(data, status=200)
+            return JsonResponse(_serialize_no_cost_quotas_report(data), status=200)
         else:
             return TemplateResponse(
                 request,
