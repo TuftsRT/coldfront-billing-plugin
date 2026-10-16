@@ -24,12 +24,6 @@ dependencies = [
     "pydantic>=2.0.0,<3",
 ]
 
-
-[tool.uv]
-# ColdFront imports bibtexparser's 1.x API (bibtexparser.bibdatabase) but doesn't declare it; it
-# arrives unpinned via doi2bib, and 2.x breaks coldfront.config.urls. Only affects this lock file.
-constraint-dependencies = ["bibtexparser<2"]
-
 [tool.hatch.build.targets.wheel]
 packages = ["coldfront_billing"]
 
