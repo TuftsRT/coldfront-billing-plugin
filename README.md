@@ -97,6 +97,7 @@ Configure these in your `local_settings.py` or equivalent:
 
 | Setting | Default | Description |
 |---|---|---|
+| `COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED` | ColdFront's `EMAIL_ENABLED` | Whether to send quota-approval emails to the PI and requester. Unset (or `None`), it follows `EMAIL_ENABLED`, so turning off ColdFront's emails turns these off too. Doesn't affect the monthly billing report, which is controlled by the schedule's "Schedule enabled" setting. |
 | `COLDFRONT_BILLING_EMAIL_FROM` | `'billing@tufts.com'` | From address for billing notification emails |
 | `COLDFRONT_BILLING_ALLOCATION_EMAIL_SUBJECT` | `'Storage quota updated for {project_name}'` | Subject template for quota-approval emails |
 | `COLDFRONT_BILLING_ALLOCATION_EMAIL_BODY` | *(see below)* | Body template for quota-approval emails |

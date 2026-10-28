@@ -21,6 +21,7 @@ from coldfront_billing.settings import (
     BILLING_ALLOCATION_EMAIL_BODY,
     BILLING_ALLOCATION_EMAIL_SUBJECT,
     BILLING_EMAIL_FROM,
+    allocation_email_enabled,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,16 @@ def send_allocation_notification(
     *,
     allocation_change_pk: int | None = None,
 ) -> None:
-    """Notify project owner and requester when a paid storage allocation quota is approved."""
+    """
+    Notify project owner and requester when a paid storage allocation quota is approved.
+
+    Does nothing unless allocation_email_enabled(): by default that follows ColdFront's
+    EMAIL_ENABLED.
+    """
+
+    if not allocation_email_enabled():
+        logger.info(f'Allocation quota approval emails are disabled; not emailing about allocation {allocation.pk}')
+        return
 
     if not is_paid_storage_allocation(allocation):
         return

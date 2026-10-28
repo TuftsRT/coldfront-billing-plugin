@@ -665,6 +665,11 @@ def allocation_change_status_pending(db) -> AllocationChangeStatusChoice:
 class TestAllocationQuotaApprovedNotification:
     """Tests for quota approval emails to project owner and requester."""
 
+    @pytest.fixture(autouse=True)
+    def emails_enabled(self, settings):
+        """The test settings leave ColdFront's EMAIL_ENABLED off, which these emails follow by default."""
+        settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED = True
+
     @patch('coldfront_billing.notifications.EmailMessage')
     def test_activation_sends_email_to_project_owner(
         self,
@@ -898,3 +903,86 @@ class TestAllocationQuotaApprovedNotification:
         _, kwargs = mock_email_message.call_args
         assert kwargs['subject'] == f'Quota update: {project.title}'
         assert kwargs['body'] == f'Project {project.title} quota is now 7 (cost: 700.00).'
+
+
+@pytest.mark.django_db
+class TestAllocationQuotaEmailSwitch:
+    """COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED, which falls back to ColdFront's EMAIL_ENABLED."""
+
+    @pytest.fixture
+    def active_paid_allocation(
+        self,
+        project,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            quota_value='12',
+            resource_name='Quota Email Switch Storage',
+        )
+        return allocation
+
+    @pytest.mark.parametrize(
+        'billing_setting, email_enabled, sends',
+        [
+            (None, True, True),
+            (None, False, False),
+            (True, False, True),
+            (False, True, False),
+        ],
+        ids=['follows_email_enabled_on', 'follows_email_enabled_off', 'billing_on_overrides', 'billing_off_overrides'],
+    )
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_the_switch(
+        self, mock_email_message, settings, active_paid_allocation, billing_setting, email_enabled, sends
+    ):
+        settings.EMAIL_ENABLED = email_enabled
+        settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED = billing_setting
+
+        send_allocation_notification(active_paid_allocation)
+
+        assert mock_email_message.return_value.send.called is sends
+
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_unset_follows_email_enabled(self, mock_email_message, settings, active_paid_allocation):
+        del settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED
+        settings.EMAIL_ENABLED = False
+
+        send_allocation_notification(active_paid_allocation)
+
+        mock_email_message.assert_not_called()
+
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_disabled_by_the_activation_signal_too(
+        self,
+        mock_email_message,
+        settings,
+        project,
+        storage_resource_type,
+        allocation_status_new,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+    ):
+        settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED = False
+        allocation, _ = add_storage_allocation_to_project(
+            project,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            quota_value='12',
+            resource_name='Quota Email Switch Signal Storage',
+        )
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        mock_email_message.assert_not_called()
