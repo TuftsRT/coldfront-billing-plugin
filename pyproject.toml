@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "coldfront-billing"
-version = "2.1.0"
-requires-python = ">=3.9"
+version = "3.0.0"
+requires-python = ">=3.10"
 authors = [
     { name = "Merixstudio" },
     { name = "Chris Barnett", email = "christopher.barnett@tufts.edu"}
@@ -16,14 +16,13 @@ license = "MIT"
 keywords = ["high-performance-computing", "resource-allocation", "billing"]
 classifiers = [
     'Programming Language :: Python :: 3',
-    'Framework :: Django :: 4.2',
+    'Framework :: Django :: 5.2',
 ]
 dependencies = [
     "coldfront>=1.1.7,<2",
     "email-validator>=2.3.0",
     "pydantic>=2.0.0,<3",
 ]
-
 
 [tool.hatch.build.targets.wheel]
 packages = ["coldfront_billing"]

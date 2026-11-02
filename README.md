@@ -14,10 +14,18 @@ A [ColdFront](https://github.com/coldfront/coldfront) plugin that adds storage b
 
 ## Requirements
 
-- Python ≥ 3.9
-- ColdFront ≥ 1.1.7, < 2
-- Django 4.2+
+- Python ≥ 3.10
+- ColdFront ≥ 1.1.9, < 2 (Bootstrap 5)
+- Django 5.2+
 - [django-q2](https://django-q2.readthedocs.io/) (optional, required for scheduled reports)
+
+Version 3 targets ColdFront 1.1.9, whose templates use Bootstrap 5. For ColdFront 1.1.7/1.1.8
+(Bootstrap 4), use the 2.x releases from the `bootstrap4` branch.
+
+The plugin's templates and scripts use Bootstrap 5's `data-bs-*` attributes and don't call
+Bootstrap from JavaScript: ColdFront's bundle doesn't expose Bootstrap's API (there is no
+`window.bootstrap` or `$.fn.modal`). Popovers are set up by ColdFront at page load, so they only
+work on elements present when the page loads.
 
 ## Installation
 
@@ -89,6 +97,7 @@ Configure these in your `local_settings.py` or equivalent:
 
 | Setting | Default | Description |
 |---|---|---|
+| `COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED` | ColdFront's `EMAIL_ENABLED` | Whether to send quota-approval emails to the PI and requester. Unset (or `None`), it follows `EMAIL_ENABLED`, so turning off ColdFront's emails turns these off too. Doesn't affect the monthly billing report, which is controlled by the schedule's "Schedule enabled" setting. |
 | `COLDFRONT_BILLING_EMAIL_FROM` | `'billing@tufts.com'` | From address for billing notification emails |
 | `COLDFRONT_BILLING_ALLOCATION_EMAIL_SUBJECT` | `'Storage quota updated for {project_name}'` | Subject template for quota-approval emails |
 | `COLDFRONT_BILLING_ALLOCATION_EMAIL_BODY` | *(see below)* | Body template for quota-approval emails |

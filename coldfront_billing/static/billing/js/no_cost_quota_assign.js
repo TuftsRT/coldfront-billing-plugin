@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var assignButton = document.getElementById('assignQuotaButton');
     var modalTitle = document.getElementById('assignQuotaModalLabel');
 
-    document.querySelectorAll('[data-target="#assignQuotaModal"], [data-bs-target="#assignQuotaModal"]').forEach(function (btn) {
+    document.querySelectorAll('[data-bs-target="#assignQuotaModal"]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var allocationId = this.getAttribute('data-allocation-id');
             var allotmentId = this.getAttribute('data-allotment-id');

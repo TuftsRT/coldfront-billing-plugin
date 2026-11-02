@@ -18,14 +18,14 @@ Projected Cost Report
   <div class="mb-3" id="accordion">
     <div class="card">
       <div class="card-header">
-        <a id="expand_button" role="button" class="card-link " data-toggle="collapse" href="#collapseOne">
+        <a id="expand_button" role="button" class="card-link " data-bs-toggle="collapse" href="#collapseOne">
           <div>
           <i class="fas fa-filter" aria-hidden="true"></i> Filter
-          <i id="plus_minus" class="fas {{expand_accordion|get_icon}} float-right"></i>
+          <i id="plus_minus" class="fas {{expand_accordion|get_icon}} float-end"></i>
           </div>
         </a>
       </div>
-      <div id="collapseOne" class="collapse {{expand_accordion}} {% if form.username.value %}show{% endif %}" data-parent="#accordion">
+      <div id="collapseOne" class="collapse {{expand_accordion}} {% if form.username.value %}show{% endif %}" data-bs-parent="#accordion">
         <div class="card-body">
           <form id="filter_form" method="GET" autocomplete="off">
                 {% if request.user.is_superuser %}
@@ -75,7 +75,7 @@ Projected Cost Report
           {% for item in charge_report %}
           <tr>
             <td style="text-align: justify; text-justify: inter-word;">
-              <a href="/project/{{item.project.id}}/" data-toggle="popover" data-trigger="hover" data-content="View project details.">{{ item.project.title }}</a>
+              <a href="/project/{{item.project.id}}/" title="View project details.">{{ item.project.title }}</a>
             </td>
             <td style="text-align: justify; text-justify: inter-word;" class="text-nowrap">{{ item.project.pi.first_name }} {{ item.project.pi.last_name }} ({{ item.project.pi.username }})</td>
             <td>${{ item.project_cost|floatformat:2}}</td>
@@ -84,7 +84,7 @@ Projected Cost Report
             <td>{{ item.percentage }}%</td>
             <td>${{ item.charged_to_id|floatformat:2 }}</td>
             <td>
-              <a class="btn btn-sm btn-info" data-toggle="collapse" href="#details-{{ forloop.counter }}" role="button" aria-expanded="false" aria-controls="details-{{ forloop.counter }}">
+              <a class="btn btn-sm btn-info" data-bs-toggle="collapse" href="#details-{{ forloop.counter }}" role="button" aria-expanded="false" aria-controls="details-{{ forloop.counter }}">
                 View Details
               </a>
             </td>
@@ -160,7 +160,6 @@ async function downloadFile(url) {
 }
   
 document.addEventListener('DOMContentLoaded', function() {
-    $('[data-toggle="popover"]').popover();
     
     document.getElementById('downloadJSON').addEventListener('click', function() {
       const url = new URL(window.location.href);

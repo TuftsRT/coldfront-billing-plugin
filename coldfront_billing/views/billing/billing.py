@@ -6,6 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, QuerySet, TextField
 from django.db.models.functions import Cast
+from django.utils.html import format_html_join
+from django.utils.safestring import mark_safe
 from django.views.generic import ListView
 
 from coldfront_billing.constants import (
@@ -92,7 +94,8 @@ class BillingView(LoginRequiredMixin, BillingListViewStateMixin, ListView):
                     for row in assignments_list
                 ]
                 project.cost_centers = ', '.join(items[:2]) + ' ...' if len(items) > 2 else ', '.join(items)
-                project.all_cost_centers = '<br>'.join(items) if items else ''
+                # popover HTML: escape each item, keep the <br> separators as markup
+                project.all_cost_centers = format_html_join(mark_safe('<br>'), '{}', ((item,) for item in items))
                 project.assignments_json = json.dumps(assignments_list)
             except ObjectDoesNotExist:
                 project.cost_centers = ''
