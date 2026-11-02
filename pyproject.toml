@@ -12,7 +12,6 @@ authors = [
 ]
 description = "Coldfront Billing Plugin"
 readme = "README.md"
-license = "MIT"
 keywords = ["high-performance-computing", "resource-allocation", "billing"]
 classifiers = [
     'Programming Language :: Python :: 3',
