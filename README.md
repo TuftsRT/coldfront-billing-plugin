@@ -185,3 +185,6 @@ The project uses [ruff](https://docs.astral.sh/ruff/) for linting and formatting
 ruff check .
 ruff format .
 ```
+
+## License
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
