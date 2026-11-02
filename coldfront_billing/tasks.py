@@ -6,9 +6,8 @@ from django_q.models import Schedule
 from coldfront_billing.allotments import reduce_allotments_evenly
 from coldfront_billing.constants import BILLING_SCHEDULE_NAME
 from coldfront_billing.models import BillingScheduleHistory, BillingScheduleSettings
-from coldfront_billing.models.no_cost_quota import NoCostQuotaAllotment, quota_with_remaining
+from coldfront_billing.models.no_cost_quota import NoCostQuotaAllotment
 from coldfront_billing.reports import auto_assign_quota, get_oversubscribed_no_cost_quotas, send_billing_report_email
-from coldfront_billing.reports.nocostquota import no_cost_quotas_report
 
 logger = logging.getLogger(__name__)
 
@@ -56,24 +55,6 @@ def run_scheduled_billing_report():
         details=details,
     )
     return result
-
-
-def send_ncq_report():
-    report = no_cost_quotas_report()
-    for i in report['allocations']:
-        del i['allocation']  # remove allocation object from report to avoid serialization issues
-
-    ncq_remaining_report = []
-    for i in quota_with_remaining:
-        ncq_remaining_report.append(
-            {
-                'user': i.user.username,
-                'quota_type': i.quota_type,
-                'amount': i.amount_tb,
-                'remaining': round(i.remaining, 2),
-            }
-        )
-    return ncq_remaining_report
 
 
 def fix_oversubscribed_no_cost_quotas():
