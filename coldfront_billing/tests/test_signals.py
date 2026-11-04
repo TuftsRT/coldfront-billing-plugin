@@ -714,40 +714,40 @@ def allocation_change_status_pending(db) -> AllocationChangeStatusChoice:
     return AllocationChangeStatusChoice.objects.get_or_create(name='Pending')[0]
 
 
+@pytest.fixture
+def pending_allocation(
+    project_with_billing_user,
+    no_cost_quota,
+    storage_resource_type,
+    allocation_status_new,
+    cost_attribute_type,
+    quota_attribute_type,
+    no_cost_quota_type_attribute_type,
+    allocation_quota_apply_attribute_type,
+):
+    """make(quota_value, status) -> an allocation requesting an allotment from no_cost_quota"""
+
+    def make(quota_value='10', status=allocation_status_new, resource_name='No-Cost Storage Pending'):
+        return TestAllocationBecameActiveSignal._pending_no_cost_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            status,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            allocation_quota_apply_attribute_type,
+            no_cost_quota,
+            quota_value=quota_value,
+            apply_pref_value=str(no_cost_quota.pk),
+            resource_name=resource_name,
+        )
+
+    return make
+
+
 @pytest.mark.django_db
 class TestAllotmentFailuresDoNotBlockActivation:
     """A requested allotment that can't be applied is recorded, and the allocation is saved all the same."""
-
-    @pytest.fixture
-    def pending_allocation(
-        self,
-        project_with_billing_user,
-        no_cost_quota,
-        storage_resource_type,
-        allocation_status_new,
-        cost_attribute_type,
-        quota_attribute_type,
-        no_cost_quota_type_attribute_type,
-        allocation_quota_apply_attribute_type,
-    ):
-        """make(quota_value, status) -> an allocation requesting an allotment from no_cost_quota"""
-
-        def make(quota_value='10', status=allocation_status_new, resource_name='No-Cost Storage Pending'):
-            return TestAllocationBecameActiveSignal._pending_no_cost_allocation(
-                project_with_billing_user,
-                storage_resource_type,
-                status,
-                cost_attribute_type,
-                quota_attribute_type,
-                no_cost_quota_type_attribute_type,
-                allocation_quota_apply_attribute_type,
-                no_cost_quota,
-                quota_value=quota_value,
-                apply_pref_value=str(no_cost_quota.pk),
-                resource_name=resource_name,
-            )
-
-        return make
 
     def test_an_invalid_allotment_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
         allocation = pending_allocation(quota_value='0.005')
@@ -801,6 +801,74 @@ class TestAllotmentFailuresDoNotBlockActivation:
             allocation=allocation,
             allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
         ).exists()
+
+
+@pytest.mark.django_db
+class TestPendingNoCostQuotaInEmail:
+    """The approval email says when a requested no-cost quota is still to be applied."""
+
+    PENDING = 'still to be applied'
+
+    @pytest.fixture(autouse=True)
+    def emails_enabled(self, settings):
+        settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED = True
+
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_activation_with_a_failed_allotment_says_it_is_pending(
+        self, mock_email_message, pending_allocation, allocation_status_active
+    ):
+        allocation = pending_allocation(quota_value='0.005')
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        _, kwargs = mock_email_message.call_args
+        assert self.PENDING in kwargs['body']
+
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_activation_with_an_applied_allotment_does_not(
+        self, mock_email_message, pending_allocation, no_cost_quota, allocation_status_active
+    ):
+        """5 TB of the 10 TB requested is free, so the other 5 still costs something and is emailed."""
+        consumer = pending_allocation(status=allocation_status_active, resource_name='No-Cost Consumer')
+        NoCostQuotaAllotment.objects.create(no_cost_quota=no_cost_quota, allocation=consumer, amount_tb=Decimal('95'))
+        allocation = pending_allocation()
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal('5')
+        _, kwargs = mock_email_message.call_args
+        assert '500.00' in kwargs['body']
+        assert self.PENDING not in kwargs['body']
+
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_a_failed_allotment_on_change_approval_says_it_is_pending(
+        self, mock_email_message, pending_allocation, allocation_status_active
+    ):
+        allocation = pending_allocation(quota_value='0.005', status=allocation_status_active)
+
+        # no allocation_change_pk: the quota check that applies to change requests is tested above
+        allocation_change_approved.send(sender=object, allocation_pk=allocation.pk)
+
+        _, kwargs = mock_email_message.call_args
+        assert self.PENDING in kwargs['body']
+
+    @patch('coldfront_billing.notifications.EmailMessage')
+    def test_the_wording_comes_from_settings(
+        self, mock_email_message, monkeypatch, pending_allocation, allocation_status_active
+    ):
+        monkeypatch.setattr(
+            'coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_NO_COST_PENDING',
+            'Free quota for {project_name} comes later.',
+        )
+        allocation = pending_allocation(quota_value='0.005')
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        _, kwargs = mock_email_message.call_args
+        assert kwargs['body'].endswith(f'\n\nFree quota for {allocation.project.title} comes later.')
 
 
 @pytest.mark.django_db
