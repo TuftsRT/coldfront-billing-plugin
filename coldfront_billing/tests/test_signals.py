@@ -1,9 +1,11 @@
 """Unit tests for coldfront_billing signals."""
 
+from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
-from decimal import Decimal
+from django.contrib.auth.models import Group
+
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttribute,
@@ -16,11 +18,10 @@ from coldfront.core.allocation.models import (
 from coldfront.core.allocation.models import AttributeType as AllocationAttributeTypeBase
 from coldfront.core.allocation.signals import allocation_change_approved
 from coldfront.core.resource.models import Resource, ResourceAttribute
-from django.contrib.auth.models import Group
 
 from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, QUOTA_ATTR_NAME
 from coldfront_billing.enums import ProjectStatus
-from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
+from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaAllotmentFailure, NoCostQuotaGroup
 from coldfront_billing.notifications import send_allocation_notification
 from coldfront_billing.tests.conftest import (
     add_no_cost_quota_storage_allocation,
@@ -358,12 +359,30 @@ def allocation_quota_apply_attribute_type(db) -> AllocationAttributeType:
     )[0]
 
 
+def assert_failure_recorded(allocation, message_part, no_cost_quota=None):
+    """
+    The request couldn't be applied, and that didn't stop the save: the allocation is active, one
+    unresolved failure says why, and the request is gone so a later approval won't reapply it.
+    """
+    allocation.refresh_from_db()
+    assert allocation.status.name == 'Active'
+    failure = NoCostQuotaAllotmentFailure.objects.get(allocation=allocation)
+    assert message_part in failure.message
+    assert failure.no_cost_quota == no_cost_quota
+    assert failure.resolved_at is None
+    assert not AllocationAttribute.objects.filter(
+        allocation=allocation,
+        allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+    ).exists()
+    return failure
+
+
 @pytest.mark.django_db
 class TestAllocationBecameActiveSignal:
     """Tests for allocation_became_active (pre_save on Allocation): auto no-cost allotment when status -> Active."""
 
+    @staticmethod
     def _pending_no_cost_allocation(
-        self,
         project,
         storage_resource_type,
         allocation_status_new,
@@ -586,7 +605,7 @@ class TestAllocationBecameActiveSignal:
 
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
 
-    def test_invalid_apply_pref_pk_skips_allotment(
+    def test_invalid_apply_pref_pk_records_a_failure(
         self,
         project_with_billing_user,
         no_cost_quota,
@@ -614,8 +633,9 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
+        assert_failure_recorded(allocation, "'not-an-int' is not a quota id")
 
-    def test_missing_quota_attribute_skips_allotment(
+    def test_missing_quota_attribute_records_a_failure(
         self,
         project_with_billing_user,
         no_cost_quota,
@@ -646,6 +666,7 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
+        assert_failure_recorded(allocation, f'no usable {QUOTA_ATTR_NAME} value', no_cost_quota=no_cost_quota)
 
     def test_saving_already_active_allocation_does_not_run_transition_logic(
         self,
@@ -691,6 +712,95 @@ def allocation_change_status_approved(db) -> AllocationChangeStatusChoice:
 @pytest.fixture
 def allocation_change_status_pending(db) -> AllocationChangeStatusChoice:
     return AllocationChangeStatusChoice.objects.get_or_create(name='Pending')[0]
+
+
+@pytest.mark.django_db
+class TestAllotmentFailuresDoNotBlockActivation:
+    """A requested allotment that can't be applied is recorded, and the allocation is saved all the same."""
+
+    @pytest.fixture
+    def pending_allocation(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        storage_resource_type,
+        allocation_status_new,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+        allocation_quota_apply_attribute_type,
+    ):
+        """make(quota_value, status) -> an allocation requesting an allotment from no_cost_quota"""
+
+        def make(quota_value='10', status=allocation_status_new, resource_name='No-Cost Storage Pending'):
+            return TestAllocationBecameActiveSignal._pending_no_cost_allocation(
+                project_with_billing_user,
+                storage_resource_type,
+                status,
+                cost_attribute_type,
+                quota_attribute_type,
+                no_cost_quota_type_attribute_type,
+                allocation_quota_apply_attribute_type,
+                no_cost_quota,
+                quota_value=quota_value,
+                apply_pref_value=str(no_cost_quota.pk),
+                resource_name=resource_name,
+            )
+
+        return make
+
+    def test_an_invalid_allotment_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
+        allocation = pending_allocation(quota_value='0.005')
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
+        assert_failure_recorded(allocation, 'smaller than allocation increment', no_cost_quota=no_cost_quota)
+
+    def test_an_exhausted_quota_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
+        consumer = pending_allocation(status=allocation_status_active, resource_name='No-Cost Consumer')
+        NoCostQuotaAllotment.objects.create(no_cost_quota=no_cost_quota, allocation=consumer, amount_tb=Decimal('100'))
+        allocation = pending_allocation()
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
+        assert_failure_recorded(allocation, 'has nothing left to allot', no_cost_quota=no_cost_quota)
+
+    def test_an_unexpected_error_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
+        allocation = pending_allocation()
+
+        with patch('coldfront_billing.signals.create_update_allotment', side_effect=RuntimeError('boom')):
+            allocation.status = allocation_status_active
+            allocation.save()
+
+        assert_failure_recorded(allocation, 'RuntimeError: boom', no_cost_quota=no_cost_quota)
+
+    def test_a_failure_on_change_approval_is_recorded(
+        self, pending_allocation, no_cost_quota, allocation_status_active
+    ):
+        allocation = pending_allocation(quota_value='0.005', status=allocation_status_active)
+
+        allocation_change_approved.send(sender=object, allocation_pk=allocation.pk, allocation_change_pk=1)
+
+        assert_failure_recorded(allocation, 'smaller than allocation increment', no_cost_quota=no_cost_quota)
+
+    def test_if_the_failure_cannot_be_recorded_the_request_is_kept(self, pending_allocation, allocation_status_active):
+        """Nothing else would remember it, so leave the request; it is in the log either way."""
+        allocation = pending_allocation(quota_value='0.005')
+
+        with patch.object(NoCostQuotaAllotmentFailure.objects, 'create', side_effect=RuntimeError('db down')):
+            allocation.status = allocation_status_active
+            allocation.save()
+
+        allocation.refresh_from_db()
+        assert allocation.status.name == 'Active'
+        assert AllocationAttribute.objects.filter(
+            allocation=allocation,
+            allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+        ).exists()
 
 
 @pytest.mark.django_db

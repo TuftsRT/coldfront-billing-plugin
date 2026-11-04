@@ -131,6 +131,7 @@ No-cost quotas let you allocate free storage to users that they can apply to red
 - **Group-based quotas** — assign a `NoCostQuotaGroup` to a Django group; a `NoCostQuota` is automatically created for each user added to the group
 - **Allotments** — a portion of a user's no-cost quota applied to a specific allocation; tracked separately so the remaining balance is always visible
 - **Auto-assignment** — the scheduled billing task can automatically apply no-cost quotas to eligible allocations
+- **Allotment failures** — when a requester asks to apply a no-cost quota, the allotment is made as the allocation becomes active or its change is approved. If it can't be made (the quota has run out, say, or the amount isn't a multiple of the increment), the allocation is still activated; the failure is logged and recorded as a `NoCostQuotaAllotmentFailure`, listed in the Django admin. It's resolved automatically once an allotment from that quota is saved for the allocation, or by setting its resolved fields in the admin. Unresolved failures are there for a site to surface however it likes, such as in an alerts list
 
 ## Scheduled Reports
 
