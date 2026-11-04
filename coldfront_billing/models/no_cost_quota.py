@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -153,14 +153,19 @@ class NoCostQuotaAllotment(models.Model):
                         'amount': f'No cost quota allotment size ({amount}) is bigger than no-cost quota size ({no_cost_quota})'
                     }
                 )
-            allocation_quota_value = self.allocation.get_attribute(QUOTA_ATTR_NAME)
-
-            if not allocation_quota_value:
+            # the stored string, not the typed float, which would need rounding to compare
+            # (and rounding 0.115 to 0.12 lets a 0.12 TB allotment onto a 0.115 TB allocation)
+            try:
+                allocation_quota_tb = Decimal(
+                    (self.allocation.get_attribute(QUOTA_ATTR_NAME, typed=False) or '').strip()
+                )
+            except InvalidOperation:
                 return
 
-            allocation_quota = BillingQuota.create(
-                Decimal(allocation_quota_value).quantize(Decimal('0.01')), StorageUnit.TB
-            )
+            if not allocation_quota_tb:
+                return
+
+            allocation_quota = BillingQuota.create(allocation_quota_tb, StorageUnit.TB)
             allotment_quota = BillingQuota.create(self.amount_tb, self.no_cost_quota.units)
 
             if (allotment_size := allotment_quota.amount_tb) > (alloc_size := allocation_quota.amount_tb):

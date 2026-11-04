@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 import pytest
+from django.core.exceptions import ValidationError
 
 from coldfront_billing.models import NoCostQuotaAllotment
 from coldfront_billing.models.no_cost_quota import quota_with_remaining
@@ -48,3 +49,32 @@ class TestQuotaWithRemaining:
         assert quota.used == Decimal('0.1')
         assert quota.remaining == Decimal('99.9')
         assert quota.remaining_normalized == Decimal('99.9')
+
+
+@pytest.mark.django_db
+class TestNoCostQuotaAllotmentClean:
+    def test_allotment_bigger_than_a_fractional_allocation_is_rejected(
+        self,
+        no_cost_quota,
+        project_with_billing_user,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        """The allocation size is compared as stored: 0.115 TB, not rounded up to 0.12."""
+        allocation, _ = add_no_cost_quota_storage_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            quota_type_value=no_cost_quota.quota_type,
+            quota_value='0.115',
+        )
+        allotment = NoCostQuotaAllotment(no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal('0.12'))
+
+        with pytest.raises(ValidationError, match='bigger than allocation size'):
+            allotment.full_clean()
