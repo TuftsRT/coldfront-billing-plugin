@@ -112,8 +112,8 @@ class TestFixOversubscribedNoCostQuotas:
         """
         Trigger: get_oversubscribed_no_cost_quotas compares an exact allotment
         total (sum of amount_tb, 0.015 TB below) against reported_quota_bytes
-        converted to TB via `int(quota) / 10**12`. With reported_quota_bytes = 0
-        that division is exact (0.0), so this fires because 0.015 TB is
+        converted to TB via `Decimal(int(quota)) / 10**12`. With
+        reported_quota_bytes = 0 that is 0, so this fires because 0.015 TB is
         more than the allocation's reported 0 TB quota.
 
         Reduction: reduce_allotments_evenly separately recomputes an exact
