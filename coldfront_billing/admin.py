@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import CostCenter, CostCenterAssignment, NoCostQuota, NoCostQuotaAllotment, NoCostQuotaGroup
+from .models import (
+    CostCenter,
+    CostCenterAssignment,
+    NoCostQuota,
+    NoCostQuotaAllotment,
+    NoCostQuotaAllotmentFailure,
+    NoCostQuotaGroup,
+)
 
 
 @admin.register(CostCenter)
@@ -48,3 +55,18 @@ class NoCostQuotaGroupAdmin(admin.ModelAdmin):
     search_fields = ['group__name', 'quota_type']
     readonly_fields = ['created', 'updated']
     ordering = ['group__name', 'quota_type']
+
+
+@admin.register(NoCostQuotaAllotmentFailure)
+class NoCostQuotaAllotmentFailureAdmin(admin.ModelAdmin):
+    """Requested allotments that couldn't be applied. Set resolved at/by to mark one dealt with."""
+
+    list_display = ['allocation', 'no_cost_quota', 'message', 'created', 'resolved_at', 'resolved_by']
+    list_filter = [('resolved_at', admin.EmptyFieldListFilter), 'created']
+    search_fields = ['allocation__project__title', 'no_cost_quota__user__username', 'message']
+    readonly_fields = ['allocation', 'no_cost_quota', 'requested_value', 'message', 'created']
+    raw_id_fields = ['resolved_by']
+
+    def has_add_permission(self, request):
+        # failures are recorded by the signal that hit them, not entered by hand
+        return False

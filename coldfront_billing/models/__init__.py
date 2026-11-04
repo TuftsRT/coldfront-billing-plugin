@@ -1,3 +1,4 @@
+from .allotment_failure import NoCostQuotaAllotmentFailure
 from .billing_schedule_history import BillingScheduleHistory
 from .cost_center import CostCenter, CostCenterAssignment
 from .group import NoCostQuotaGroup
@@ -12,5 +13,6 @@ __all__ = [
     'NoCostQuota',
     'NoCostQuotaGroup',
     'NoCostQuotaAllotment',
+    'NoCostQuotaAllotmentFailure',
     'quota_with_remaining',
 ]

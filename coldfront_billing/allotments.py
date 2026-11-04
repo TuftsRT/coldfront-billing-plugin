@@ -2,11 +2,12 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from coldfront.core.allocation.models import Allocation
 
 from coldfront_billing.constants import QUOTA_ATTR_NAME
-from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
+from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaAllotmentFailure
 
 
 def create_update_allotment(allocation: Allocation, amount: Decimal, quota: NoCostQuota, append: bool = False) -> str:
@@ -29,6 +30,12 @@ def create_update_allotment(allocation: Allocation, amount: Decimal, quota: NoCo
 
             allotment.full_clean()
             allotment.save()
+
+            # however it was applied -- by hand, auto-assigned or a later request -- an allotment
+            # from this quota answers any earlier failure to apply one
+            NoCostQuotaAllotmentFailure.objects.filter(
+                allocation=allocation, no_cost_quota=quota, resolved_at__isnull=True
+            ).update(resolved_at=timezone.now(), resolution_note='Resolved by a later allotment.')
     except Exception as e:
         if hasattr(e, 'message_dict'):
             msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())

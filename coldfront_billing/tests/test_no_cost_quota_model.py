@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 from django.core.exceptions import ValidationError
 
-from coldfront_billing.models import NoCostQuotaAllotment
+from coldfront_billing.models import NoCostQuotaAllotment, NoCostQuotaAllotmentFailure
 from coldfront_billing.models.no_cost_quota import quota_with_remaining
 from coldfront_billing.tests.conftest import add_no_cost_quota_storage_allocation
 
@@ -78,3 +78,27 @@ class TestNoCostQuotaAllotmentClean:
 
         with pytest.raises(ValidationError, match='bigger than allocation size'):
             allotment.full_clean()
+
+
+@pytest.mark.django_db
+class TestNoCostQuotaAllotmentFailureResolve:
+    def test_records_who_and_why(self, user, no_cost_quota, project_with_billing_user):
+        allocation = project_with_billing_user.allocation_set.first()
+        failure = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message='nope')
+
+        assert failure.resolve(user, 'applied by hand') is True
+
+        failure.refresh_from_db()
+        assert failure.resolved_at is not None
+        assert failure.resolved_by == user
+        assert failure.resolution_note == 'applied by hand'
+
+    def test_resolving_twice_keeps_the_first(self, user, superuser, project_with_billing_user):
+        allocation = project_with_billing_user.allocation_set.first()
+        failure = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message='nope')
+        failure.resolve(user)
+
+        assert failure.resolve(superuser) is False
+
+        failure.refresh_from_db()
+        assert failure.resolved_by == user
