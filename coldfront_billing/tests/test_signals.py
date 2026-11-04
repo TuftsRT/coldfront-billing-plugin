@@ -443,6 +443,38 @@ class TestAllocationBecameActiveSignal:
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
         assert allotment.amount_tb == Decimal('10.0')
 
+    def test_transition_to_active_with_fractional_quota_creates_exact_allotment(
+        self,
+        project_with_billing_user,
+        no_cost_quota,
+        storage_resource_type,
+        allocation_status_new,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+        allocation_quota_apply_attribute_type,
+    ):
+        """0.1 has no exact float form; the allotment must still be exactly 0.1 TB, not 0.1000000000000000055..."""
+        allocation = self._pending_no_cost_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            allocation_status_new,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            allocation_quota_apply_attribute_type,
+            no_cost_quota,
+            quota_value='0.1',
+            apply_pref_value=str(no_cost_quota.pk),
+        )
+
+        allocation.status = allocation_status_active
+        allocation.save()
+
+        allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
+        assert allotment.amount_tb == Decimal('0.1')
+
     def test_allocation_change_approved_creates_allotment_when_allocation_already_active(
         self,
         project_with_billing_user,
