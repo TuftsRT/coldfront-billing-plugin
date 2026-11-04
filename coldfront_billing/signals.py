@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, post_delete, post_save, pre_save
@@ -37,11 +37,16 @@ def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
     except NoCostQuota.DoesNotExist:
         return
 
-    allocation_quota_tb = allocation.get_attribute(QUOTA_ATTR_NAME, typed=True)
+    # Untyped: the typed value is a float, and Decimal(0.1) is 0.1000000000000000055..., which
+    # fails the allotment's max_digits and increment-multiple validation.
+    allocation_quota_tb = allocation.get_attribute(QUOTA_ATTR_NAME, typed=False)
     if allocation_quota_tb is None:
         return
 
-    allocation_tb = Decimal(allocation_quota_tb)
+    try:
+        allocation_tb = Decimal(allocation_quota_tb.strip())
+    except InvalidOperation:
+        return
     remaining_tb = no_cost_quota.remaining_normalized
 
     amount = min(allocation_tb, remaining_tb)

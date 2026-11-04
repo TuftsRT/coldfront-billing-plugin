@@ -60,7 +60,7 @@ def no_cost_quotas_report(username: str = None, username_exact: bool = False):
             'allocation': allocation,
             'vol_path': vol_path,
             'storage_owner': storage_owner,
-            'quota': f'{int(quota) / 10**12:.5f}',
+            'quota': f'{Decimal(int(quota)) / 10**12:.5f}',
             'allotments': [],
         }
         ncq_allotment = allocation.no_cost_quota_allotments.all()
@@ -73,7 +73,7 @@ def no_cost_quotas_report(username: str = None, username_exact: bool = False):
             ncq_owner = ncq.user.username
             info['allotments'].append({'amount': str(amount), 'quota_type': quota_type, 'ncq_owner': ncq_owner})
         info['ncq_allot_total'] = str(ncq_allot_total)
-        info['billable_quota'] = f'{max(0, Decimal(int(quota) / 10**12) - ncq_allot_total):.5f}'
+        info['billable_quota'] = f'{max(0, Decimal(int(quota)) / 10**12 - ncq_allot_total):.5f}'
         data.append(info)
     if username and username_exact:
         # also look for any NoCostQuotaAllotments that the user owns, but are not associated with an allocation that they own
@@ -102,7 +102,7 @@ def no_cost_quotas_report(username: str = None, username_exact: bool = False):
                         'allocation': allocation,
                         'vol_path': vol_path,
                         'storage_owner': storage_owner,
-                        'quota': f'{int(quota) / 10**12:.5f}',
+                        'quota': f'{Decimal(int(quota)) / 10**12:.5f}',
                         'amount': amount,
                         'ncq_owner': ncq_owner,
                         'quota_type': quota_type,
@@ -136,7 +136,7 @@ def get_oversubscribed_no_cost_quotas():
         increment = Decimal(ncq_allotment.first().no_cost_quota.increment_gb) / Decimal(1000)
         ncq_allot_total = sum(allot.amount_tb for allot in ncq_allotment)
         total = Decimal(ncq_allot_total)
-        quota_tb = Decimal(int(quota) / 10**12).quantize(increment)
+        quota_tb = (Decimal(int(quota)) / 10**12).quantize(increment)
         if quota_tb < total:
             exceeded_allotments.append(
                 {

@@ -115,6 +115,31 @@ class TestCreateUpdateAllotment:
         with pytest.raises(Exception, match='Could not save allotment'):
             create_update_allotment(allocation, Decimal('-1.0'), no_cost_quota)
 
+    def test_invalid_new_allotment_is_not_saved(
+        self,
+        user,
+        no_cost_quota,
+        project_with_billing_user,
+        storage_resource_type,
+        allocation_status_active,
+        cost_attribute_type,
+        quota_attribute_type,
+        no_cost_quota_type_attribute_type,
+    ):
+        """Validation runs before the insert, so a rejected amount leaves no allotment behind."""
+        allocation, _ = add_no_cost_quota_storage_allocation(
+            project_with_billing_user,
+            storage_resource_type,
+            allocation_status_active,
+            cost_attribute_type,
+            quota_attribute_type,
+            no_cost_quota_type_attribute_type,
+            quota_type_value=no_cost_quota.quota_type,
+        )
+        with pytest.raises(Exception, match='multiple of increment'):
+            create_update_allotment(allocation, Decimal('1.005'), no_cost_quota)
+        assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
+
     def test_create_or_update_allotment_by_id(
         self,
         user,

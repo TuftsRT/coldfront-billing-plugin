@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 
 from coldfront.core.allocation.models import Allocation
@@ -9,21 +10,25 @@ from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
 
 def create_update_allotment(allocation: Allocation, amount: Decimal, quota: NoCostQuota, append: bool = False) -> str:
+    # Validate before writing anything, so a rejected amount leaves no allotment behind.
+    # The row lock keeps two appends to one allotment from losing an update.
     try:
-        allotment, created = NoCostQuotaAllotment.objects.get_or_create(
-            no_cost_quota=quota,
-            allocation=allocation,
-            defaults={'amount_tb': amount},
-        )
-
-        if not created:
-            if append:
+        with transaction.atomic():
+            allotment = (
+                NoCostQuotaAllotment.objects.select_for_update()
+                .filter(no_cost_quota=quota, allocation=allocation)
+                .first()
+            )
+            created = allotment is None
+            if created:
+                allotment = NoCostQuotaAllotment(no_cost_quota=quota, allocation=allocation, amount_tb=amount)
+            elif append:
                 allotment.amount_tb += amount
             else:
                 allotment.amount_tb = amount
 
-        allotment.full_clean()
-        allotment.save()
+            allotment.full_clean()
+            allotment.save()
     except Exception as e:
         if hasattr(e, 'message_dict'):
             msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
