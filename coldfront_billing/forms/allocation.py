@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, ClassVar
 
 from django import forms
@@ -12,7 +13,7 @@ class AllocationDetailsForm(forms.Form):
     quota_in_terabyte = forms.DecimalField(
         label='Storage Quota (TB)',
         required=True,
-        min_value=0.1,
+        min_value=Decimal('0.1'),
         widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1', 'class': 'form-control'}),
         help_text='Specify the storage quota in terabytes for your allocation. The minimum allowed value is 0.1 TB.',
     )
