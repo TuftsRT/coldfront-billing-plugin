@@ -185,13 +185,13 @@ def to_tb(expr):
 
 def _build_quota_with_remaining():
     return NoCostQuota.objects.annotate(
-        used=Coalesce(Sum('allotments__amount_tb'), Value(0.0), output_field=DecimalField()),
+        used=Coalesce(Sum('allotments__amount_tb'), Value(Decimal('0')), output_field=DecimalField()),
         used_inactive=Coalesce(
             Sum(
                 'allotments__amount_tb',
                 filter=~Q(allotments__allocation__status__name=AllocationStatus.ACTIVE),
             ),
-            Value(0.0),
+            Value(Decimal('0')),
             output_field=DecimalField(),
         ),
     ).annotate(
