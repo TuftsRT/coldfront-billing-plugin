@@ -1,13 +1,14 @@
 import logging
 from decimal import Decimal
 
+from django.core.mail import EmailMessage
+
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttributeChangeRequest,
     AllocationChangeRequest,
 )
 from coldfront.core.resource.models import ResourceType
-from django.core.mail import EmailMessage
 
 from coldfront_billing.constants import DEFAULT_BILLING_COST, DEFAULT_BILLING_QUOTA, QUOTA_ATTR_NAME
 from coldfront_billing.data import BillingAllocation
@@ -19,6 +20,7 @@ from coldfront_billing.prefetch import (
 )
 from coldfront_billing.settings import (
     BILLING_ALLOCATION_EMAIL_BODY,
+    BILLING_ALLOCATION_EMAIL_NO_COST_PENDING,
     BILLING_ALLOCATION_EMAIL_SUBJECT,
     BILLING_EMAIL_FROM,
     allocation_email_enabled,
@@ -74,9 +76,13 @@ def send_allocation_notification(
     allocation: Allocation,
     *,
     allocation_change_pk: int | None = None,
+    no_cost_quota_pending: bool = False,
 ) -> None:
     """
     Notify project owner and requester when a paid storage allocation quota is approved.
+
+    `no_cost_quota_pending` says a no-cost quota they asked to apply couldn't be applied
+    automatically, so the cost quoted leaves it out; the email then says it's still to come.
 
     Does nothing unless allocation_email_enabled(): by default that follows ColdFront's
     EMAIL_ENABLED.
@@ -117,11 +123,10 @@ def send_allocation_notification(
     subject = BILLING_ALLOCATION_EMAIL_SUBJECT.format(
         project_name=project_name,
     )
-    body = BILLING_ALLOCATION_EMAIL_BODY.format(
-        project_name=project_name,
-        quota_amount=quota_amount,
-        cost=f'{cost:.2f}',
-    )
+    placeholders = {'project_name': project_name, 'quota_amount': quota_amount, 'cost': f'{cost:.2f}'}
+    body = BILLING_ALLOCATION_EMAIL_BODY.format(**placeholders)
+    if no_cost_quota_pending:
+        body = f'{body}\n\n{BILLING_ALLOCATION_EMAIL_NO_COST_PENDING.format(**placeholders)}'
 
     email = EmailMessage(
         subject=subject,

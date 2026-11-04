@@ -33,7 +33,7 @@ class AllotmentRequestError(Exception):
     """A requested no-cost allotment can't be applied, for a reason worth telling a person."""
 
 
-def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
+def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> bool:
     """
     Create/update the no-cost allotment requested through ``ALLOCATION_QUOTA_ATTRIBUTE_NAME``,
     then remove that request.
@@ -42,12 +42,15 @@ def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
     billing problem must not stop that. A request that can't be applied is logged and recorded as
     a NoCostQuotaAllotmentFailure for someone to deal with, and removed all the same, so a later
     approval doesn't apply it on top of whatever they decide.
+
+    Returns True if a requested allotment was left unapplied, False otherwise (including when
+    nothing was requested).
     """
     apply_quota_attr = allocation.allocationattribute_set.filter(
         allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
     ).first()
     if not apply_quota_attr:
-        return
+        return False
 
     requested_value = apply_quota_attr.value
     no_cost_quota = None
@@ -58,7 +61,7 @@ def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
             amount = _requested_amount(allocation, no_cost_quota)
             create_update_allotment(allocation, amount, no_cost_quota, append=True)
             apply_quota_attr.delete()
-        return
+        return False
     except AllotmentRequestError as e:
         message = str(e)
         logger.warning(f'No-cost quota allotment not applied to allocation {allocation.pk}: {message}')
@@ -79,6 +82,7 @@ def _apply_no_cost_quota_allotment_if_requested(allocation: Allocation) -> None:
     except Exception:
         # keep the request, so the failure is at least not lost, and say so in the log
         logger.exception(f'Could not record the failed no-cost quota allotment on allocation {allocation.pk}')
+    return True
 
 
 def _requested_quota(requested_value: str) -> NoCostQuota:
@@ -149,18 +153,19 @@ def allocation_became_active(sender, instance: Allocation, **kwargs):
         return
 
     if old_allocation.status.name != AllocationStatus.ACTIVE and instance.status.name == AllocationStatus.ACTIVE:
-        _apply_no_cost_quota_allotment_if_requested(instance)
-        send_allocation_notification(instance)
+        pending = _apply_no_cost_quota_allotment_if_requested(instance)
+        send_allocation_notification(instance, no_cost_quota_pending=pending)
 
 
 @receiver(allocation_change_approved, dispatch_uid='allocation_change_request_approved_ncq')
 def allocation_change_request_approved(sender, allocation_pk, **kwargs):
     """After staff approve an allocation change request, apply no-cost quota allotment if user requested it."""
     allocation = Allocation.objects.get(pk=allocation_pk)
-    _apply_no_cost_quota_allotment_if_requested(allocation)
+    pending = _apply_no_cost_quota_allotment_if_requested(allocation)
     send_allocation_notification(
         allocation,
         allocation_change_pk=kwargs.get('allocation_change_pk'),
+        no_cost_quota_pending=pending,
     )
 
 

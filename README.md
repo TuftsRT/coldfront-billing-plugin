@@ -101,6 +101,7 @@ Configure these in your `local_settings.py` or equivalent:
 | `COLDFRONT_BILLING_EMAIL_FROM` | `'billing@tufts.com'` | From address for billing notification emails |
 | `COLDFRONT_BILLING_ALLOCATION_EMAIL_SUBJECT` | `'Storage quota updated for {project_name}'` | Subject template for quota-approval emails |
 | `COLDFRONT_BILLING_ALLOCATION_EMAIL_BODY` | *(see below)* | Body template for quota-approval emails |
+| `COLDFRONT_BILLING_ALLOCATION_EMAIL_NO_COST_PENDING` | `'The no-cost quota you asked to apply to this allocation is still to be applied, so the cost above does not include it yet.'` | Added to the body, after a blank line, when a no-cost quota the requester asked to apply couldn't be applied automatically. Takes the same placeholders as the body |
 | `COLDFRONT_BILLING_MAX_COST_CENTER_ASSIGNMENTS` | `10` | Maximum cost center rows per project |
 | `COLDFRONT_BILLIG_REPORTS_TOTAL_DEPT_NAME` | `'C800260'` | Department code used for report totals row |
 | `COLDFRONT_BILLIG_REPORTS_TOTAL_DESCRIPTION` | `'Storage Charges'` | Description used for report totals row |
