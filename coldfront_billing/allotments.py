@@ -35,15 +35,15 @@ def create_update_allotment(allocation: Allocation, amount: Decimal, quota: NoCo
             # from this quota answers any earlier failure to apply one
             NoCostQuotaAllotmentFailure.objects.filter(
                 allocation=allocation, no_cost_quota=quota, resolved_at__isnull=True
-            ).update(resolved_at=timezone.now(), resolution_note='Resolved by a later allotment.')
+            ).update(resolved_at=timezone.now(), resolution_note="Resolved by a later allotment.")
     except Exception as e:
-        if hasattr(e, 'message_dict'):
-            msg = '; '.join(f'{field}: {errors[0]}' for field, errors in e.message_dict.items())
+        if hasattr(e, "message_dict"):
+            msg = "; ".join(f"{field}: {errors[0]}" for field, errors in e.message_dict.items())
         else:
             msg = str(e)
-        raise Exception(f'Could not save allotment: {msg}')
+        raise Exception(f"Could not save allotment: {msg}")
 
-    return 'Assigned' if created else 'Updated'
+    return "Assigned" if created else "Updated"
 
 
 def create_or_update_allotment(allocation_id: int, amount: Decimal, quota: NoCostQuota) -> str:

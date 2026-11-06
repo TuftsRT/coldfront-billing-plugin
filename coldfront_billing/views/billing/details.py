@@ -1,13 +1,14 @@
 from typing import Any, Dict
 
-from coldfront.core.allocation.models import Allocation
-from coldfront.core.project.models import Project
-from coldfront.core.resource.models import ResourceType
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView
+
+from coldfront.core.allocation.models import Allocation
+from coldfront.core.project.models import Project
+from coldfront.core.resource.models import ResourceType
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.data.billing import create_billing_allocations
@@ -24,9 +25,9 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
     """Project billing details view showing all allocations for a project."""
 
     model = Project
-    template_name = 'billing/billing_details.html'
-    context_object_name = 'project'
-    pk_url_kwarg = 'project_id'
+    template_name = "billing/billing_details.html"
+    context_object_name = "project"
+    pk_url_kwarg = "project_id"
 
     def check_permission(self, project: Project) -> bool:
         user = self.request.user
@@ -42,22 +43,22 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
         )
 
     def get(self, request, *args, **kwargs):
-        project = get_object_or_404(Project, id=kwargs['project_id'])
+        project = get_object_or_404(Project, id=kwargs["project_id"])
         if not self.check_permission(project):
-            messages.error(request, 'You do not have permission to view this project.')
-            return redirect('billing_index')
+            messages.error(request, "You do not have permission to view this project.")
+            return redirect("billing_index")
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Project]:
-        return Project.objects.filter(id=self.kwargs['project_id'])
+        return Project.objects.filter(id=self.kwargs["project_id"])
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         project = self.object
 
-        if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
-            context['allocations'] = []
-            context['total_cost'] = 0.0
+        if not (storage_type := ResourceType.objects.only("id").filter(name="Storage").first()):
+            context["allocations"] = []
+            context["total_cost"] = 0.0
             return context
 
         allocation_objs = (
@@ -68,7 +69,7 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
                 status__name=AllocationStatus.ACTIVE,
             )
             .distinct()
-            .select_related('project', 'project__pi', 'status')
+            .select_related("project", "project__pi", "status")
             .prefetch_related(
                 get_quota_attr_prefetch(),
                 get_paid_storage_resources_prefetch(storage_type.id),
@@ -83,6 +84,6 @@ class BillingDetailsView(LoginRequiredMixin, BillingListViewStateMixin, DetailVi
             context
             | self.get_extended_pagination_params(allocations)
             | {
-                'total_cost': round(sum(a.total_cost for a in allocations), 2),
+                "total_cost": round(sum(a.total_cost for a in allocations), 2),
             }
         )

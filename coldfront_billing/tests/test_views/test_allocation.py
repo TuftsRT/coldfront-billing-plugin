@@ -8,7 +8,7 @@ from coldfront_billing.tests.conftest import add_storage_allocation_to_project
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestUpdateAllocationDetailsView:
     """Test suite for UpdateAllocationDetailsView."""
 
@@ -16,14 +16,14 @@ class TestUpdateAllocationDetailsView:
     def _get_update_allocation_details(client, user, allocation_pk):
         """Helper to GET the update allocation details page."""
         client.force_login(user)
-        url = reverse('update_allocation_details', kwargs={'pk': allocation_pk})
+        url = reverse("update_allocation_details", kwargs={"pk": allocation_pk})
         return client.get(url)
 
     @staticmethod
     def _post_update_allocation_details(client, user, allocation_pk, data):
         """Helper to POST the update allocation details form."""
         client.force_login(user)
-        url = reverse('update_allocation_details', kwargs={'pk': allocation_pk})
+        url = reverse("update_allocation_details", kwargs={"pk": allocation_pk})
         return client.post(url, data=data)
 
     def test_unauthenticated_user_redirected(
@@ -44,10 +44,10 @@ class TestUpdateAllocationDetailsView:
             quota_attribute_type,
             with_quota=False,
         )
-        url = reverse('update_allocation_details', kwargs={'pk': allocation.pk})
+        url = reverse("update_allocation_details", kwargs={"pk": allocation.pk})
         response = client.get(url)
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
 
     def test_superuser_can_view_form(
         self,
@@ -70,11 +70,11 @@ class TestUpdateAllocationDetailsView:
         )
         response = self._get_update_allocation_details(client, superuser, allocation.pk)
         assert response.status_code == 200
-        assert 'allocation' in response.context
-        assert response.context['allocation'] == allocation
-        assert 'form' in response.context
-        assert 'quota_in_terabyte' in response.context['form'].fields
-        assert response.context['show_cost_center'] is True
+        assert "allocation" in response.context
+        assert response.context["allocation"] == allocation
+        assert "form" in response.context
+        assert "quota_in_terabyte" in response.context["form"].fields
+        assert response.context["show_cost_center"] is True
 
     def test_pi_can_view_form(
         self,
@@ -90,7 +90,7 @@ class TestUpdateAllocationDetailsView:
         """Test that project PI can view the update allocation details form."""
         from coldfront.core.project.models import ProjectUser, ProjectUserRoleChoice
 
-        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name='Manager')
+        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name="Manager")
         # PI must be in projectuser_set with Active status to have allocation permission
         ProjectUser.objects.create(
             project=project,
@@ -152,7 +152,7 @@ class TestUpdateAllocationDetailsView:
         )
         response = self._get_update_allocation_details(client, superuser, allocation.pk)
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        assert response.url == reverse("project-detail", kwargs={"pk": project.pk})
 
     def test_post_valid_quota_creates_attribute_and_redirects(
         self,
@@ -175,18 +175,18 @@ class TestUpdateAllocationDetailsView:
             quota_attribute_type,
             with_quota=False,
         )
-        data = {'quota_in_terabyte': 10.5}
+        data = {"quota_in_terabyte": 10.5}
 
         response = self._post_update_allocation_details(client, superuser, allocation.pk, data)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        assert response.url == reverse("project-detail", kwargs={"pk": project.pk})
 
         attr = AllocationAttribute.objects.get(
             allocation=allocation,
-            allocation_attribute_type__name='quota_in_terabyte',
+            allocation_attribute_type__name="quota_in_terabyte",
         )
-        assert attr.value == '10.5'
+        assert attr.value == "10.5"
 
     def test_post_with_apply_allocation_quota_creates_string_attribute(
         self,
@@ -204,14 +204,14 @@ class TestUpdateAllocationDetailsView:
 
         from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME
 
-        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Text')
+        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name="Text")
         AllocationAttributeType.objects.get_or_create(
             name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
             defaults={
-                'attribute_type': text_attr_type,
-                'has_usage': False,
-                'is_changeable': True,
-                'is_unique': True,
+                "attribute_type": text_attr_type,
+                "has_usage": False,
+                "is_changeable": True,
+                "is_unique": True,
             },
         )
 
@@ -224,12 +224,12 @@ class TestUpdateAllocationDetailsView:
             with_quota=False,
         )
         quota_pk = 4242
-        data = {'quota_in_terabyte': 10.5, 'apply_allocation_quota': str(quota_pk)}
+        data = {"quota_in_terabyte": 10.5, "apply_allocation_quota": str(quota_pk)}
 
         response = self._post_update_allocation_details(client, superuser, allocation.pk, data)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        assert response.url == reverse("project-detail", kwargs={"pk": project.pk})
 
         apply_attr = AllocationAttribute.objects.get(
             allocation=allocation,
@@ -250,7 +250,7 @@ class TestUpdateAllocationDetailsView:
         """Test that POST with cost center creates CostCenterAssignment."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
+        CostCenter.objects.create(name="DEPT001", cost_center_type="department")
         allocation, _ = add_storage_allocation_to_project(
             project,
             storage_resource_type,
@@ -259,13 +259,13 @@ class TestUpdateAllocationDetailsView:
             quota_attribute_type,
             with_quota=False,
         )
-        data = {'quota_in_terabyte': 5.0, 'cost_center': 'DEPT001'}
+        data = {"quota_in_terabyte": 5.0, "cost_center": "DEPT001"}
 
         response = self._post_update_allocation_details(client, superuser, allocation.pk, data)
 
         assert response.status_code == 302
         assignment = CostCenterAssignment.objects.get(project=project)
-        assert assignment.assignments == [{'department': 'DEPT001', 'percentage': 100}]
+        assert assignment.assignments == [{"department": "DEPT001", "percentage": 100}]
 
     def test_post_grant_without_cost_center_shows_form_error(
         self,
@@ -280,8 +280,8 @@ class TestUpdateAllocationDetailsView:
         """Grant cannot be submitted without a cost center."""
         from coldfront_billing.models import CostCenter
 
-        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
-        CostCenter.objects.create(name='GRANT001', cost_center_type='grant')
+        CostCenter.objects.create(name="DEPT001", cost_center_type="department")
+        CostCenter.objects.create(name="GRANT001", cost_center_type="grant")
         allocation, _ = add_storage_allocation_to_project(
             project,
             storage_resource_type,
@@ -290,12 +290,12 @@ class TestUpdateAllocationDetailsView:
             quota_attribute_type,
             with_quota=False,
         )
-        data = {'quota_in_terabyte': 5.0, 'grant': 'GRANT001'}
+        data = {"quota_in_terabyte": 5.0, "grant": "GRANT001"}
 
         response = self._post_update_allocation_details(client, superuser, allocation.pk, data)
 
         assert response.status_code == 200
-        assert 'grant' in response.context['form'].errors
+        assert "grant" in response.context["form"].errors
 
     def test_cost_center_field_hidden_when_project_has_assignment(
         self,
@@ -310,8 +310,8 @@ class TestUpdateAllocationDetailsView:
         """Test that cost_center field is hidden when project already has cost center."""
         from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-        CostCenter.objects.create(name='DEPT001', cost_center_type='department')
-        CostCenterAssignment.objects.create(project=project, assignments=[{'department': 'DEPT001', 'percentage': 100}])
+        CostCenter.objects.create(name="DEPT001", cost_center_type="department")
+        CostCenterAssignment.objects.create(project=project, assignments=[{"department": "DEPT001", "percentage": 100}])
         allocation, _ = add_storage_allocation_to_project(
             project,
             storage_resource_type,
@@ -324,8 +324,8 @@ class TestUpdateAllocationDetailsView:
         response = self._get_update_allocation_details(client, superuser, allocation.pk)
 
         assert response.status_code == 200
-        assert 'cost_center' not in response.context['form'].fields
-        assert response.context['show_cost_center'] is False
+        assert "cost_center" not in response.context["form"].fields
+        assert response.context["show_cost_center"] is False
 
     def test_nonexistent_allocation_returns_404(self, client, superuser):
         """Test that nonexistent allocation returns 404."""
@@ -335,7 +335,7 @@ class TestUpdateAllocationDetailsView:
 
 @pytest.mark.skip(reason="AllocationCreateView is overridden by a different plugin")
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestAllocationCreateView:
     """Test suite for AllocationCreateView (redirect to quota page for paid storage)."""
 
@@ -358,12 +358,12 @@ class TestAllocationCreateView:
         from coldfront.core.project.models import ProjectUser, ProjectUserRoleChoice
 
         # Ensure coldfront-required status choices exist
-        AllocationStatusChoice.objects.get_or_create(name='New')
-        AllocationUserStatusChoice.objects.get_or_create(name='Active')
+        AllocationStatusChoice.objects.get_or_create(name="New")
+        AllocationUserStatusChoice.objects.get_or_create(name="Active")
         from coldfront.core.resource.models import Resource, ResourceAttribute
 
         # PI must be Manager on project to create allocations
-        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name='Manager')
+        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name="Manager")
         ProjectUser.objects.create(
             project=project,
             user=pi_user,
@@ -373,7 +373,7 @@ class TestAllocationCreateView:
 
         # Create allocatable storage resource with requires_payment
         storage_resource = Resource.objects.create(
-            name='Paid Storage',
+            name="Paid Storage",
             resource_type=storage_resource_type,
             requires_payment=True,
             is_allocatable=True,
@@ -383,33 +383,33 @@ class TestAllocationCreateView:
         ResourceAttribute.objects.create(
             resource=storage_resource,
             resource_attribute_type=cost_attribute_type,
-            value='100',
+            value="100",
         )
 
         client.force_login(pi_user)
-        url = reverse('allocation-create', kwargs={'project_pk': project.pk})
+        url = reverse("allocation-create", kwargs={"project_pk": project.pk})
         data = {
-            'resource': storage_resource.pk,
-            'justification': 'Need storage for research',
-            'quantity': 1,
-            'users': [],
+            "resource": storage_resource.pk,
+            "justification": "Need storage for research",
+            "quantity": 1,
+            "users": [],
         }
 
         response = client.post(url, data=data)
 
         assert response.status_code == 302
-        assert '/update-allocation-details/' in response.url
-        assert '/allocation/' in response.url
+        assert "/update-allocation-details/" in response.url
+        assert "/allocation/" in response.url
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestAllocationCostPreviewView:
     @staticmethod
     def _preview(client, user, allocation_pk, quota_tb):
         client.force_login(user)
-        url = reverse('allocation_cost_preview', kwargs={'pk': allocation_pk})
-        return client.get(url, {'quota_in_terabyte': quota_tb})
+        url = reverse("allocation_cost_preview", kwargs={"pk": allocation_pk})
+        return client.get(url, {"quota_in_terabyte": quota_tb})
 
     def test_missing_quota_parameter_returns_400(
         self,
@@ -430,9 +430,9 @@ class TestAllocationCostPreviewView:
             with_quota=False,
         )
         client.force_login(superuser)
-        response = client.get(reverse('allocation_cost_preview', kwargs={'pk': allocation.pk}))
+        response = client.get(reverse("allocation_cost_preview", kwargs={"pk": allocation.pk}))
         assert response.status_code == 400
-        assert 'quota_in_terabyte' in response.json()['error']
+        assert "quota_in_terabyte" in response.json()["error"]
 
     def test_negative_quota_returns_400(
         self,
@@ -452,7 +452,7 @@ class TestAllocationCostPreviewView:
             quota_attribute_type,
             with_quota=False,
         )
-        response = self._preview(client, superuser, allocation.pk, '-1')
+        response = self._preview(client, superuser, allocation.pk, "-1")
         assert response.status_code == 400
 
     def test_returns_cost_breakdown(
@@ -472,18 +472,18 @@ class TestAllocationCostPreviewView:
             cost_attribute_type,
             quota_attribute_type,
             with_quota=False,
-            cost_value='100',
+            cost_value="100",
         )
-        response = self._preview(client, superuser, allocation.pk, '10')
+        response = self._preview(client, superuser, allocation.pk, "10")
         assert response.status_code == 200
         data = response.json()
-        assert data['quota_tb'] == '10'
-        assert data['cost_per_tb'] == '100'
-        assert 'total_cost' in data
+        assert data["quota_tb"] == "10"
+        assert data["cost_per_tb"] == "100"
+        assert "total_cost" in data
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestDeleteIncompleteAllocationView:
     """Test suite for DeleteIncompleteAllocationView."""
 
@@ -491,7 +491,7 @@ class TestDeleteIncompleteAllocationView:
     def _post_delete_allocation(client, user, allocation_pk):
         """Helper to POST the delete allocation request."""
         client.force_login(user)
-        url = reverse('delete_incomplete_allocation', kwargs={'pk': allocation_pk})
+        url = reverse("delete_incomplete_allocation", kwargs={"pk": allocation_pk})
         return client.post(url)
 
     def test_unauthenticated_user_redirected_to_login(
@@ -512,10 +512,10 @@ class TestDeleteIncompleteAllocationView:
             quota_attribute_type,
             with_quota=False,
         )
-        url = reverse('delete_incomplete_allocation', kwargs={'pk': allocation.pk})
+        url = reverse("delete_incomplete_allocation", kwargs={"pk": allocation.pk})
         response = client.post(url)
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
 
     def test_superuser_can_delete_new_allocation(
         self,
@@ -544,7 +544,7 @@ class TestDeleteIncompleteAllocationView:
         response = self._post_delete_allocation(client, superuser, allocation_id)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project_id})
+        assert response.url == reverse("project-detail", kwargs={"pk": project_id})
         assert not Allocation.objects.filter(pk=allocation_id).exists()
 
     def test_user_without_permission_gets_forbidden(
@@ -585,7 +585,7 @@ class TestDeleteIncompleteAllocationView:
         from coldfront.core.project.models import ProjectUser, ProjectUserRoleChoice
 
         # Set up PI as a user on the allocation
-        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name='Manager')
+        manager_role, _ = ProjectUserRoleChoice.objects.get_or_create(name="Manager")
         ProjectUser.objects.create(
             project=project,
             user=pi_user,
@@ -603,7 +603,7 @@ class TestDeleteIncompleteAllocationView:
         )
 
         # Add user to allocation
-        alloc_user_status, _ = AllocationUserStatusChoice.objects.get_or_create(name='Active')
+        alloc_user_status, _ = AllocationUserStatusChoice.objects.get_or_create(name="Active")
         AllocationUser.objects.create(
             allocation=allocation,
             user=pi_user,
@@ -616,7 +616,7 @@ class TestDeleteIncompleteAllocationView:
         response = self._post_delete_allocation(client, pi_user, allocation_id)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project_id})
+        assert response.url == reverse("project-detail", kwargs={"pk": project_id})
         assert not Allocation.objects.filter(pk=allocation_id).exists()
 
     def test_cannot_delete_active_allocation(
@@ -645,7 +645,7 @@ class TestDeleteIncompleteAllocationView:
         response = self._post_delete_allocation(client, superuser, allocation_id)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        assert response.url == reverse("project-detail", kwargs={"pk": project.pk})
         # Allocation should still exist
         assert Allocation.objects.filter(pk=allocation_id).exists()
 
@@ -661,7 +661,7 @@ class TestDeleteIncompleteAllocationView:
         """Test that allocations with Rejected status cannot be deleted."""
         from coldfront.core.allocation.models import Allocation, AllocationStatusChoice
 
-        allocation_status_rejected, _ = AllocationStatusChoice.objects.get_or_create(name='Rejected')
+        allocation_status_rejected, _ = AllocationStatusChoice.objects.get_or_create(name="Rejected")
 
         allocation, _ = add_storage_allocation_to_project(
             project,
@@ -676,7 +676,7 @@ class TestDeleteIncompleteAllocationView:
         response = self._post_delete_allocation(client, superuser, allocation_id)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project.pk})
+        assert response.url == reverse("project-detail", kwargs={"pk": project.pk})
         # Allocation should still exist
         assert Allocation.objects.filter(pk=allocation_id).exists()
 
@@ -708,7 +708,7 @@ class TestDeleteIncompleteAllocationView:
         response = client.get(response.url)
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) > 0
-        assert any('cancelled' in str(msg).lower() for msg in messages)
+        assert any("cancelled" in str(msg).lower() for msg in messages)
 
     def test_delete_shows_error_message_for_non_new_status(
         self,
@@ -738,7 +738,7 @@ class TestDeleteIncompleteAllocationView:
         response = client.get(response.url)
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) > 0
-        assert any('only incomplete' in str(msg).lower() for msg in messages)
+        assert any("only incomplete" in str(msg).lower() for msg in messages)
 
     def test_delete_redirects_to_project_detail(
         self,
@@ -764,7 +764,7 @@ class TestDeleteIncompleteAllocationView:
         response = self._post_delete_allocation(client, superuser, allocation.pk)
 
         assert response.status_code == 302
-        assert response.url == reverse('project-detail', kwargs={'pk': project_id})
+        assert response.url == reverse("project-detail", kwargs={"pk": project_id})
 
     def test_nonexistent_allocation_returns_404(
         self,
@@ -773,7 +773,7 @@ class TestDeleteIncompleteAllocationView:
     ):
         """Test that accessing nonexistent allocation returns 404."""
         client.force_login(superuser)
-        url = reverse('delete_incomplete_allocation', kwargs={'pk': 99999})
+        url = reverse("delete_incomplete_allocation", kwargs={"pk": 99999})
         response = client.post(url)
         assert response.status_code == 404
 
@@ -797,7 +797,7 @@ class TestDeleteIncompleteAllocationView:
             with_quota=False,
         )
         client.force_login(superuser)
-        url = reverse('delete_incomplete_allocation', kwargs={'pk': allocation.pk})
+        url = reverse("delete_incomplete_allocation", kwargs={"pk": allocation.pk})
         response = client.get(url)
         # View inherits from View, so GET should return 405 Method Not Allowed
         assert response.status_code == 405

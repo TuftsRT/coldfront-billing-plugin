@@ -1,6 +1,6 @@
-from decimal import Decimal, InvalidOperation
 from collections.abc import Iterable
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from typing import Any, Self
 
 from coldfront_billing.constants import ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME
@@ -9,8 +9,8 @@ from coldfront_billing.enums import StorageUnit
 from coldfront_billing.utils import first_or_none
 
 UNIT_TO_TB = {
-    StorageUnit.TB: Decimal('1.0'),
-    StorageUnit.GB: Decimal('0.001'),
+    StorageUnit.TB: Decimal("1.0"),
+    StorageUnit.GB: Decimal("0.001"),
 }
 
 
@@ -28,9 +28,10 @@ class BillingQuota:
         return self.amount_tb / UNIT_TO_TB[StorageUnit.GB]
 
     @staticmethod
-    def create(amount: Decimal, unit: str, *_, **__) -> 'BillingQuota':
+    def create(amount: Decimal, unit: str, *_, **__) -> "BillingQuota":
         return BillingQuota(amount, StorageUnit.parse(unit))
-    def create(amount: Decimal, unit: str, *_, **__) -> 'BillingQuota':
+
+    def create(amount: Decimal, unit: str, *_, **__) -> "BillingQuota":
         return BillingQuota(amount, StorageUnit.parse(unit))
 
 
@@ -67,7 +68,7 @@ class NoCostQuotaAllocation:
             # increment is always in GB, so we need to convert it to the quota unit for comparison
             return possible_quota.quantize(increment_in_units)
 
-        tb_to_quota_unit = Decimal('1.0') / UNIT_TO_TB[quota_unit]
+        tb_to_quota_unit = Decimal("1.0") / UNIT_TO_TB[quota_unit]
         allocation_available_tb = max(0, self.allocation_amount - self.other_allotments_amount)
         allocation_available = allocation_available_tb * tb_to_quota_unit
         max_possible = min(possible_quota, allocation_available)
@@ -77,11 +78,11 @@ class NoCostQuotaAllocation:
     @property
     def user_allotment_amount(self) -> Decimal:
         # returns the amount of existing user allotment on this allocation in TB
-        return self.users_allotment.amount_tb if self.users_allotment else Decimal('0')
+        return self.users_allotment.amount_tb if self.users_allotment else Decimal("0")
 
     @property
     def other_allotments_amount(self) -> Decimal:
-        return sum((a.amount_tb for a in self.other_allotments), Decimal('0'))
+        return sum((a.amount_tb for a in self.other_allotments), Decimal("0"))
 
     @classmethod
     def create(cls, user_id: int, allocation: Any) -> Self:
@@ -133,7 +134,7 @@ class AllocationAssignment:
     amount: Decimal
 
     def __str__(self) -> str:
-        return f'{self.allocation_id} - {self.amount}'
+        return f"{self.allocation_id} - {self.amount}"
 
 
 class NoCostQuotaEngine:
@@ -169,29 +170,29 @@ def parse_allocations(allocation_ids: list[str], amount_strs: list[str]) -> list
     allocation_ids = [a.strip() for a in allocation_ids]
     amount_strs = [a.strip() for a in amount_strs]
     if not allocation_ids:
-        raise Exception('No allocations provided')
+        raise Exception("No allocations provided")
 
     if not amount_strs:
-        raise Exception('No amounts provided')
+        raise Exception("No amounts provided")
 
     if len(allocation_ids) != len(amount_strs):
-        raise Exception('Invalid request: allocation and amount counts do not match.')
+        raise Exception("Invalid request: allocation and amount counts do not match.")
 
     assignments = []
 
     for allocation_id_str, amount_str in zip(allocation_ids, amount_strs, strict=True):
         if not allocation_id_str:
-            raise Exception('Invalid request: missing allocation.')
+            raise Exception("Invalid request: missing allocation.")
 
         try:
             allocation_id = int(allocation_id_str)
         except (ValueError, TypeError):
-            raise Exception('The allocation id is invalid.')
+            raise Exception("The allocation id is invalid.")
 
         try:
-            amount = Decimal(amount_str.replace(',', '.')).quantize(Decimal('0.01'))
+            amount = Decimal(amount_str.replace(",", ".")).quantize(Decimal("0.01"))
         except (ValueError, TypeError, InvalidOperation):
-            raise Exception('The amount of allocation is invalid.')
+            raise Exception("The amount of allocation is invalid.")
 
         assignments.append(AllocationAssignment(allocation_id, amount))
 

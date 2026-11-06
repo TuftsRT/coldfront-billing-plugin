@@ -10,14 +10,14 @@ from coldfront_billing.views.mixins import NoCostQuotaStateMixin
 
 
 class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaStateMixin, ListView):
-    template_name = 'no_cost_quota/manage.html'
-    context_object_name = 'quota_list'
+    template_name = "no_cost_quota/manage.html"
+    context_object_name = "quota_list"
     model = NoCostQuota
 
     def filter_quotas(self, quotas: QuerySet[NoCostQuota]) -> QuerySet[NoCostQuota]:
         search_form = NoCostQuotaSearchForm(self.request.GET)
         if search_form.is_valid():
-            if username := search_form.cleaned_data.get('username'):
+            if username := search_form.cleaned_data.get("username"):
                 quotas = quotas.filter(Q(user__username__icontains=username))
         return quotas
 
@@ -33,7 +33,7 @@ class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaStateMixin, ListView
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
 
-        for quota in context.get('quota_list', []):
+        for quota in context.get("quota_list", []):
             if quota.used_inactive != 0:
                 quota.has_inactive = True
 
@@ -41,6 +41,6 @@ class ManageNoCostQuotasView(LoginRequiredMixin, NoCostQuotaStateMixin, ListView
             context
             | self.get_pagination_params()
             | {
-                'search_form': NoCostQuotaSearchForm(self.request.GET),
+                "search_form": NoCostQuotaSearchForm(self.request.GET),
             }
         )

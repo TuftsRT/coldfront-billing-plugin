@@ -2,6 +2,10 @@ from decimal import Decimal
 from typing import List, Optional
 
 import pytest
+from django.contrib.auth.models import User
+from django.http import HttpRequest
+from django.test import override_settings
+
 from coldfront.core.allocation.models import (
     Allocation,
     AllocationAttribute,
@@ -28,9 +32,6 @@ from coldfront.core.resource.models import (
     ResourceAttributeType,
     ResourceType,
 )
-from django.contrib.auth.models import User
-from django.http import HttpRequest
-from django.test import override_settings
 
 from coldfront_billing.constants import (
     BILLING_ROLE_NAME,
@@ -45,7 +46,7 @@ from coldfront_billing.enums import AllocationStatus, ProjectStatus
 @pytest.fixture
 def configure_urls():
     """Configure URLs for view tests."""
-    with override_settings(ROOT_URLCONF='coldfront_billing.tests.conftest_urls'):
+    with override_settings(ROOT_URLCONF="coldfront_billing.tests.conftest_urls"):
         yield
 
 
@@ -57,19 +58,19 @@ def configure_urls():
 @pytest.fixture
 def user(db) -> User:
     """Create a regular user."""
-    return User.objects.create_user(username='testuser', email='test@example.com', password='testpass123')
+    return User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
 
 
 @pytest.fixture
 def superuser(db) -> User:
     """Create a superuser."""
-    return User.objects.create_superuser(username='admin', email='admin@example.com', password='adminpass123')
+    return User.objects.create_superuser(username="admin", email="admin@example.com", password="adminpass123")
 
 
 @pytest.fixture
 def pi_user(db) -> User:
     """Create a PI user."""
-    return User.objects.create_user(username='pi_user', email='pi@example.com', password='pipass123')
+    return User.objects.create_user(username="pi_user", email="pi@example.com", password="pipass123")
 
 
 # ============================================================================
@@ -80,7 +81,7 @@ def pi_user(db) -> User:
 @pytest.fixture
 def project_status_active(db) -> ProjectStatusChoice:
     """Create an Active project status."""
-    return ProjectStatusChoice.objects.get_or_create(name='Active')[0]
+    return ProjectStatusChoice.objects.get_or_create(name="Active")[0]
 
 
 @pytest.fixture
@@ -92,7 +93,7 @@ def project_status_archived(db) -> ProjectStatusChoice:
 @pytest.fixture
 def project_status_new(db) -> ProjectStatusChoice:
     """Create a New project status."""
-    return ProjectStatusChoice.objects.get_or_create(name='New')[0]
+    return ProjectStatusChoice.objects.get_or_create(name="New")[0]
 
 
 def get_or_create_project_role(role_name: str) -> ProjectUserRoleChoice:
@@ -121,13 +122,13 @@ def manager_role(db) -> ProjectUserRoleChoice:
 @pytest.fixture
 def project_user_status_active(db) -> ProjectUserStatusChoice:
     """Create an Active project user status."""
-    return ProjectUserStatusChoice.objects.get_or_create(name='Active')[0]
+    return ProjectUserStatusChoice.objects.get_or_create(name="Active")[0]
 
 
 @pytest.fixture
 def project_user_status_inactive(db) -> ProjectUserStatusChoice:
     """Create an Inactive project user status."""
-    return ProjectUserStatusChoice.objects.get_or_create(name='Inactive')[0]
+    return ProjectUserStatusChoice.objects.get_or_create(name="Inactive")[0]
 
 
 # ============================================================================
@@ -138,7 +139,7 @@ def project_user_status_inactive(db) -> ProjectUserStatusChoice:
 @pytest.fixture
 def field_of_science(db) -> FieldOfScience:
     """Create a FieldOfScience for projects."""
-    return FieldOfScience.objects.get_or_create(description='Test Field of Science', defaults={'is_selectable': True})[
+    return FieldOfScience.objects.get_or_create(description="Test Field of Science", defaults={"is_selectable": True})[
         0
     ]
 
@@ -147,7 +148,7 @@ def field_of_science(db) -> FieldOfScience:
 def project(pi_user: User, project_status_active: ProjectStatusChoice, field_of_science: FieldOfScience, db) -> Project:
     """Create a test project."""
     return Project.objects.create(
-        title='Test Project',
+        title="Test Project",
         pi=pi_user,
         status=project_status_active,
         field_of_science=field_of_science,
@@ -243,7 +244,7 @@ def cost_center(db):
     """Create a test CostCenter."""
     from coldfront_billing.models import CostCenter
 
-    return CostCenter.objects.create(name='TEST_DEPT', cost_center_type='department')
+    return CostCenter.objects.create(name="TEST_DEPT", cost_center_type="department")
 
 
 @pytest.fixture
@@ -251,16 +252,16 @@ def cost_center_assignment(project, db):
     """Create a test CostCenterAssignment."""
     from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-    CostCenter.objects.create(name='ASSIGN_DEPT', cost_center_type='department')
+    CostCenter.objects.create(name="ASSIGN_DEPT", cost_center_type="department")
     return CostCenterAssignment.objects.create(
-        project=project, assignments=[{'department': 'ASSIGN_DEPT', 'percentage': 100}]
+        project=project, assignments=[{"department": "ASSIGN_DEPT", "percentage": 100}]
     )
 
 
 @pytest.fixture
 def storage_resource_type(db) -> ResourceType:
     """Create a Storage ResourceType."""
-    return ResourceType.objects.get_or_create(name='Storage')[0]
+    return ResourceType.objects.get_or_create(name="Storage")[0]
 
 
 @pytest.fixture
@@ -272,18 +273,18 @@ def allocation_status_active(db) -> AllocationStatusChoice:
 @pytest.fixture
 def allocation_status_new(db) -> AllocationStatusChoice:
     """Create a New allocation status."""
-    return AllocationStatusChoice.objects.get_or_create(name='New')[0]
+    return AllocationStatusChoice.objects.get_or_create(name="New")[0]
 
 
 @pytest.fixture
 def cost_attribute_type(db) -> ResourceAttributeType:
     """Create a cost attribute type for resources."""
     # First create the base AttributeType
-    text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name='Text')
+    text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name="Text")
 
     # Then create the ResourceAttributeType with the attribute_type
     return ResourceAttributeType.objects.get_or_create(
-        name=COST_ATTR_NAME, defaults={'attribute_type': text_attr_type}
+        name=COST_ATTR_NAME, defaults={"attribute_type": text_attr_type}
     )[0]
 
 
@@ -291,15 +292,15 @@ def cost_attribute_type(db) -> ResourceAttributeType:
 def quota_attribute_type(db) -> AllocationAttributeType:
     """Create a quota attribute type for allocations."""
     # First create the base AttributeType
-    float_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Float')
+    float_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name="Float")
 
     # Then create the AllocationAttributeType with the attribute_type
     return AllocationAttributeType.objects.get_or_create(
         name=QUOTA_ATTR_NAME,
         defaults={
-            'attribute_type': float_attr_type,
-            'has_usage': True,
-            'is_changeable': True,
+            "attribute_type": float_attr_type,
+            "has_usage": True,
+            "is_changeable": True,
         },
     )[0]
 
@@ -307,10 +308,10 @@ def quota_attribute_type(db) -> AllocationAttributeType:
 @pytest.fixture
 def no_cost_quota_type_attribute_type(db) -> ResourceAttributeType:
     """Create a no_cost_quota_type attribute type for resources."""
-    text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name='Text')
+    text_attr_type, _ = ResourceAttributeTypeBase.objects.get_or_create(name="Text")
     return ResourceAttributeType.objects.get_or_create(
         name=NO_COST_QUOTA_TYPE_ATTR_NAME,
-        defaults={'attribute_type': text_attr_type},
+        defaults={"attribute_type": text_attr_type},
     )[0]
 
 
@@ -321,10 +322,10 @@ def no_cost_quota(user, db):
 
     return NoCostQuota.objects.create(
         user=user,
-        quota_type='tier_1',
-        description='Tier 1 storage',
-        amount_tb=Decimal('100.0'),
-        units='TB',
+        quota_type="tier_1",
+        description="Tier 1 storage",
+        amount_tb=Decimal("100.0"),
+        units="TB",
         increment_gb=10,
     )
 
@@ -340,9 +341,9 @@ def add_storage_allocation_to_project(
     allocation_status_active: AllocationStatusChoice,
     cost_attribute_type: ResourceAttributeType,
     quota_attribute_type: AllocationAttributeType,
-    cost_value: str = '100',
-    quota_value: str = '5',
-    resource_name: str = 'Test Storage',
+    cost_value: str = "100",
+    quota_value: str = "5",
+    resource_name: str = "Test Storage",
     storage_resource: Optional[Resource] = None,
     with_quota: bool = True,
 ):
@@ -362,7 +363,7 @@ def add_storage_allocation_to_project(
         project=project,
         status=allocation_status_active,
         quantity=100,
-        justification='Test justification',
+        justification="Test justification",
     )
     allocation.resources.add(storage_resource)
     if with_quota:
@@ -381,9 +382,9 @@ def add_no_cost_quota_storage_allocation(
     cost_attribute_type: ResourceAttributeType,
     quota_attribute_type: AllocationAttributeType,
     no_cost_quota_type_attribute_type: ResourceAttributeType,
-    quota_type_value: str = 'tier_1',
-    resource_name: str = 'No-Cost Storage',
-    quota_value: str = '5',
+    quota_type_value: str = "tier_1",
+    resource_name: str = "No-Cost Storage",
+    quota_value: str = "5",
 ) -> tuple:
     """Add a storage allocation with no_cost_quota_type attribute. Returns (allocation, storage_resource)."""
     storage_resource = Resource.objects.create(
@@ -394,7 +395,7 @@ def add_no_cost_quota_storage_allocation(
     ResourceAttribute.objects.create(
         resource=storage_resource,
         resource_attribute_type=cost_attribute_type,
-        value='100',
+        value="100",
     )
     ResourceAttribute.objects.create(
         resource=storage_resource,
@@ -428,7 +429,7 @@ def multiple_projects(
     projects = []
     for i in range(5):
         project = Project.objects.create(
-            title=f'Test Project {i + 1}',
+            title=f"Test Project {i + 1}",
             pi=pi_user,
             status=project_status_active,
             field_of_science=field_of_science,
@@ -436,7 +437,7 @@ def multiple_projects(
 
         # Create a storage resource for each project
         storage_resource = Resource.objects.create(
-            name=f'Storage Resource {i + 1}',
+            name=f"Storage Resource {i + 1}",
             resource_type=storage_resource_type,
             requires_payment=True,
         )
@@ -453,7 +454,7 @@ def multiple_projects(
             project=project,
             status=allocation_status_active,
             quantity=100,
-            justification='Test justification',
+            justification="Test justification",
         )
         allocation.resources.add(storage_resource)
 
@@ -468,11 +469,11 @@ def multiple_projects(
     return projects
 
 
-def create_pi_user(username_suffix: str = '') -> User:
+def create_pi_user(username_suffix: str = "") -> User:
     """Helper function to create a PI user."""
-    username = f'pi{username_suffix}' if username_suffix else 'pi'
-    email = f'{username}@example.com'
-    return User.objects.create_user(username=username, email=email, password='pass')
+    username = f"pi{username_suffix}" if username_suffix else "pi"
+    email = f"{username}@example.com"
+    return User.objects.create_user(username=username, email=email, password="pass")
 
 
 def create_project_with_role_user(
@@ -481,7 +482,7 @@ def create_project_with_role_user(
     project_status: ProjectStatusChoice,
     role: ProjectUserRoleChoice,
     project_user_status: ProjectUserStatusChoice,
-    title: str = 'Test Project',
+    title: str = "Test Project",
     with_allocation: bool = False,
     storage_resource_type: Optional[ResourceType] = None,
     allocation_status_active: Optional[AllocationStatusChoice] = None,
@@ -493,7 +494,7 @@ def create_project_with_role_user(
     # Get or create field_of_science if not provided
     if field_of_science is None:
         field_of_science = FieldOfScience.objects.get_or_create(
-            description='Test Field of Science', defaults={'is_selectable': True}
+            description="Test Field of Science", defaults={"is_selectable": True}
         )[0]
 
     project = Project.objects.create(
@@ -514,7 +515,7 @@ def create_project_with_role_user(
         [storage_resource_type, allocation_status_active, cost_attribute_type, quota_attribute_type]
     ):
         storage_resource = Resource.objects.create(
-            name=f'Storage for {title}',
+            name=f"Storage for {title}",
             resource_type=storage_resource_type,
             requires_payment=True,
         )
@@ -522,21 +523,21 @@ def create_project_with_role_user(
         ResourceAttribute.objects.create(
             resource=storage_resource,
             resource_attribute_type=cost_attribute_type,
-            value='100',  # $100 per TB
+            value="100",  # $100 per TB
         )
 
         allocation = Allocation.objects.create(
             project=project,
             status=allocation_status_active,
             quantity=100,
-            justification='Test justification',
+            justification="Test justification",
         )
         allocation.resources.add(storage_resource)
 
         AllocationAttribute.objects.create(
             allocation=allocation,
             allocation_attribute_type=quota_attribute_type,
-            value='5',  # 5 TB
+            value="5",  # 5 TB
         )
 
     return project

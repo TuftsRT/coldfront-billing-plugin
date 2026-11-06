@@ -40,7 +40,7 @@ pip install coldfront-billing
 ```python
 INSTALLED_APPS = [
     # ... existing ColdFront apps ...
-    'coldfront_billing',
+    "coldfront_billing",
 ]
 ```
 
@@ -55,7 +55,7 @@ from django.urls import path, include
 
 urlpatterns = [
     # ... existing URL patterns ...
-    path('', include('coldfront_billing.urls')),
+    path("", include("coldfront_billing.urls")),
 ]
 ```
 

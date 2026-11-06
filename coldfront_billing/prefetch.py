@@ -24,9 +24,9 @@ from .utils import NoStorageException
 def get_cost_attr_prefetch() -> Prefetch:
     """Return Prefetch for resource cost attribute."""
     return Prefetch(
-        'resourceattribute_set',
+        "resourceattribute_set",
         queryset=ResourceAttribute.objects.filter(resource_attribute_type__name=COST_ATTR_NAME).only(
-            'resource_id', 'value', 'resource_attribute_type_id'
+            "resource_id", "value", "resource_attribute_type_id"
         ),
         to_attr=COST_ATTRIBUTE_NAME,
     )
@@ -35,7 +35,7 @@ def get_cost_attr_prefetch() -> Prefetch:
 def get_paid_storage_resources_prefetch(storage_type_id: int) -> Prefetch:
     """Return Prefetch for paid Storage resources with cost attribute."""
     return Prefetch(
-        'resources',
+        "resources",
         queryset=Resource.objects.filter(
             resource_type_id=storage_type_id,
             requires_payment=True,
@@ -47,9 +47,9 @@ def get_paid_storage_resources_prefetch(storage_type_id: int) -> Prefetch:
 def get_quota_attr_prefetch() -> Prefetch:
     """Return Prefetch for allocation quota attribute."""
     return Prefetch(
-        'allocationattribute_set',
+        "allocationattribute_set",
         queryset=AllocationAttribute.objects.filter(allocation_attribute_type__name=QUOTA_ATTR_NAME).only(
-            'allocation_id', 'value'
+            "allocation_id", "value"
         ),
         to_attr=QUOTA_ATTRIBUTE_NAME,
     )
@@ -57,21 +57,21 @@ def get_quota_attr_prefetch() -> Prefetch:
 
 def get_no_cost_quota_allotments_prefetch() -> Prefetch:
     return Prefetch(
-        'no_cost_quota_allotments',
-        queryset=NoCostQuotaAllotment.objects.select_related('no_cost_quota').only(
-            'id',
-            'allocation_id',
-            'amount_tb',
-            'no_cost_quota_id',
-            'no_cost_quota__user_id',
-            'no_cost_quota__units',
+        "no_cost_quota_allotments",
+        queryset=NoCostQuotaAllotment.objects.select_related("no_cost_quota").only(
+            "id",
+            "allocation_id",
+            "amount_tb",
+            "no_cost_quota_id",
+            "no_cost_quota__user_id",
+            "no_cost_quota__units",
         ),
         to_attr=ALLOTMENTS_ATTRIBUTE_NAME,
     )
 
 
 def get_projects_prefetch(projects: QuerySet[Project]) -> QuerySet[Project, Project]:
-    if not (storage_type := ResourceType.objects.only('id').filter(name='Storage').first()):
+    if not (storage_type := ResourceType.objects.only("id").filter(name="Storage").first()):
         raise NoStorageException()
 
     # Restrict to only projects that actually have paid Storage allocations
@@ -81,7 +81,7 @@ def get_projects_prefetch(projects: QuerySet[Project]) -> QuerySet[Project, Proj
     ).distinct()
 
     allocations_prefetch = Prefetch(
-        'allocation_set',
+        "allocation_set",
         queryset=Allocation.objects.filter(
             resources__resource_type_id=storage_type.id,
             resources__requires_payment=True,
@@ -95,12 +95,12 @@ def get_projects_prefetch(projects: QuerySet[Project]) -> QuerySet[Project, Proj
         ),
         to_attr=BILLING_ATTRIBUTE_NAME,
     )
-    return projects.select_related('pi', 'status').prefetch_related(allocations_prefetch, 'cost_center_assignment')
+    return projects.select_related("pi", "status").prefetch_related(allocations_prefetch, "cost_center_assignment")
 
 
 def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation]:
     quota_owner = quota.user
-    storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
+    storage_type = ResourceType.objects.only("id").filter(name="Storage").first()
 
     if not storage_type:
         return Allocation.objects.none()
@@ -121,14 +121,14 @@ def get_filtered_allocations_prefetch(quota: NoCostQuota) -> QuerySet[Allocation
     ).distinct()
 
     return (
-        allocations.select_related('project', 'project__pi', 'status')
+        allocations.select_related("project", "project__pi", "status")
         .prefetch_related(
-            'resources',
+            "resources",
             get_paid_storage_resources_prefetch(storage_type.id),
             get_quota_attr_prefetch(),
             get_no_cost_quota_allotments_prefetch(),
         )
-        .order_by('project__title', 'pk')
+        .order_by("project__title", "pk")
     )
 
 
@@ -145,7 +145,7 @@ def get_billing_visible_projects_query(username: str) -> Q:
 
 def is_paid_storage_allocation(allocation: Allocation) -> bool:
     return allocation.resources.filter(
-        resource_type__name='Storage',
+        resource_type__name="Storage",
         requires_payment=True,
     ).exists()
 

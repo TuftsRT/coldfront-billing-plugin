@@ -44,15 +44,15 @@ class TestGetOversubscribedNoCostQuotas:
             with_quota=False,
         )
 
-        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Text')
+        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name="Text")
         reported_quota_type, _ = AllocationAttributeType.objects.get_or_create(
-            name='reported_quota_bytes',
-            defaults={'attribute_type': text_attr_type},
+            name="reported_quota_bytes",
+            defaults={"attribute_type": text_attr_type},
         )
         AllocationAttribute.objects.create(
             allocation=allocation,
             allocation_attribute_type=reported_quota_type,
-            value='5000000000000',  # 5 TB
+            value="5000000000000",  # 5 TB
         )
 
         assert get_oversubscribed_no_cost_quotas() == []
@@ -80,18 +80,18 @@ class TestGetOversubscribedNoCostQuotas:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Text')
+        text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name="Text")
         reported_quota_type, _ = AllocationAttributeType.objects.get_or_create(
-            name='reported_quota_bytes',
-            defaults={'attribute_type': text_attr_type},
+            name="reported_quota_bytes",
+            defaults={"attribute_type": text_attr_type},
         )
         AllocationAttribute.objects.create(
             allocation=allocation,
             allocation_attribute_type=reported_quota_type,
-            value='155000000000',
+            value="155000000000",
         )
         NoCostQuotaAllotment.objects.create(
-            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal('0.16')
+            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal("0.16")
         )
 
         assert get_oversubscribed_no_cost_quotas() == []

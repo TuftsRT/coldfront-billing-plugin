@@ -20,25 +20,25 @@ class TestBillingRoleContextProcessor:
         """Test that superusers return has_billing_role=True."""
         request = create_billing_request(superuser)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': True}
+        assert result == {"has_billing_role": True}
 
     def test_regular_user_without_billing_role_returns_false(self, user, project):
         """Test that regular users without Billing role return False."""
         request = create_billing_request(user)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': False}
+        assert result == {"has_billing_role": False}
 
     def test_user_with_active_billing_role_returns_true(self, user, project_with_billing_user):
         """Test that users with active Billing role return True."""
         request = create_billing_request(user)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': True}
+        assert result == {"has_billing_role": True}
 
     def test_user_with_active_manager_role_returns_true(self, user, project_with_manager_user):
         """Test that users with active Manager role return True."""
         request = create_billing_request(user)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': True}
+        assert result == {"has_billing_role": True}
 
     def test_only_active_and_archived_projects_considered(
         self,
@@ -50,25 +50,25 @@ class TestBillingRoleContextProcessor:
         project_user_status_active,
     ):
         """Test that only Active/Archived projects are considered, not New ones."""
-        pi_user1 = create_pi_user('1')
+        pi_user1 = create_pi_user("1")
         create_project_with_role_user(
-            user, pi_user1, project_status_active, billing_role, project_user_status_active, 'Active Project'
+            user, pi_user1, project_status_active, billing_role, project_user_status_active, "Active Project"
         )
 
-        pi_user2 = create_pi_user('2')
+        pi_user2 = create_pi_user("2")
         create_project_with_role_user(
-            user, pi_user2, project_status_archived, billing_role, project_user_status_active, 'Archived Project'
+            user, pi_user2, project_status_archived, billing_role, project_user_status_active, "Archived Project"
         )
 
-        pi_user3 = create_pi_user('3')
+        pi_user3 = create_pi_user("3")
         create_project_with_role_user(
-            user, pi_user3, project_status_new, billing_role, project_user_status_active, 'New Project'
+            user, pi_user3, project_status_new, billing_role, project_user_status_active, "New Project"
         )
 
         request = create_billing_request(user)
         result = billing_role_func(request)
         # Should return True because of active/archived projects
-        assert result == {'has_billing_role': True}
+        assert result == {"has_billing_role": True}
 
     def test_only_active_project_user_status_considered(
         self,
@@ -79,20 +79,20 @@ class TestBillingRoleContextProcessor:
         project_user_status_inactive,
     ):
         """Test that only Active ProjectUser status is considered."""
-        pi_user1 = create_pi_user('1')
+        pi_user1 = create_pi_user("1")
         create_project_with_role_user(
-            user, pi_user1, project_status_active, billing_role, project_user_status_active, 'Active User Project'
+            user, pi_user1, project_status_active, billing_role, project_user_status_active, "Active User Project"
         )
 
-        pi_user2 = create_pi_user('2')
+        pi_user2 = create_pi_user("2")
         create_project_with_role_user(
-            user, pi_user2, project_status_active, billing_role, project_user_status_inactive, 'Inactive User Project'
+            user, pi_user2, project_status_active, billing_role, project_user_status_inactive, "Inactive User Project"
         )
 
         request = create_billing_request(user)
         result = billing_role_func(request)
         # Should return True because of the active project user
-        assert result == {'has_billing_role': True}
+        assert result == {"has_billing_role": True}
 
     def test_inactive_project_user_returns_false(
         self,
@@ -102,26 +102,26 @@ class TestBillingRoleContextProcessor:
         project_user_status_inactive,
     ):
         """Test that inactive ProjectUser status returns False."""
-        pi_user = create_pi_user('1')
+        pi_user = create_pi_user("1")
         create_project_with_role_user(
             user,
             pi_user,
             project_status_active,
             billing_role,
             project_user_status_inactive,
-            'Project with Inactive User',
+            "Project with Inactive User",
         )
         request = create_billing_request(user)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': False}
+        assert result == {"has_billing_role": False}
 
     def test_project_pi_returns_has_billing_role_true(self, user, project_status_active, field_of_science):
         from coldfront.core.project.models import Project
 
         # Create project with user as PI
         Project.objects.create(
-            title='Test Project',
-            description='Test project for PI access',
+            title="Test Project",
+            description="Test project for PI access",
             pi=user,
             status=project_status_active,
             field_of_science=field_of_science,
@@ -129,4 +129,4 @@ class TestBillingRoleContextProcessor:
 
         request = create_billing_request(user)
         result = billing_role_func(request)
-        assert result == {'has_billing_role': True}
+        assert result == {"has_billing_role": True}

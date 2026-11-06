@@ -36,9 +36,9 @@ def create_recipient_list(
     project_owner = allocation.project.pi
 
     if allocation_change_pk is not None:
-        record = AllocationChangeRequest.history.filter(id=allocation_change_pk).order_by('history_date').first()
+        record = AllocationChangeRequest.history.filter(id=allocation_change_pk).order_by("history_date").first()
     else:
-        record = allocation.history.order_by('history_date').first()
+        record = allocation.history.order_by("history_date").first()
 
     requester = record.history_user if record else None
 
@@ -53,9 +53,9 @@ def create_recipient_list(
 
 
 def calculate_cost(allocation_pk) -> Decimal:
-    storage_type = ResourceType.objects.only('id').filter(name='Storage').first()
+    storage_type = ResourceType.objects.only("id").filter(name="Storage").first()
     if not storage_type:
-        return Decimal('0.00')
+        return Decimal("0.00")
     prefetched = (
         Allocation.objects.filter(pk=allocation_pk)
         .prefetch_related(
@@ -68,7 +68,7 @@ def calculate_cost(allocation_pk) -> Decimal:
     return (
         BillingAllocation.parse(prefetched, DEFAULT_BILLING_QUOTA, DEFAULT_BILLING_COST).total_cost
         if prefetched is not None
-        else Decimal('0.00')
+        else Decimal("0.00")
     )
 
 
@@ -89,7 +89,7 @@ def send_allocation_notification(
     """
 
     if not allocation_email_enabled():
-        logger.info(f'Allocation quota approval emails are disabled; not emailing about allocation {allocation.pk}')
+        logger.info(f"Allocation quota approval emails are disabled; not emailing about allocation {allocation.pk}")
         return
 
     if not is_paid_storage_allocation(allocation):
@@ -115,7 +115,7 @@ def send_allocation_notification(
     recipient_list = create_recipient_list(allocation, allocation_change_pk)
     if not recipient_list:
         logger.warning(
-            f'Skipping allocation quota approval email for allocation {allocation.pk}: no recipient addresses',
+            f"Skipping allocation quota approval email for allocation {allocation.pk}: no recipient addresses",
         )
         return
 
@@ -123,10 +123,10 @@ def send_allocation_notification(
     subject = BILLING_ALLOCATION_EMAIL_SUBJECT.format(
         project_name=project_name,
     )
-    placeholders = {'project_name': project_name, 'quota_amount': quota_amount, 'cost': f'{cost:.2f}'}
+    placeholders = {"project_name": project_name, "quota_amount": quota_amount, "cost": f"{cost:.2f}"}
     body = BILLING_ALLOCATION_EMAIL_BODY.format(**placeholders)
     if no_cost_quota_pending:
-        body = f'{body}\n\n{BILLING_ALLOCATION_EMAIL_NO_COST_PENDING.format(**placeholders)}'
+        body = f"{body}\n\n{BILLING_ALLOCATION_EMAIL_NO_COST_PENDING.format(**placeholders)}"
 
     email = EmailMessage(
         subject=subject,
@@ -138,7 +138,7 @@ def send_allocation_notification(
         email.send()
     except Exception:
         logger.exception(
-            'Failed to send allocation quota approval email for allocation %s to %s',
+            "Failed to send allocation quota approval email for allocation %s to %s",
             allocation.pk,
             recipient_list,
         )

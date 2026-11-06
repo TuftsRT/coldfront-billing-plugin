@@ -11,15 +11,15 @@ from coldfront_billing.tests.test_views.common import _get_manage_response, get_
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestManageNoCostQuotasView:
     """Test suite for ManageNoCostQuotasView."""
 
     def test_unauthenticated_user_redirected(self, client):
         """Test that unauthenticated users are redirected to login."""
-        response = client.get(reverse('manage_no_cost_quota'))
+        response = client.get(reverse("manage_no_cost_quota"))
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
 
     def test_superuser_sees_all_quotas(
         self,
@@ -31,9 +31,9 @@ class TestManageNoCostQuotasView:
         """Test that superusers see all no-cost quotas."""
         response = _get_manage_response(client, superuser)
         assert response.status_code == 200
-        assert 'quota_list' in response.context
+        assert "quota_list" in response.context
         # no_cost_quota belongs to user; superuser should see it
-        assert list(response.context['quota_list']) == [no_cost_quota]
+        assert list(response.context["quota_list"]) == [no_cost_quota]
 
     def test_regular_user_sees_only_own_quotas(
         self,
@@ -44,7 +44,7 @@ class TestManageNoCostQuotasView:
         """Test that regular users see only their own quotas."""
         response = _get_manage_response(client, user)
         assert response.status_code == 200
-        assert list(response.context['quota_list']) == [no_cost_quota]
+        assert list(response.context["quota_list"]) == [no_cost_quota]
 
     def test_regular_user_does_not_see_other_users_quotas(
         self,
@@ -57,16 +57,16 @@ class TestManageNoCostQuotasView:
 
         other_quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI quota',
-            amount_tb=Decimal('50.0'),
-            units='TB',
+            quota_type="tier_1",
+            description="PI quota",
+            amount_tb=Decimal("50.0"),
+            units="TB",
             increment_gb=100,
         )
         response = _get_manage_response(client, user)
         assert response.status_code == 200
-        assert list(response.context['quota_list']) == []
-        assert other_quota not in response.context['quota_list']
+        assert list(response.context["quota_list"]) == []
+        assert other_quota not in response.context["quota_list"]
 
     def test_manage_page_shows_quota_in_gb(
         self,
@@ -78,34 +78,34 @@ class TestManageNoCostQuotasView:
 
         gb_quota = NoCostQuota.objects.create(
             user=user,
-            quota_type='tier_2',
-            description='Tier 2 storage in GB',
-            amount_tb=Decimal('1.0'),
-            units='GB',
+            quota_type="tier_2",
+            description="Tier 2 storage in GB",
+            amount_tb=Decimal("1.0"),
+            units="GB",
             increment_gb=100,
         )
         response = _get_manage_response(client, user)
         assert response.status_code == 200
-        assert gb_quota in response.context['quota_list']
-        assert gb_quota.units == 'GB'
+        assert gb_quota in response.context["quota_list"]
+        assert gb_quota.units == "GB"
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestAssignNoCostQuotasView:
     """Test suite for AssignNoCostQuotasView."""
 
     def test_unauthenticated_user_redirected(self, client, no_cost_quota):
         """Test that unauthenticated users are redirected to login."""
-        response = client.get(f'{reverse("assign_no_cost_quota")}?selected_quota={no_cost_quota.pk}')
+        response = client.get(f"{reverse('assign_no_cost_quota')}?selected_quota={no_cost_quota.pk}")
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
 
     def test_missing_selected_quota_redirects_with_error(self, client, user):
         """Test that missing selected_quota redirects to manage with error."""
-        response = get_assign_response(client, user, '')
+        response = get_assign_response(client, user, "")
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_assign_sort_preserves_selected_quota_back_and_accordion(
         self,
@@ -129,23 +129,23 @@ class TestAssignNoCostQuotasView:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        manage_return = urlencode({'order_by': 'owner', 'direction': 'asc'})
+        manage_return = urlencode({"order_by": "owner", "direction": "asc"})
         query = urlencode(
             {
-                'selected_quota': str(no_cost_quota.pk),
-                'back': manage_return,
-                'order_by': 'id',
-                'direction': 'asc',
+                "selected_quota": str(no_cost_quota.pk),
+                "back": manage_return,
+                "order_by": "id",
+                "direction": "asc",
             }
         )
         client.force_login(user)
-        response = client.get(f'{reverse("assign_no_cost_quota")}?{query}')
+        response = client.get(f"{reverse('assign_no_cost_quota')}?{query}")
         assert response.status_code == 200
-        fp = response.context['filter_parameters']
-        assert f'selected_quota={no_cost_quota.pk}' in fp
-        assert 'back=' in fp
-        assert response.context['back'] == manage_return
-        assert response.context['expand_accordion'] == ''
+        fp = response.context["filter_parameters"]
+        assert f"selected_quota={no_cost_quota.pk}" in fp
+        assert "back=" in fp
+        assert response.context["back"] == manage_return
+        assert response.context["expand_accordion"] == ""
 
     def test_assign_filter_form_preserves_back_in_html(
         self,
@@ -169,10 +169,10 @@ class TestAssignNoCostQuotasView:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        manage_return = urlencode({'order_by': 'owner', 'direction': 'asc'})
-        query = urlencode({'selected_quota': str(no_cost_quota.pk), 'back': manage_return})
+        manage_return = urlencode({"order_by": "owner", "direction": "asc"})
+        query = urlencode({"selected_quota": str(no_cost_quota.pk), "back": manage_return})
         client.force_login(user)
-        response = client.get(f'{reverse("assign_no_cost_quota")}?{query}')
+        response = client.get(f"{reverse('assign_no_cost_quota')}?{query}")
         assert response.status_code == 200
         assert b'name="back"' in response.content
 
@@ -192,15 +192,15 @@ class TestAssignNoCostQuotasView:
 
         other_quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI quota',
-            amount_tb=Decimal('50.0'),
-            units='TB',
+            quota_type="tier_1",
+            description="PI quota",
+            amount_tb=Decimal("50.0"),
+            units="TB",
             increment_gb=100,
         )
         response = get_assign_response(client, user, other_quota.pk)
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_superuser_can_assign_any_quota(
         self,
@@ -227,8 +227,8 @@ class TestAssignNoCostQuotasView:
         )
         response = get_assign_response(client, superuser, no_cost_quota.pk)
         assert response.status_code == 200
-        assert response.context['quota'] == no_cost_quota
-        assert 'allocations' in response.context
+        assert response.context["quota"] == no_cost_quota
+        assert "allocations" in response.context
 
     def test_owner_can_assign_own_quota(
         self,
@@ -254,7 +254,7 @@ class TestAssignNoCostQuotasView:
         )
         response = get_assign_response(client, user, no_cost_quota.pk)
         assert response.status_code == 200
-        assert response.context['quota'] == no_cost_quota
+        assert response.context["quota"] == no_cost_quota
 
     def test_assign_page_shows_eligible_allocations(
         self,
@@ -280,12 +280,12 @@ class TestAssignNoCostQuotasView:
         )
         response = get_assign_response(client, user, no_cost_quota.pk)
         assert response.status_code == 200
-        allocations_data = response.context['allocations']
+        allocations_data = response.context["allocations"]
         assert len(allocations_data) == 1
-        assert allocations_data[0]['allocation'] == allocation
-        assert 'max_possible' in allocations_data[0]
-        assert 'existing_amount' in allocations_data[0]
-        assert 'allotment_id' in allocations_data[0]
+        assert allocations_data[0]["allocation"] == allocation
+        assert "max_possible" in allocations_data[0]
+        assert "existing_amount" in allocations_data[0]
+        assert "allotment_id" in allocations_data[0]
 
     def test_assign_page_shows_allotment_id_when_allotment_exists(
         self,
@@ -314,13 +314,13 @@ class TestAssignNoCostQuotasView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('5.0'),
+            amount_tb=Decimal("5.0"),
         )
         response = get_assign_response(client, user, no_cost_quota.pk)
         assert response.status_code == 200
-        allocations_data = response.context['allocations']
+        allocations_data = response.context["allocations"]
         assert len(allocations_data) == 1
-        assert allocations_data[0]['allotment_id'] == allotment.pk
+        assert allocations_data[0]["allotment_id"] == allotment.pk
 
     def test_assign_page_shows_empty_allotment_id_when_no_allotment(
         self,
@@ -346,6 +346,6 @@ class TestAssignNoCostQuotasView:
         )
         response = get_assign_response(client, user, no_cost_quota.pk)
         assert response.status_code == 200
-        allocations_data = response.context['allocations']
+        allocations_data = response.context["allocations"]
         assert len(allocations_data) == 1
-        assert allocations_data[0]['allotment_id'] == ''
+        assert allocations_data[0]["allotment_id"] == ""

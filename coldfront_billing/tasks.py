@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 def run_scheduled_billing_report():
     billing_settings = BillingScheduleSettings.objects.first()
     if not billing_settings:
-        return {'success': False, 'message': 'No billing settings found'}
+        return {"success": False, "message": "No billing settings found"}
 
     today = timezone.localdate()
 
     if billing_settings.end_date and today > billing_settings.end_date:
         Schedule.objects.filter(name=BILLING_SCHEDULE_NAME).delete()
-        return {'success': False, 'message': 'Schedule expired'}
+        return {"success": False, "message": "Schedule expired"}
 
     started = timezone.now()
 
@@ -35,18 +35,18 @@ def run_scheduled_billing_report():
                 status=BillingScheduleHistory.Status.FAILED_AUTOASSIGN,
                 details=str(exc),
             )
-            return {'success': False, 'message': f'Auto-assign failed: {exc}'}
+            return {"success": False, "message": f"Auto-assign failed: {exc}"}
 
     result = send_billing_report_email(billing_settings)
     stopped = timezone.now()
-    if success := result.get('success'):
+    if success := result.get("success"):
         history_status = BillingScheduleHistory.Status.SUCCESS
     else:
         history_status = result.get(
-            'history_status',
+            "history_status",
             BillingScheduleHistory.Status.FAILED_MAIL,
         )
-    details = '' if success else result.get('message', '')
+    details = "" if success else result.get("message", "")
 
     BillingScheduleHistory.objects.create(
         started=started,
@@ -63,24 +63,24 @@ def fix_oversubscribed_no_cost_quotas():
     """
     exceeded_allotments = get_oversubscribed_no_cost_quotas()
     for item in exceeded_allotments:
-        reduce_allotments_evenly(list(item['ncq_allotments']))
-    return [item['ncq_allotments'] for item in exceeded_allotments]
+        reduce_allotments_evenly(list(item["ncq_allotments"]))
+    return [item["ncq_allotments"] for item in exceeded_allotments]
 
 
 def remove_empty_ncq_allotments():
     empty_allotments = NoCostQuotaAllotment.objects.filter(amount_tb__lte=0)
     count = empty_allotments.count()
     if count > 0:
-        logger.info(f'Removing {count} NoCostQuotaAllotment(s) with amount 0.')
+        logger.info(f"Removing {count} NoCostQuotaAllotment(s) with amount 0.")
         empty_allotments.delete()
-    return f'Removed {count} NoCostQuotaAllotment(s) with amount 0.'
+    return f"Removed {count} NoCostQuotaAllotment(s) with amount 0."
 
 
 def autoallocate_ncq_allotments():
     """
     Automatically allocate NoCostQuotaAllotments to eligible users based on their remaining quota.
     """
-    logger.info('Starting automatic allocation of NoCostQuotaAllotments.')
+    logger.info("Starting automatic allocation of NoCostQuotaAllotments.")
     response = auto_assign_quota()
-    logger.info(f'Automatic allocation response: {response}')
+    logger.info(f"Automatic allocation response: {response}")
     return response

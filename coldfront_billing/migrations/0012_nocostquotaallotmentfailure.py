@@ -7,63 +7,63 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('allocation', '0006_alter_historicalallocation_options_and_more'),
-        ('coldfront_billing', '0011_remove_nocostquota_amount_and_more'),
+        ("allocation", "0006_alter_historicalallocation_options_and_more"),
+        ("coldfront_billing", "0011_remove_nocostquota_amount_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='NoCostQuotaAllotmentFailure',
+            name="NoCostQuotaAllotmentFailure",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 (
-                    'requested_value',
+                    "requested_value",
                     models.CharField(
                         blank=True,
-                        help_text='The request as stored on the allocation: the id of the no-cost quota to apply.',
+                        help_text="The request as stored on the allocation: the id of the no-cost quota to apply.",
                         max_length=128,
                     ),
                 ),
-                ('message', models.TextField(help_text='Why the allotment could not be applied.')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('resolved_at', models.DateTimeField(blank=True, null=True)),
-                ('resolution_note', models.CharField(blank=True, max_length=255)),
+                ("message", models.TextField(help_text="Why the allotment could not be applied.")),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("resolved_at", models.DateTimeField(blank=True, null=True)),
+                ("resolution_note", models.CharField(blank=True, max_length=255)),
                 (
-                    'allocation',
+                    "allocation",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='no_cost_quota_allotment_failures',
-                        to='allocation.allocation',
+                        related_name="no_cost_quota_allotment_failures",
+                        to="allocation.allocation",
                     ),
                 ),
                 (
-                    'no_cost_quota',
+                    "no_cost_quota",
                     models.ForeignKey(
                         blank=True,
-                        help_text='The quota the requester asked to apply, if it could be found.',
+                        help_text="The quota the requester asked to apply, if it could be found.",
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='allotment_failures',
-                        to='coldfront_billing.nocostquota',
+                        related_name="allotment_failures",
+                        to="coldfront_billing.nocostquota",
                     ),
                 ),
                 (
-                    'resolved_by',
+                    "resolved_by",
                     models.ForeignKey(
                         blank=True,
-                        help_text='Who marked it dealt with. Empty if a later allotment resolved it.',
+                        help_text="Who marked it dealt with. Empty if a later allotment resolved it.",
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='+',
+                        related_name="+",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'no-cost quota allotment failure',
-                'verbose_name_plural': 'no-cost quota allotment failures',
-                'ordering': ['-created'],
+                "verbose_name": "no-cost quota allotment failure",
+                "verbose_name_plural": "no-cost quota allotment failures",
+                "ordering": ["-created"],
             },
         ),
     ]

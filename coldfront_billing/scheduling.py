@@ -10,7 +10,7 @@ from coldfront_billing.models import BillingScheduleSettings
 from coldfront_billing.tasks import run_scheduled_billing_report
 from coldfront_billing.utils import calculate_next_run
 
-BILLING_TASK_PATH = f'{run_scheduled_billing_report.__module__}.{run_scheduled_billing_report.__name__}'
+BILLING_TASK_PATH = f"{run_scheduled_billing_report.__module__}.{run_scheduled_billing_report.__name__}"
 
 
 def _calculate_repeats(
@@ -49,7 +49,7 @@ def sync_billing_schedule(billing_settings: Optional[BillingScheduleSettings]) -
         return
 
     # Build next_run from start_date
-    kwargs = {'start_date': billing_settings.start_date}
+    kwargs = {"start_date": billing_settings.start_date}
 
     if BILLING_USE_TEST_SCHEDULING:
         kwargs.update(minutes=5)
@@ -73,10 +73,10 @@ def sync_billing_schedule(billing_settings: Optional[BillingScheduleSettings]) -
     Schedule.objects.update_or_create(
         name=BILLING_SCHEDULE_NAME,
         defaults={
-            'func': BILLING_TASK_PATH,
-            'schedule_type': schedule_type,
-            'minutes': minutes,
-            'next_run': next_run,
-            'repeats': repeats,
+            "func": BILLING_TASK_PATH,
+            "schedule_type": schedule_type,
+            "minutes": minutes,
+            "next_run": next_run,
+            "repeats": repeats,
         },
     )

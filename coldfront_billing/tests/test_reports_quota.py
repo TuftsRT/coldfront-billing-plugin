@@ -11,8 +11,8 @@ from coldfront_billing.tests.conftest import add_no_cost_quota_storage_allocatio
 class TestAutoAssignQuota:
     def test_skipped_when_no_eligible_quotas(self, storage_resource_type):
         status, message = auto_assign_quota()
-        assert status == 'skipped'
-        assert 'nothing to do' in message.lower()
+        assert status == "skipped"
+        assert "nothing to do" in message.lower()
 
     def test_assigns_allotments_for_pi_with_remaining_quota(
         self,
@@ -26,10 +26,10 @@ class TestAutoAssignQuota:
     ):
         quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI tier',
+            quota_type="tier_1",
+            description="PI tier",
             amount_tb=20.0,
-            units='TB',
+            units="TB",
             increment_gb=1000,
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -40,11 +40,11 @@ class TestAutoAssignQuota:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
             quota_type_value=quota.quota_type,
-            quota_value='10',
+            quota_value="10",
         )
         status, message = auto_assign_quota()
-        assert status == 'ok'
-        assert '1 quota' in message
+        assert status == "ok"
+        assert "1 quota" in message
         assert NoCostQuotaAllotment.objects.filter(
             no_cost_quota=quota,
             allocation=allocation,

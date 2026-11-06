@@ -33,13 +33,13 @@ from coldfront_billing.tests.conftest import (
 @pytest.fixture
 def no_cost_quota_group(db):
     """Create a NoCostQuotaGroup for signal tests."""
-    group = Group.objects.create(name='tier_1_group')
+    group = Group.objects.create(name="tier_1_group")
     return NoCostQuotaGroup.objects.create(
         group=group,
-        quota_type='tier_1',
-        description='Tier 1 storage',
-        amount_tb=Decimal('15.0'),
-        units='TB',
+        quota_type="tier_1",
+        description="Tier 1 storage",
+        amount_tb=Decimal("15.0"),
+        units="TB",
         increment_gb=1000,
     )
 
@@ -47,14 +47,14 @@ def no_cost_quota_group(db):
 @pytest.fixture
 def no_cost_quota_group_tier2(db):
     """Create a second NoCostQuotaGroup for signal tests."""
-    group = Group.objects.create(name='tier_2_group')
+    group = Group.objects.create(name="tier_2_group")
 
     return NoCostQuotaGroup.objects.create(
         group=group,
-        quota_type='tier_2',
-        description='Tier 2 storage',
-        amount_tb=Decimal('50.0'),
-        units='TB',
+        quota_type="tier_2",
+        description="Tier 2 storage",
+        amount_tb=Decimal("50.0"),
+        units="TB",
         increment_gb=500,
     )
 
@@ -83,7 +83,7 @@ class TestUserGroupsChangedSignal:
         no_cost_quota_group,
     ):
         """When user is added to a group that does not match any NoCostQuotaGroup, no quota is created."""
-        group = Group.objects.create(name='other_group')
+        group = Group.objects.create(name="other_group")
 
         user.groups.add(group)
 
@@ -98,8 +98,8 @@ class TestUserGroupsChangedSignal:
         """When user is added to one matching group, only that group's quota is created."""
         user.groups.add(no_cost_quota_group.group)
 
-        assert NoCostQuota.objects.filter(user=user, quota_type='tier_1').exists()
-        assert not NoCostQuota.objects.filter(user=user, quota_type='tier_2').exists()
+        assert NoCostQuota.objects.filter(user=user, quota_type="tier_1").exists()
+        assert not NoCostQuota.objects.filter(user=user, quota_type="tier_2").exists()
 
     def test_adding_user_to_multiple_groups_creates_quotas_for_each_matching_group(
         self,
@@ -110,8 +110,8 @@ class TestUserGroupsChangedSignal:
         """When user is added to multiple matching groups, a quota is created for each matching group."""
         user.groups.add(no_cost_quota_group.group, no_cost_quota_group_tier2.group)
 
-        assert NoCostQuota.objects.filter(user=user, quota_type='tier_1').exists()
-        assert NoCostQuota.objects.filter(user=user, quota_type='tier_2').exists()
+        assert NoCostQuota.objects.filter(user=user, quota_type="tier_1").exists()
+        assert NoCostQuota.objects.filter(user=user, quota_type="tier_2").exists()
         assert NoCostQuota.objects.filter(user=user).count() == 2
 
     def test_get_or_create_prevents_duplicate_when_user_already_in_group(
@@ -123,7 +123,7 @@ class TestUserGroupsChangedSignal:
         user.groups.add(no_cost_quota_group.group)
         user.groups.add(no_cost_quota_group.group)  # Add again
 
-        assert NoCostQuota.objects.filter(user=user, quota_type='tier_1').count() == 1
+        assert NoCostQuota.objects.filter(user=user, quota_type="tier_1").count() == 1
 
     def test_removing_user_from_group_does_not_create_quota(
         self,
@@ -144,7 +144,7 @@ class TestUserGroupsChangedSignal:
         user,
     ):
         """When no NoCostQuotaGroup exists, adding user to any group does not error."""
-        group = Group.objects.create(name='some_group')
+        group = Group.objects.create(name="some_group")
 
         user.groups.add(group)  # Should not raise
 
@@ -165,7 +165,7 @@ class TestProjectArchivedSignal:
         quota_attribute_type,
         no_cost_quota_type_attribute_type,
         *,
-        resource_name: str = 'No-Cost Storage',
+        resource_name: str = "No-Cost Storage",
     ):
         allocation, _ = add_no_cost_quota_storage_allocation(
             project,
@@ -180,7 +180,7 @@ class TestProjectArchivedSignal:
         return NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('5.0'),
+            amount_tb=Decimal("5.0"),
         )
 
     def test_transition_active_to_archived_deletes_allotments_for_project(
@@ -227,7 +227,7 @@ class TestProjectArchivedSignal:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
         )
-        project_with_billing_user.title = 'Updated title'
+        project_with_billing_user.title = "Updated title"
         project_with_billing_user.save()
 
         assert NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
@@ -255,7 +255,7 @@ class TestProjectArchivedSignal:
         project_with_billing_user.status = project_status_archived
         project_with_billing_user.save()
 
-        project_with_billing_user.title = 'Still archived'
+        project_with_billing_user.title = "Still archived"
         project_with_billing_user.save()
 
         assert project_with_billing_user.status.name == ProjectStatus.ARCHIVED
@@ -284,7 +284,7 @@ class TestProjectArchivedSignal:
             cost_attribute_type,
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
-            resource_name='No-Cost Storage A',
+            resource_name="No-Cost Storage A",
         )
         project_b = create_project_with_role_user(
             user=user,
@@ -292,7 +292,7 @@ class TestProjectArchivedSignal:
             project_status=project_status_active,
             role=billing_role,
             project_user_status=project_user_status_active,
-            title='Other project',
+            title="Other project",
         )
         allotment_b = self._make_allotment(
             project_b,
@@ -302,7 +302,7 @@ class TestProjectArchivedSignal:
             cost_attribute_type,
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
-            resource_name='No-Cost Storage B',
+            resource_name="No-Cost Storage B",
         )
 
         project_with_billing_user.status = project_status_archived
@@ -325,7 +325,7 @@ class TestProjectArchivedSignal:
     ):
         """Any non-archived prior status to Archived triggers cleanup (not only Active)."""
         project_with_billing_user.status = project_status_new
-        project_with_billing_user.save(update_fields=['status'])
+        project_with_billing_user.save(update_fields=["status"])
 
         allotment = self._make_allotment(
             project_with_billing_user,
@@ -346,16 +346,16 @@ class TestProjectArchivedSignal:
 @pytest.fixture
 def allocation_status_new(db) -> AllocationStatusChoice:
     """Non-active allocation status for testing transitions to Active."""
-    return AllocationStatusChoice.objects.get_or_create(name='New')[0]
+    return AllocationStatusChoice.objects.get_or_create(name="New")[0]
 
 
 @pytest.fixture
 def allocation_quota_apply_attribute_type(db) -> AllocationAttributeType:
     """Allocation attribute type for apply no-cost quota preference (allocation_no_cost_quota)."""
-    text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name='Text')
+    text_attr_type, _ = AllocationAttributeTypeBase.objects.get_or_create(name="Text")
     return AllocationAttributeType.objects.get_or_create(
         name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
-        defaults={'attribute_type': text_attr_type},
+        defaults={"attribute_type": text_attr_type},
     )[0]
 
 
@@ -365,7 +365,7 @@ def assert_failure_recorded(allocation, message_part, no_cost_quota=None):
     unresolved failure says why, and the request is gone so a later approval won't reapply it.
     """
     allocation.refresh_from_db()
-    assert allocation.status.name == 'Active'
+    assert allocation.status.name == "Active"
     failure = NoCostQuotaAllotmentFailure.objects.get(allocation=allocation)
     assert message_part in failure.message
     assert failure.no_cost_quota == no_cost_quota
@@ -392,9 +392,9 @@ class TestAllocationBecameActiveSignal:
         allocation_quota_apply_attribute_type,
         no_cost_quota,
         *,
-        quota_value: str = '10',
+        quota_value: str = "10",
         apply_pref_value: str | None = None,
-        resource_name: str = 'No-Cost Storage Pending',
+        resource_name: str = "No-Cost Storage Pending",
     ) -> Allocation:
         storage_resource = Resource.objects.create(
             name=resource_name,
@@ -404,7 +404,7 @@ class TestAllocationBecameActiveSignal:
         ResourceAttribute.objects.create(
             resource=storage_resource,
             resource_attribute_type=cost_attribute_type,
-            value='100',
+            value="100",
         )
         ResourceAttribute.objects.create(
             resource=storage_resource,
@@ -415,7 +415,7 @@ class TestAllocationBecameActiveSignal:
             project=project,
             status=allocation_status_new,
             quantity=1,
-            justification='pending activation',
+            justification="pending activation",
         )
         allocation.resources.add(storage_resource)
         AllocationAttribute.objects.create(
@@ -452,7 +452,7 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota_type_attribute_type,
             allocation_quota_apply_attribute_type,
             no_cost_quota,
-            quota_value='10',
+            quota_value="10",
             apply_pref_value=str(no_cost_quota.pk),
         )
 
@@ -460,7 +460,7 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        assert allotment.amount_tb == Decimal('10.0')
+        assert allotment.amount_tb == Decimal("10.0")
 
     def test_transition_to_active_with_fractional_quota_creates_exact_allotment(
         self,
@@ -484,7 +484,7 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota_type_attribute_type,
             allocation_quota_apply_attribute_type,
             no_cost_quota,
-            quota_value='0.1',
+            quota_value="0.1",
             apply_pref_value=str(no_cost_quota.pk),
         )
 
@@ -492,7 +492,7 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        assert allotment.amount_tb == Decimal('0.1')
+        assert allotment.amount_tb == Decimal("0.1")
 
     def test_allocation_change_approved_creates_allotment_when_allocation_already_active(
         self,
@@ -515,14 +515,14 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota_type_attribute_type,
             allocation_quota_apply_attribute_type,
             no_cost_quota,
-            quota_value='10',
+            quota_value="10",
             apply_pref_value=str(no_cost_quota.pk),
         )
 
         allocation_change_approved.send(sender=object, allocation_pk=allocation.pk, allocation_change_pk=1)
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
-        assert allotment.amount_tb == Decimal('10.0')
+        assert allotment.amount_tb == Decimal("10.0")
         assert not AllocationAttribute.objects.filter(
             allocation=allocation,
             allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
@@ -548,8 +548,8 @@ class TestAllocationBecameActiveSignal:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
-            resource_name='No-Cost Consumer',
-            quota_value='5',
+            resource_name="No-Cost Consumer",
+            quota_value="5",
         )
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
@@ -566,9 +566,9 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota_type_attribute_type,
             allocation_quota_apply_attribute_type,
             no_cost_quota,
-            quota_value='50',
+            quota_value="50",
             apply_pref_value=str(no_cost_quota.pk),
-            resource_name='No-Cost Storage Pending B',
+            resource_name="No-Cost Storage Pending B",
         )
 
         allocation.status = allocation_status_active
@@ -626,7 +626,7 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota_type_attribute_type,
             allocation_quota_apply_attribute_type,
             no_cost_quota,
-            apply_pref_value='not-an-int',
+            apply_pref_value="not-an-int",
         )
 
         allocation.status = allocation_status_active
@@ -666,7 +666,7 @@ class TestAllocationBecameActiveSignal:
         allocation.save()
 
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
-        assert_failure_recorded(allocation, f'no usable {QUOTA_ATTR_NAME} value', no_cost_quota=no_cost_quota)
+        assert_failure_recorded(allocation, f"no usable {QUOTA_ATTR_NAME} value", no_cost_quota=no_cost_quota)
 
     def test_saving_already_active_allocation_does_not_run_transition_logic(
         self,
@@ -689,7 +689,7 @@ class TestAllocationBecameActiveSignal:
             no_cost_quota_type_attribute_type,
             allocation_quota_apply_attribute_type,
             no_cost_quota,
-            quota_value='10',
+            quota_value="10",
             apply_pref_value=str(no_cost_quota.pk),
         )
         allocation.status = allocation_status_active
@@ -697,7 +697,7 @@ class TestAllocationBecameActiveSignal:
 
         allotment = NoCostQuotaAllotment.objects.get(allocation=allocation, no_cost_quota=no_cost_quota)
         first_amount = allotment.amount_tb
-        allocation.justification = 'still active'
+        allocation.justification = "still active"
         allocation.save()
 
         allotment.refresh_from_db()
@@ -706,12 +706,12 @@ class TestAllocationBecameActiveSignal:
 
 @pytest.fixture
 def allocation_change_status_approved(db) -> AllocationChangeStatusChoice:
-    return AllocationChangeStatusChoice.objects.get_or_create(name='Approved')[0]
+    return AllocationChangeStatusChoice.objects.get_or_create(name="Approved")[0]
 
 
 @pytest.fixture
 def allocation_change_status_pending(db) -> AllocationChangeStatusChoice:
-    return AllocationChangeStatusChoice.objects.get_or_create(name='Pending')[0]
+    return AllocationChangeStatusChoice.objects.get_or_create(name="Pending")[0]
 
 
 @pytest.fixture
@@ -727,7 +727,7 @@ def pending_allocation(
 ):
     """make(quota_value, status) -> an allocation requesting an allotment from no_cost_quota"""
 
-    def make(quota_value='10', status=allocation_status_new, resource_name='No-Cost Storage Pending'):
+    def make(quota_value="10", status=allocation_status_new, resource_name="No-Cost Storage Pending"):
         return TestAllocationBecameActiveSignal._pending_no_cost_allocation(
             project_with_billing_user,
             storage_resource_type,
@@ -750,53 +750,53 @@ class TestAllotmentFailuresDoNotBlockActivation:
     """A requested allotment that can't be applied is recorded, and the allocation is saved all the same."""
 
     def test_an_invalid_allotment_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
-        allocation = pending_allocation(quota_value='0.005')
+        allocation = pending_allocation(quota_value="0.005")
 
         allocation.status = allocation_status_active
         allocation.save()
 
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
-        assert_failure_recorded(allocation, 'smaller than allocation increment', no_cost_quota=no_cost_quota)
+        assert_failure_recorded(allocation, "smaller than allocation increment", no_cost_quota=no_cost_quota)
 
     def test_an_exhausted_quota_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
-        consumer = pending_allocation(status=allocation_status_active, resource_name='No-Cost Consumer')
-        NoCostQuotaAllotment.objects.create(no_cost_quota=no_cost_quota, allocation=consumer, amount_tb=Decimal('100'))
+        consumer = pending_allocation(status=allocation_status_active, resource_name="No-Cost Consumer")
+        NoCostQuotaAllotment.objects.create(no_cost_quota=no_cost_quota, allocation=consumer, amount_tb=Decimal("100"))
         allocation = pending_allocation()
 
         allocation.status = allocation_status_active
         allocation.save()
 
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
-        assert_failure_recorded(allocation, 'has nothing left to allot', no_cost_quota=no_cost_quota)
+        assert_failure_recorded(allocation, "has nothing left to allot", no_cost_quota=no_cost_quota)
 
     def test_an_unexpected_error_is_recorded(self, pending_allocation, no_cost_quota, allocation_status_active):
         allocation = pending_allocation()
 
-        with patch('coldfront_billing.signals.create_update_allotment', side_effect=RuntimeError('boom')):
+        with patch("coldfront_billing.signals.create_update_allotment", side_effect=RuntimeError("boom")):
             allocation.status = allocation_status_active
             allocation.save()
 
-        assert_failure_recorded(allocation, 'RuntimeError: boom', no_cost_quota=no_cost_quota)
+        assert_failure_recorded(allocation, "RuntimeError: boom", no_cost_quota=no_cost_quota)
 
     def test_a_failure_on_change_approval_is_recorded(
         self, pending_allocation, no_cost_quota, allocation_status_active
     ):
-        allocation = pending_allocation(quota_value='0.005', status=allocation_status_active)
+        allocation = pending_allocation(quota_value="0.005", status=allocation_status_active)
 
         allocation_change_approved.send(sender=object, allocation_pk=allocation.pk, allocation_change_pk=1)
 
-        assert_failure_recorded(allocation, 'smaller than allocation increment', no_cost_quota=no_cost_quota)
+        assert_failure_recorded(allocation, "smaller than allocation increment", no_cost_quota=no_cost_quota)
 
     def test_if_the_failure_cannot_be_recorded_the_request_is_kept(self, pending_allocation, allocation_status_active):
         """Nothing else would remember it, so leave the request; it is in the log either way."""
-        allocation = pending_allocation(quota_value='0.005')
+        allocation = pending_allocation(quota_value="0.005")
 
-        with patch.object(NoCostQuotaAllotmentFailure.objects, 'create', side_effect=RuntimeError('db down')):
+        with patch.object(NoCostQuotaAllotmentFailure.objects, "create", side_effect=RuntimeError("db down")):
             allocation.status = allocation_status_active
             allocation.save()
 
         allocation.refresh_from_db()
-        assert allocation.status.name == 'Active'
+        assert allocation.status.name == "Active"
         assert AllocationAttribute.objects.filter(
             allocation=allocation,
             allocation_attribute_type__name=ALLOCATION_QUOTA_ATTRIBUTE_NAME,
@@ -807,68 +807,68 @@ class TestAllotmentFailuresDoNotBlockActivation:
 class TestPendingNoCostQuotaInEmail:
     """The approval email says when a requested no-cost quota is still to be applied."""
 
-    PENDING = 'still to be applied'
+    PENDING = "still to be applied"
 
     @pytest.fixture(autouse=True)
     def emails_enabled(self, settings):
         settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED = True
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_activation_with_a_failed_allotment_says_it_is_pending(
         self, mock_email_message, pending_allocation, allocation_status_active
     ):
-        allocation = pending_allocation(quota_value='0.005')
+        allocation = pending_allocation(quota_value="0.005")
 
         allocation.status = allocation_status_active
         allocation.save()
 
         _, kwargs = mock_email_message.call_args
-        assert self.PENDING in kwargs['body']
+        assert self.PENDING in kwargs["body"]
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_activation_with_an_applied_allotment_does_not(
         self, mock_email_message, pending_allocation, no_cost_quota, allocation_status_active
     ):
         """5 TB of the 10 TB requested is free, so the other 5 still costs something and is emailed."""
-        consumer = pending_allocation(status=allocation_status_active, resource_name='No-Cost Consumer')
-        NoCostQuotaAllotment.objects.create(no_cost_quota=no_cost_quota, allocation=consumer, amount_tb=Decimal('95'))
+        consumer = pending_allocation(status=allocation_status_active, resource_name="No-Cost Consumer")
+        NoCostQuotaAllotment.objects.create(no_cost_quota=no_cost_quota, allocation=consumer, amount_tb=Decimal("95"))
         allocation = pending_allocation()
 
         allocation.status = allocation_status_active
         allocation.save()
 
-        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal('5')
+        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal("5")
         _, kwargs = mock_email_message.call_args
-        assert '500.00' in kwargs['body']
-        assert self.PENDING not in kwargs['body']
+        assert "500.00" in kwargs["body"]
+        assert self.PENDING not in kwargs["body"]
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_a_failed_allotment_on_change_approval_says_it_is_pending(
         self, mock_email_message, pending_allocation, allocation_status_active
     ):
-        allocation = pending_allocation(quota_value='0.005', status=allocation_status_active)
+        allocation = pending_allocation(quota_value="0.005", status=allocation_status_active)
 
         # no allocation_change_pk: the quota check that applies to change requests is tested above
         allocation_change_approved.send(sender=object, allocation_pk=allocation.pk)
 
         _, kwargs = mock_email_message.call_args
-        assert self.PENDING in kwargs['body']
+        assert self.PENDING in kwargs["body"]
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_the_wording_comes_from_settings(
         self, mock_email_message, monkeypatch, pending_allocation, allocation_status_active
     ):
         monkeypatch.setattr(
-            'coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_NO_COST_PENDING',
-            'Free quota for {project_name} comes later.',
+            "coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_NO_COST_PENDING",
+            "Free quota for {project_name} comes later.",
         )
-        allocation = pending_allocation(quota_value='0.005')
+        allocation = pending_allocation(quota_value="0.005")
 
         allocation.status = allocation_status_active
         allocation.save()
 
         _, kwargs = mock_email_message.call_args
-        assert kwargs['body'].endswith(f'\n\nFree quota for {allocation.project.title} comes later.')
+        assert kwargs["body"].endswith(f"\n\nFree quota for {allocation.project.title} comes later.")
 
 
 @pytest.mark.django_db
@@ -880,7 +880,7 @@ class TestAllocationQuotaApprovedNotification:
         """The test settings leave ColdFront's EMAIL_ENABLED off, which these emails follow by default."""
         settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED = True
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_activation_sends_email_to_project_owner(
         self,
         mock_email_message,
@@ -897,8 +897,8 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_new,
             cost_attribute_type,
             quota_attribute_type,
-            quota_value='12',
-            resource_name='Quota Email Activation Storage',
+            quota_value="12",
+            resource_name="Quota Email Activation Storage",
         )
 
         allocation.status = allocation_status_active
@@ -906,13 +906,13 @@ class TestAllocationQuotaApprovedNotification:
 
         mock_email_message.return_value.send.assert_called_once()
         _, kwargs = mock_email_message.call_args
-        assert project.pi.email in kwargs['to']
-        assert '12' in kwargs['body']
-        assert project.title in kwargs['body']
-        assert '1200.00' in kwargs['body']
+        assert project.pi.email in kwargs["to"]
+        assert "12" in kwargs["body"]
+        assert project.title in kwargs["body"]
+        assert "1200.00" in kwargs["body"]
 
-    @patch('coldfront_billing.notifications.EmailMessage')
-    @patch('coldfront_billing.notifications.create_recipient_list')
+    @patch("coldfront_billing.notifications.EmailMessage")
+    @patch("coldfront_billing.notifications.create_recipient_list")
     def test_activation_sends_email_to_requester_when_different_from_owner(
         self,
         mock_recipient_list,
@@ -932,16 +932,16 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_new,
             cost_attribute_type,
             quota_attribute_type,
-            resource_name='Quota Email Requester Storage',
+            resource_name="Quota Email Requester Storage",
         )
 
         allocation.status = allocation_status_active
         allocation.save()
 
         _, kwargs = mock_email_message.call_args
-        assert set(kwargs['to']) == {project.pi.email, user.email}
+        assert set(kwargs["to"]) == {project.pi.email, user.email}
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_activation_skips_non_paid_storage(
         self,
         mock_email_message,
@@ -958,17 +958,17 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_new,
             cost_attribute_type,
             quota_attribute_type,
-            resource_name='Quota Email Free Storage',
+            resource_name="Quota Email Free Storage",
         )
         storage_resource.requires_payment = False
-        storage_resource.save(update_fields=['requires_payment'])
+        storage_resource.save(update_fields=["requires_payment"])
 
         allocation.status = allocation_status_active
         allocation.save()
 
         mock_email_message.return_value.send.assert_not_called()
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_change_approved_sends_when_quota_changed(
         self,
         mock_email_message,
@@ -985,8 +985,8 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            quota_value='5',
-            resource_name='Quota Email Change Storage',
+            quota_value="5",
+            resource_name="Quota Email Change Storage",
         )
         quota_attr = allocation.allocationattribute_set.get(
             allocation_attribute_type__name=QUOTA_ATTR_NAME,
@@ -995,14 +995,14 @@ class TestAllocationQuotaApprovedNotification:
             allocation=allocation,
             status=allocation_change_status_pending,
             end_date_extension=0,
-            justification='Increase quota',
+            justification="Increase quota",
         )
         AllocationAttributeChangeRequest.objects.create(
             allocation_change_request=change_request,
             allocation_attribute=quota_attr,
-            new_value='20',
+            new_value="20",
         )
-        quota_attr.value = '20'
+        quota_attr.value = "20"
         quota_attr.save()
 
         allocation_change_approved.send(
@@ -1013,10 +1013,10 @@ class TestAllocationQuotaApprovedNotification:
 
         mock_email_message.return_value.send.assert_called_once()
         _, kwargs = mock_email_message.call_args
-        assert '20' in kwargs['body']
-        assert '2000.00' in kwargs['body']
+        assert "20" in kwargs["body"]
+        assert "2000.00" in kwargs["body"]
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_change_approved_skips_when_quota_not_in_request(
         self,
         mock_email_message,
@@ -1033,13 +1033,13 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            resource_name='Quota Email Extend Storage',
+            resource_name="Quota Email Extend Storage",
         )
         change_request = AllocationChangeRequest.objects.create(
             allocation=allocation,
             status=allocation_change_status_pending,
             end_date_extension=30,
-            justification='Extend only',
+            justification="Extend only",
         )
 
         allocation_change_approved.send(
@@ -1050,7 +1050,7 @@ class TestAllocationQuotaApprovedNotification:
 
         mock_email_message.return_value.send.assert_not_called()
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_skips_when_billable_cost_zero(
         self,
         mock_email_message,
@@ -1067,13 +1067,13 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            quota_value='10',
-            resource_name='Quota Email Zero Cost Storage',
+            quota_value="10",
+            resource_name="Quota Email Zero Cost Storage",
         )
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('10.0'),
+            amount_tb=Decimal("10.0"),
         )
 
         send_allocation_notification(allocation)
@@ -1081,14 +1081,14 @@ class TestAllocationQuotaApprovedNotification:
         mock_email_message.return_value.send.assert_not_called()
 
     @patch(
-        'coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_BODY',
-        'Project {project_name} quota is now {quota_amount} (cost: {cost}).',
+        "coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_BODY",
+        "Project {project_name} quota is now {quota_amount} (cost: {cost}).",
     )
     @patch(
-        'coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_SUBJECT',
-        'Quota update: {project_name}',
+        "coldfront_billing.notifications.BILLING_ALLOCATION_EMAIL_SUBJECT",
+        "Quota update: {project_name}",
     )
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_uses_settings_templates(
         self,
         mock_email_message,
@@ -1104,15 +1104,15 @@ class TestAllocationQuotaApprovedNotification:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            quota_value='7',
-            resource_name='Quota Email Template Storage',
+            quota_value="7",
+            resource_name="Quota Email Template Storage",
         )
 
         send_allocation_notification(allocation)
 
         _, kwargs = mock_email_message.call_args
-        assert kwargs['subject'] == f'Quota update: {project.title}'
-        assert kwargs['body'] == f'Project {project.title} quota is now 7 (cost: 700.00).'
+        assert kwargs["subject"] == f"Quota update: {project.title}"
+        assert kwargs["body"] == f"Project {project.title} quota is now 7 (cost: 700.00)."
 
 
 @pytest.mark.django_db
@@ -1134,22 +1134,22 @@ class TestAllocationQuotaEmailSwitch:
             allocation_status_active,
             cost_attribute_type,
             quota_attribute_type,
-            quota_value='12',
-            resource_name='Quota Email Switch Storage',
+            quota_value="12",
+            resource_name="Quota Email Switch Storage",
         )
         return allocation
 
     @pytest.mark.parametrize(
-        'billing_setting, email_enabled, sends',
+        "billing_setting, email_enabled, sends",
         [
             (None, True, True),
             (None, False, False),
             (True, False, True),
             (False, True, False),
         ],
-        ids=['follows_email_enabled_on', 'follows_email_enabled_off', 'billing_on_overrides', 'billing_off_overrides'],
+        ids=["follows_email_enabled_on", "follows_email_enabled_off", "billing_on_overrides", "billing_off_overrides"],
     )
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_the_switch(
         self, mock_email_message, settings, active_paid_allocation, billing_setting, email_enabled, sends
     ):
@@ -1160,7 +1160,7 @@ class TestAllocationQuotaEmailSwitch:
 
         assert mock_email_message.return_value.send.called is sends
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_unset_follows_email_enabled(self, mock_email_message, settings, active_paid_allocation):
         del settings.COLDFRONT_BILLING_ALLOCATION_EMAIL_ENABLED
         settings.EMAIL_ENABLED = False
@@ -1169,7 +1169,7 @@ class TestAllocationQuotaEmailSwitch:
 
         mock_email_message.assert_not_called()
 
-    @patch('coldfront_billing.notifications.EmailMessage')
+    @patch("coldfront_billing.notifications.EmailMessage")
     def test_disabled_by_the_activation_signal_too(
         self,
         mock_email_message,
@@ -1188,8 +1188,8 @@ class TestAllocationQuotaEmailSwitch:
             allocation_status_new,
             cost_attribute_type,
             quota_attribute_type,
-            quota_value='12',
-            resource_name='Quota Email Switch Signal Storage',
+            quota_value="12",
+            resource_name="Quota Email Switch Signal Storage",
         )
 
         allocation.status = allocation_status_active
