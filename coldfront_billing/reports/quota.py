@@ -26,7 +26,7 @@ def auto_assign_quota() -> tuple[str, str]:
 
     for user_id in {p.pi_id for p in projects if p.pi_id}:
         for quota in quota_with_remaining.filter(user_id=user_id):
-            remaining = Decimal(quota.remaining).quantize(Decimal('0.01'), rounding=ROUND_FLOOR)
+            remaining = Decimal(quota.remaining).quantize(Decimal("0.01"), rounding=ROUND_FLOOR)
             if remaining <= 0:
                 continue
 
@@ -56,9 +56,9 @@ def auto_assign_quota() -> tuple[str, str]:
                 assignments_applied += 1
 
     if not processed:
-        return 'skipped', 'No no-cost quotas auto-assigned (nothing to do or no eligible allocations).'
+        return "skipped", "No no-cost quotas auto-assigned (nothing to do or no eligible allocations)."
 
     return (
-        'ok',
-        f'Auto-assigned no-cost quota for {processed} quota(s); {assignments_applied} allotment(s) created or updated.',
+        "ok",
+        f"Auto-assigned no-cost quota for {processed} quota(s); {assignments_applied} allotment(s) created or updated.",
     )

@@ -13,8 +13,8 @@ class NoCostQuotaGroup(QuotaBase):
     group = OneToOneField(
         Group,
         on_delete=CASCADE,
-        related_name='no_cost_quota_group',
-        help_text='Django Group - when a user is added to this group, a NoCostQuota is created for them',
+        related_name="no_cost_quota_group",
+        help_text="Django Group - when a user is added to this group, a NoCostQuota is created for them",
     )
 
     def __str__(self):

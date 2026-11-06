@@ -31,9 +31,9 @@ class TestCreateUpdateAllotment:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        result = create_update_allotment(allocation, Decimal('2.0'), no_cost_quota)
-        assert result == 'Assigned'
-        assert NoCostQuotaAllotment.objects.filter(allocation=allocation, amount_tb=Decimal('2.0')).exists()
+        result = create_update_allotment(allocation, Decimal("2.0"), no_cost_quota)
+        assert result == "Assigned"
+        assert NoCostQuotaAllotment.objects.filter(allocation=allocation, amount_tb=Decimal("2.0")).exists()
 
     def test_updates_existing_allotment(
         self,
@@ -56,11 +56,11 @@ class TestCreateUpdateAllotment:
             quota_type_value=no_cost_quota.quota_type,
         )
         NoCostQuotaAllotment.objects.create(
-            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal('1.0')
+            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal("1.0")
         )
-        result = create_update_allotment(allocation, Decimal('3.0'), no_cost_quota)
-        assert result == 'Updated'
-        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal('3.0')
+        result = create_update_allotment(allocation, Decimal("3.0"), no_cost_quota)
+        assert result == "Updated"
+        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal("3.0")
 
     def test_append_increments_amount(
         self,
@@ -83,10 +83,10 @@ class TestCreateUpdateAllotment:
             quota_type_value=no_cost_quota.quota_type,
         )
         NoCostQuotaAllotment.objects.create(
-            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal('1.0')
+            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal("1.0")
         )
-        create_update_allotment(allocation, Decimal('2.0'), no_cost_quota, append=True)
-        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal('3.0')
+        create_update_allotment(allocation, Decimal("2.0"), no_cost_quota, append=True)
+        assert NoCostQuotaAllotment.objects.get(allocation=allocation).amount_tb == Decimal("3.0")
 
     def test_validation_error_wrapped(
         self,
@@ -108,8 +108,8 @@ class TestCreateUpdateAllotment:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        with pytest.raises(Exception, match='Could not save allotment'):
-            create_update_allotment(allocation, Decimal('-1.0'), no_cost_quota)
+        with pytest.raises(Exception, match="Could not save allotment"):
+            create_update_allotment(allocation, Decimal("-1.0"), no_cost_quota)
 
     def test_invalid_new_allotment_is_not_saved(
         self,
@@ -132,8 +132,8 @@ class TestCreateUpdateAllotment:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        with pytest.raises(Exception, match='multiple of increment'):
-            create_update_allotment(allocation, Decimal('1.005'), no_cost_quota)
+        with pytest.raises(Exception, match="multiple of increment"):
+            create_update_allotment(allocation, Decimal("1.005"), no_cost_quota)
         assert not NoCostQuotaAllotment.objects.filter(allocation=allocation).exists()
 
     def test_create_or_update_allotment_by_id(
@@ -156,7 +156,7 @@ class TestCreateUpdateAllotment:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        assert create_or_update_allotment(allocation.pk, Decimal('1.0'), no_cost_quota) == 'Assigned'
+        assert create_or_update_allotment(allocation.pk, Decimal("1.0"), no_cost_quota) == "Assigned"
 
     def test_saving_an_allotment_resolves_earlier_failures_from_that_quota(
         self,
@@ -179,11 +179,11 @@ class TestCreateUpdateAllotment:
             quota_type_value=no_cost_quota.quota_type,
         )
         from_this_quota = NoCostQuotaAllotmentFailure.objects.create(
-            allocation=allocation, no_cost_quota=no_cost_quota, message='earlier'
+            allocation=allocation, no_cost_quota=no_cost_quota, message="earlier"
         )
-        unknown_quota = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message='bad id')
+        unknown_quota = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message="bad id")
 
-        create_update_allotment(allocation, Decimal('2.0'), no_cost_quota)
+        create_update_allotment(allocation, Decimal("2.0"), no_cost_quota)
 
         from_this_quota.refresh_from_db()
         unknown_quota.refresh_from_db()
@@ -212,11 +212,11 @@ class TestCreateUpdateAllotment:
             quota_type_value=no_cost_quota.quota_type,
         )
         failure = NoCostQuotaAllotmentFailure.objects.create(
-            allocation=allocation, no_cost_quota=no_cost_quota, message='earlier'
+            allocation=allocation, no_cost_quota=no_cost_quota, message="earlier"
         )
 
-        with pytest.raises(Exception, match='Could not save allotment'):
-            create_update_allotment(allocation, Decimal('1.005'), no_cost_quota)
+        with pytest.raises(Exception, match="Could not save allotment"):
+            create_update_allotment(allocation, Decimal("1.005"), no_cost_quota)
 
         failure.refresh_from_db()
         assert failure.resolved_at is None

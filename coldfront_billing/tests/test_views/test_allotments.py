@@ -1,7 +1,8 @@
 """Unit tests for no_cost_quota views: manage, assign, single allotment, and bulk auto-assign."""
 
-from urllib.parse import urlencode
 from decimal import Decimal
+from urllib.parse import urlencode
+
 import pytest
 from django.urls import reverse
 
@@ -14,7 +15,7 @@ from coldfront_billing.tests.test_views.common import (
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestNoCostQuotaAllotmentView:
     """Test suite for NoCostQuotaAllotmentView."""
 
@@ -40,15 +41,15 @@ class TestNoCostQuotaAllotmentView:
             quota_type_value=no_cost_quota.quota_type,
         )
         response = client.post(
-            reverse('no_cost_quota_manage_allotment'),
+            reverse("no_cost_quota_manage_allotment"),
             data={
-                'quota_id': no_cost_quota.pk,
-                'allocation_id': allocation.pk,
-                'amount': '5',
+                "quota_id": no_cost_quota.pk,
+                "allocation_id": allocation.pk,
+                "amount": "5",
             },
         )
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
 
     def test_missing_quota_or_allocation_redirects_with_error(
         self,
@@ -75,18 +76,18 @@ class TestNoCostQuotaAllotmentView:
         client.force_login(user)
 
         response = client.post(
-            reverse('no_cost_quota_manage_allotment'),
-            data={'allocation_id': allocation.pk, 'amount': '5'},
+            reverse("no_cost_quota_manage_allotment"),
+            data={"allocation_id": allocation.pk, "amount": "5"},
         )
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
         response = client.post(
-            reverse('no_cost_quota_manage_allotment'),
-            data={'quota_id': no_cost_quota.pk, 'amount': '5'},
+            reverse("no_cost_quota_manage_allotment"),
+            data={"quota_id": no_cost_quota.pk, "amount": "5"},
         )
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_invalid_amount_redirects_with_error(
         self,
@@ -110,9 +111,9 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        response = post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, 'not-a-number')
+        response = post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, "not-a-number")
         assert response.status_code == 302
-        assert f'selected_quota={no_cost_quota.pk}' in response.url
+        assert f"selected_quota={no_cost_quota.pk}" in response.url
 
     def test_regular_user_cannot_create_allotment_for_other_users_quota(
         self,
@@ -131,10 +132,10 @@ class TestNoCostQuotaAllotmentView:
 
         other_quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI quota',
-            amount_tb=Decimal('50.0'),
-            units='TB',
+            quota_type="tier_1",
+            description="PI quota",
+            amount_tb=Decimal("50.0"),
+            units="TB",
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -146,9 +147,9 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota_type_attribute_type,
             quota_type_value=other_quota.quota_type,
         )
-        response = post_create_allotment(client, user, other_quota.pk, allocation.pk, '5')
+        response = post_create_allotment(client, user, other_quota.pk, allocation.pk, "5")
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_valid_post_creates_allotment(
         self,
@@ -174,15 +175,15 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        response = post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, '5')
+        response = post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, "5")
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
         allotment = NoCostQuotaAllotment.objects.get(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
         )
-        assert allotment.amount_tb == Decimal('5.0')
+        assert allotment.amount_tb == Decimal("5.0")
 
     def test_valid_post_updates_existing_allotment(
         self,
@@ -208,15 +209,15 @@ class TestNoCostQuotaAllotmentView:
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
         )
-        post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, '1')
-        response = post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, '2')
+        post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, "1")
+        response = post_create_allotment(client, user, no_cost_quota.pk, allocation.pk, "2")
         assert response.status_code == 302
 
         allotment = NoCostQuotaAllotment.objects.get(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
         )
-        assert allotment.amount_tb == Decimal('2.0')
+        assert allotment.amount_tb == Decimal("2.0")
         assert (
             NoCostQuotaAllotment.objects.filter(
                 no_cost_quota=no_cost_quota,
@@ -241,10 +242,10 @@ class TestNoCostQuotaAllotmentView:
 
         gb_quota = NoCostQuota.objects.create(
             user=user,
-            quota_type='tier_2',
-            description='Tier 2 storage in GB',
-            amount_tb=Decimal('1000.0'),  # 1 TB = 1000 GB
-            units='GB',
+            quota_type="tier_2",
+            description="Tier 2 storage in GB",
+            amount_tb=Decimal("1000.0"),  # 1 TB = 1000 GB
+            units="GB",
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -255,11 +256,11 @@ class TestNoCostQuotaAllotmentView:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
             quota_type_value=gb_quota.quota_type,
-            quota_value='1000',  # 1000 TB allocation for GB allotment validation
+            quota_value="1000",  # 1000 TB allocation for GB allotment validation
         )
-        response = post_create_allotment(client, user, gb_quota.pk, allocation.pk, '100')
+        response = post_create_allotment(client, user, gb_quota.pk, allocation.pk, "100")
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
         allotment = NoCostQuotaAllotment.objects.get(
             no_cost_quota=gb_quota,
@@ -294,14 +295,14 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('5.0'),
+            amount_tb=Decimal("5.0"),
         )
         response = client.post(
-            reverse('no_cost_quota_manage_allotment'),
-            data={'action': 'delete', 'allotment_id': allotment.pk},
+            reverse("no_cost_quota_manage_allotment"),
+            data={"action": "delete", "allotment_id": allotment.pk},
         )
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
         assert NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
 
     def test_missing_allotment_id_redirects_with_error(
@@ -312,11 +313,11 @@ class TestNoCostQuotaAllotmentView:
         """Test that delete action without allotment_id redirects to manage with error."""
         client.force_login(user)
         response = client.post(
-            reverse('no_cost_quota_manage_allotment'),
-            data={'action': 'delete'},
+            reverse("no_cost_quota_manage_allotment"),
+            data={"action": "delete"},
         )
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_valid_delete_removes_allotment(
         self,
@@ -345,11 +346,11 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('5.0'),
+            amount_tb=Decimal("5.0"),
         )
         response = post_delete_allotment(client, user, allotment.pk)
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
         assert not NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
 
     def test_regular_user_cannot_delete_other_users_allotment(
@@ -369,10 +370,10 @@ class TestNoCostQuotaAllotmentView:
 
         other_quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI quota',
-            amount_tb=Decimal('50.0'),
-            units='TB',
+            quota_type="tier_1",
+            description="PI quota",
+            amount_tb=Decimal("50.0"),
+            units="TB",
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -387,11 +388,11 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=other_quota,
             allocation=allocation,
-            amount_tb=Decimal('5.0'),
+            amount_tb=Decimal("5.0"),
         )
         response = post_delete_allotment(client, user, allotment.pk)
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
         assert NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
 
     def test_superuser_can_delete_any_allotment(
@@ -411,10 +412,10 @@ class TestNoCostQuotaAllotmentView:
 
         pi_quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI quota',
-            amount_tb=Decimal('50.0'),
-            units='TB',
+            quota_type="tier_1",
+            description="PI quota",
+            amount_tb=Decimal("50.0"),
+            units="TB",
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -429,16 +430,16 @@ class TestNoCostQuotaAllotmentView:
         allotment = NoCostQuotaAllotment.objects.create(
             no_cost_quota=pi_quota,
             allocation=allocation,
-            amount_tb=Decimal('5.0'),
+            amount_tb=Decimal("5.0"),
         )
         response = post_delete_allotment(client, superuser, allotment.pk)
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
         assert not NoCostQuotaAllotment.objects.filter(pk=allotment.pk).exists()
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('configure_urls')
+@pytest.mark.usefixtures("configure_urls")
 class TestAutoAssignAllotmentsView:
     """Test suite for AutoAssignAllotmentsView (bulk allotment create/update)."""
 
@@ -464,28 +465,28 @@ class TestAutoAssignAllotmentsView:
         )
         body = urlencode(
             [
-                ('quota_id', str(no_cost_quota.pk)),
-                ('allocation_id', str(allocation.pk)),
-                ('amount', '1'),
+                ("quota_id", str(no_cost_quota.pk)),
+                ("allocation_id", str(allocation.pk)),
+                ("amount", "1"),
             ]
         )
         response = client.post(
-            reverse('no_cost_quota_auto_allotment'),
+            reverse("no_cost_quota_auto_allotment"),
             data=body,
-            content_type='application/x-www-form-urlencoded',
+            content_type="application/x-www-form-urlencoded",
         )
         assert response.status_code == 302
-        assert '/login' in response.url
+        assert "/login" in response.url
 
     def test_missing_quota_id_redirects_to_manage(self, client, user):
         client.force_login(user)
         response = client.post(
-            reverse('no_cost_quota_auto_allotment'),
-            data='',
-            content_type='application/x-www-form-urlencoded',
+            reverse("no_cost_quota_auto_allotment"),
+            data="",
+            content_type="application/x-www-form-urlencoded",
         )
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_regular_user_cannot_auto_assign_other_users_quota(
         self,
@@ -503,10 +504,10 @@ class TestAutoAssignAllotmentsView:
 
         other_quota = NoCostQuota.objects.create(
             user=pi_user,
-            quota_type='tier_1',
-            description='PI quota',
-            amount_tb=Decimal('50.0'),
-            units='TB',
+            quota_type="tier_1",
+            description="PI quota",
+            amount_tb=Decimal("50.0"),
+            units="TB",
             increment_gb=100,  # Increment in GB
         )
         allocation, _ = add_no_cost_quota_storage_allocation(
@@ -522,10 +523,10 @@ class TestAutoAssignAllotmentsView:
             client,
             user,
             other_quota.pk,
-            [(allocation.pk, '2')],
+            [(allocation.pk, "2")],
         )
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
     def test_mismatched_row_counts_redirects_to_assign_with_error(
         self,
@@ -551,19 +552,19 @@ class TestAutoAssignAllotmentsView:
         client.force_login(user)
         body = urlencode(
             [
-                ('quota_id', str(no_cost_quota.pk)),
-                ('allocation_id', str(allocation.pk)),
-                ('amount', '1'),
-                ('amount', '2'),
+                ("quota_id", str(no_cost_quota.pk)),
+                ("allocation_id", str(allocation.pk)),
+                ("amount", "1"),
+                ("amount", "2"),
             ]
         )
         response = client.post(
-            reverse('no_cost_quota_auto_allotment'),
+            reverse("no_cost_quota_auto_allotment"),
             data=body,
-            content_type='application/x-www-form-urlencoded',
+            content_type="application/x-www-form-urlencoded",
         )
         assert response.status_code == 302
-        assert f'selected_quota={no_cost_quota.pk}' in response.url
+        assert f"selected_quota={no_cost_quota.pk}" in response.url
 
     def test_valid_bulk_post_creates_two_allotments(
         self,
@@ -587,7 +588,7 @@ class TestAutoAssignAllotmentsView:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
-            resource_name='NCQ Bulk A',
+            resource_name="NCQ Bulk A",
         )
         alloc_b, _ = add_no_cost_quota_storage_allocation(
             project_with_billing_user,
@@ -597,19 +598,23 @@ class TestAutoAssignAllotmentsView:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
-            resource_name='NCQ Bulk B',
+            resource_name="NCQ Bulk B",
         )
         response = post_auto_assign_allotments(
             client,
             user,
             no_cost_quota.pk,
-            [(alloc_a.pk, '2'), (alloc_b.pk, '3,0')],
+            [(alloc_a.pk, "2"), (alloc_b.pk, "3,0")],
         )
         assert response.status_code == 302
-        assert response.url == reverse('manage_no_cost_quota')
+        assert response.url == reverse("manage_no_cost_quota")
 
-        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_a).amount_tb == Decimal('2.0')
-        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_b).amount_tb == Decimal('3.0')
+        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_a).amount_tb == Decimal(
+            "2.0"
+        )
+        assert NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=alloc_b).amount_tb == Decimal(
+            "3.0"
+        )
 
     def test_valid_bulk_post_updates_existing_allotments(
         self,
@@ -637,15 +642,15 @@ class TestAutoAssignAllotmentsView:
         NoCostQuotaAllotment.objects.create(
             no_cost_quota=no_cost_quota,
             allocation=allocation,
-            amount_tb=Decimal('1.0'),
+            amount_tb=Decimal("1.0"),
         )
         response = post_auto_assign_allotments(
             client,
             user,
             no_cost_quota.pk,
-            [(allocation.pk, '5')],
+            [(allocation.pk, "5")],
         )
         assert response.status_code == 302
         allotment = NoCostQuotaAllotment.objects.get(no_cost_quota=no_cost_quota, allocation=allocation)
-        assert allotment.amount_tb == Decimal('5.0')
+        assert allotment.amount_tb == Decimal("5.0")
         assert NoCostQuotaAllotment.objects.filter(no_cost_quota=no_cost_quota, allocation=allocation).count() == 1

@@ -4,30 +4,29 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('coldfront_billing', '0010_alter_nocostquota_options_nocostquota_amount_tb_and_more'),
+        ("coldfront_billing", "0010_alter_nocostquota_options_nocostquota_amount_tb_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='nocostquota',
-            name='amount',
+            model_name="nocostquota",
+            name="amount",
         ),
         migrations.RemoveField(
-            model_name='nocostquota',
-            name='minimum_increment',
+            model_name="nocostquota",
+            name="minimum_increment",
         ),
         migrations.RemoveField(
-            model_name='nocostquotaallotment',
-            name='amount',
+            model_name="nocostquotaallotment",
+            name="amount",
         ),
         migrations.RemoveField(
-            model_name='nocostquotagroup',
-            name='amount',
+            model_name="nocostquotagroup",
+            name="amount",
         ),
         migrations.RemoveField(
-            model_name='nocostquotagroup',
-            name='minimum_increment',
+            model_name="nocostquotagroup",
+            name="minimum_increment",
         ),
     ]

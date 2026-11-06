@@ -22,23 +22,23 @@ class NoCostQuotaAllotmentFailure(models.Model):
     allocation = models.ForeignKey(
         Allocation,
         on_delete=models.CASCADE,
-        related_name='no_cost_quota_allotment_failures',
+        related_name="no_cost_quota_allotment_failures",
     )
     no_cost_quota = models.ForeignKey(
-        'coldfront_billing.NoCostQuota',
+        "coldfront_billing.NoCostQuota",
         null=True,
         blank=True,
         # keep the record if the quota goes: it still says what was asked for and why it failed
         on_delete=models.SET_NULL,
-        related_name='allotment_failures',
-        help_text='The quota the requester asked to apply, if it could be found.',
+        related_name="allotment_failures",
+        help_text="The quota the requester asked to apply, if it could be found.",
     )
     requested_value = models.CharField(
         max_length=128,
         blank=True,
-        help_text='The request as stored on the allocation: the id of the no-cost quota to apply.',
+        help_text="The request as stored on the allocation: the id of the no-cost quota to apply.",
     )
-    message = models.TextField(help_text='Why the allotment could not be applied.')
+    message = models.TextField(help_text="Why the allotment could not be applied.")
     created = models.DateTimeField(auto_now_add=True)
 
     resolved_at = models.DateTimeField(null=True, blank=True)
@@ -48,25 +48,25 @@ class NoCostQuotaAllotmentFailure(models.Model):
         blank=True,
         # keep the record when the account goes away: who resolved it is history
         on_delete=models.SET_NULL,
-        related_name='+',
-        help_text='Who marked it dealt with. Empty if a later allotment resolved it.',
+        related_name="+",
+        help_text="Who marked it dealt with. Empty if a later allotment resolved it.",
     )
     resolution_note = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        ordering = ['-created']
-        verbose_name = 'no-cost quota allotment failure'
-        verbose_name_plural = 'no-cost quota allotment failures'
+        ordering = ["-created"]
+        verbose_name = "no-cost quota allotment failure"
+        verbose_name_plural = "no-cost quota allotment failures"
 
-    def resolve(self, user=None, note=''):
+    def resolve(self, user=None, note=""):
         """Mark this failure dealt with, by `user`, or by a later allotment if None. A no-op if already resolved."""
         if self.resolved_at is not None:
             return False
         self.resolved_at = timezone.now()
         self.resolved_by = user
-        self.resolution_note = note[: self._meta.get_field('resolution_note').max_length]
-        self.save(update_fields=['resolved_at', 'resolved_by', 'resolution_note'])
+        self.resolution_note = note[: self._meta.get_field("resolution_note").max_length]
+        self.save(update_fields=["resolved_at", "resolved_by", "resolution_note"])
         return True
 
     def __str__(self):
-        return f'Allotment failure on allocation {self.allocation_id}'
+        return f"Allotment failure on allocation {self.allocation_id}"

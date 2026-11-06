@@ -11,7 +11,7 @@ from coldfront_billing.constants import (
 from coldfront_billing.enums import AllocationStatus
 
 
-def create_mock_allotment(amount, units='TB'):
+def create_mock_allotment(amount, units="TB"):
     """Create a mock no-cost quota allotment object."""
     allotment = Mock()
     allotment.amount_tb = amount
@@ -36,11 +36,11 @@ def create_mock_allocation(
     trigger getattr defaults - matching real allocations without prefetched data.
     """
     spec = [
-        'id',
-        'project_id',
-        'end_date',
-        'status',
-        'project',
+        "id",
+        "project_id",
+        "end_date",
+        "status",
+        "project",
         QUOTA_ATTRIBUTE_NAME,
         STORAGE_RESOURCE_ATTRIBUTE_NAME,
     ]
@@ -63,7 +63,7 @@ def create_mock_allocation(
     return allocation
 
 
-def create_mock_storage_resource(cost_attrs=None, name='Test Storage'):
+def create_mock_storage_resource(cost_attrs=None, name="Test Storage"):
     """Create a mock storage resource object."""
     resource = Mock()
     resource.name = name
@@ -71,7 +71,7 @@ def create_mock_storage_resource(cost_attrs=None, name='Test Storage'):
     return resource
 
 
-def create_mock_project(title='Test Project', pi=None):
+def create_mock_project(title="Test Project", pi=None):
     """Create a mock project object."""
     project = Mock()
     project.title = title
@@ -79,14 +79,14 @@ def create_mock_project(title='Test Project', pi=None):
     return project
 
 
-def create_mock_pi(username='pi_user'):
+def create_mock_pi(username="pi_user"):
     """Create a mock PI user object."""
     pi = Mock()
     pi.username = username
     return pi
 
 
-def create_ncq_allotment(amount, units='TB', user_id=1):
+def create_ncq_allotment(amount, units="TB", user_id=1):
     """Mock no-cost quota allotment with user_id (for PricedAllocation / engine tests)."""
     allotment = Mock()
     allotment.amount_tb = amount
@@ -103,14 +103,14 @@ def mock_allocation_for_priced(
     storage_resources=None,
 ):
     allocation = Mock(
-        spec=['id', ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME],
+        spec=["id", ALLOTMENTS_ATTRIBUTE_NAME, QUOTA_ATTRIBUTE_NAME, STORAGE_RESOURCE_ATTRIBUTE_NAME],
     )
     allocation.id = 1
     allocation.all_allotments = all_allotments
     setattr(
         allocation,
         QUOTA_ATTRIBUTE_NAME,
-        quota_attrs if quota_attrs is not None else [Mock(value='10')],
+        quota_attrs if quota_attrs is not None else [Mock(value="10")],
     )
     setattr(
         allocation,

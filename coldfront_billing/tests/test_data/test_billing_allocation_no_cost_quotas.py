@@ -20,9 +20,9 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('10'),
-            cost_per_tb=Decimal('100'),
-            no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
+            quota_tb=Decimal("10"),
+            cost_per_tb=Decimal("100"),
+            no_cost_quotas=[BillingQuota(amount=Decimal("3.0"), unit=StorageUnit.TB)],
         )
         # 10 - 3 = 7 TB billable, ceil(7) * 100 = 700
         assert billing.total_cost == 700
@@ -32,9 +32,9 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('5'),
-            cost_per_tb=Decimal('100'),
-            no_cost_quotas=[BillingQuota(amount=Decimal('1000.0'), unit=StorageUnit.GB)],
+            quota_tb=Decimal("5"),
+            cost_per_tb=Decimal("100"),
+            no_cost_quotas=[BillingQuota(amount=Decimal("1000.0"), unit=StorageUnit.GB)],
         )
         # 5 - 1 = 4 TB billable, 4 * 100 = 400
         assert billing.total_cost == 400
@@ -44,14 +44,14 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('10'),
-            cost_per_tb=Decimal('100'),
+            quota_tb=Decimal("10"),
+            cost_per_tb=Decimal("100"),
             no_cost_quotas=[
-                BillingQuota(amount=Decimal('2.0'), unit=StorageUnit.TB),
-                BillingQuota(amount=Decimal('450.0'), unit=StorageUnit.GB),  # 0.5 TB
+                BillingQuota(amount=Decimal("2.0"), unit=StorageUnit.TB),
+                BillingQuota(amount=Decimal("450.0"), unit=StorageUnit.GB),  # 0.5 TB
             ],
         )
-        # 10 - 2.45 = 7.55 TB billable, ceil(7.55) -> 7.6 * 100 = 760 
+        # 10 - 2.45 = 7.55 TB billable, ceil(7.55) -> 7.6 * 100 = 760
         assert billing.total_cost == 760
 
     def test_total_cost_no_cost_quota_exceeds_quota_returns_zero(self):
@@ -59,9 +59,9 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('5'),
-            cost_per_tb=Decimal('100'),
-            no_cost_quotas=[BillingQuota(amount=Decimal('10.0'), unit=StorageUnit.TB)],
+            quota_tb=Decimal("5"),
+            cost_per_tb=Decimal("100"),
+            no_cost_quotas=[BillingQuota(amount=Decimal("10.0"), unit=StorageUnit.TB)],
         )
         # max(5 - 10, 0) = 0, 0 * 100 = 0
         assert billing.total_cost == 0
@@ -71,8 +71,8 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('5'),
-            cost_per_tb=Decimal('100'),
+            quota_tb=Decimal("5"),
+            cost_per_tb=Decimal("100"),
             no_cost_quotas=[],
         )
         assert billing.total_cost == 500
@@ -82,12 +82,12 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('10'),
-            cost_per_tb=Decimal('100'),
-            no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
+            quota_tb=Decimal("10"),
+            cost_per_tb=Decimal("100"),
+            no_cost_quotas=[BillingQuota(amount=Decimal("3.0"), unit=StorageUnit.TB)],
         )
         # unpaid_quota = 7 TB; user applies 2 TB -> billable 5 TB -> ceil(5) * 100
-        predicted, applied = billing.get_predicted_cost(Decimal('2.0'))
+        predicted, applied = billing.get_predicted_cost(Decimal("2.0"))
         assert applied == 2.0
         assert predicted == 500
 
@@ -96,21 +96,21 @@ class TestBillingAllocationNoCostQuotas:
         billing = BillingAllocation(
             allocation_id=1,
             project_id=1,
-            quota_tb=Decimal('10'),
-            cost_per_tb=Decimal('100'),
-            no_cost_quotas=[BillingQuota(amount=Decimal('3.0'), unit=StorageUnit.TB)],
+            quota_tb=Decimal("10"),
+            cost_per_tb=Decimal("100"),
+            no_cost_quotas=[BillingQuota(amount=Decimal("3.0"), unit=StorageUnit.TB)],
         )
-        predicted, applied = billing.get_predicted_cost(Decimal('100.0'))
-        assert applied == Decimal('7.0')
+        predicted, applied = billing.get_predicted_cost(Decimal("100.0"))
+        assert applied == Decimal("7.0")
         assert predicted == 0
 
     def test_parse_with_no_cost_quota_data(self):
         """Test parse populates no_cost_quotas from allocation allotments."""
-        allotment1 = create_mock_allotment(amount=Decimal('2.0'), units='TB')
-        allotment2 = create_mock_allotment(amount=Decimal('500.0'), units='GB')
-        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        allotment1 = create_mock_allotment(amount=Decimal("2.0"), units="TB")
+        allotment2 = create_mock_allotment(amount=Decimal("500.0"), units="GB")
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value="100")])
         allocation = create_mock_allocation(
-            quota_attrs=[Mock(value='10')],
+            quota_attrs=[Mock(value="10")],
             storage_resources=[storage_resource],
             no_cost_quota_data=[allotment1, allotment2],
         )
@@ -126,9 +126,9 @@ class TestBillingAllocationNoCostQuotas:
 
     def test_parse_without_no_cost_quota_data_yields_empty(self):
         """Test parse when allocation has no allotments (attribute not set, real-life scenario)."""
-        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value='100')])
+        storage_resource = create_mock_storage_resource(cost_attrs=[Mock(value="100")])
         allocation = create_mock_allocation(
-            quota_attrs=[Mock(value='5')],
+            quota_attrs=[Mock(value="5")],
             storage_resources=[storage_resource],
         )
 

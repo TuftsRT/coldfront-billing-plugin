@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_CEILING, InvalidOperation
+from decimal import ROUND_CEILING, Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,7 +11,7 @@ from coldfront_billing.data import parse_allocations
 from coldfront_billing.data.quota import AllocationAssignment
 from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment
 
-REDIRECT = 'manage_no_cost_quota'
+REDIRECT = "manage_no_cost_quota"
 
 
 class ManageAllotmentView(LoginRequiredMixin, View):
@@ -20,39 +20,39 @@ class ManageAllotmentView(LoginRequiredMixin, View):
     def post(self, request):
         post = request.POST
 
-        action = post.get('action', 'assign').strip()
+        action = post.get("action", "assign").strip()
 
-        if action == 'delete':
-            if not (allotment_id := post.get('allotment_id')):
-                messages.error(request, 'Allotment id not passed')
+        if action == "delete":
+            if not (allotment_id := post.get("allotment_id")):
+                messages.error(request, "Allotment id not passed")
                 return redirect(REDIRECT)
             allotment = get_object_or_404(NoCostQuotaAllotment, pk=allotment_id)
 
             if not request.user.is_superuser and allotment.no_cost_quota.user_id != request.user.id:
-                messages.error(request, 'You do not have permission to remove this allotment.')
+                messages.error(request, "You do not have permission to remove this allotment.")
                 return redirect(REDIRECT)
 
             allotment.delete()
-            messages.success(request, 'No-Cost Quota allotment deleted.')
+            messages.success(request, "No-Cost Quota allotment deleted.")
             return redirect(REDIRECT)
 
-        amount_str = post.get('amount_tb', '').strip()
+        amount_str = post.get("amount_tb", "").strip()
 
-        if not (quota_id := post.get('quota_id')) or not (allocation_id := post.get('allocation_id')):
-            messages.error(request, 'Invalid request: missing quota or allocation.')
+        if not (quota_id := post.get("quota_id")) or not (allocation_id := post.get("allocation_id")):
+            messages.error(request, "Invalid request: missing quota or allocation.")
             return redirect(REDIRECT)
 
-        assign_url = f'{reverse("assign_no_cost_quota")}?selected_quota={quota_id}'
+        assign_url = f"{reverse('assign_no_cost_quota')}?selected_quota={quota_id}"
 
         try:
-            amount = Decimal(amount_str).quantize(Decimal('0.01'), rounding=ROUND_CEILING)
+            amount = Decimal(amount_str).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
         except (ValueError, TypeError, InvalidOperation):
-            messages.error(request, 'Please enter a valid amount.')
+            messages.error(request, "Please enter a valid amount.")
             return redirect(assign_url)
 
         quota = get_object_or_404(NoCostQuota, pk=quota_id)
         if not request.user.is_superuser and quota.user_id != request.user.id:
-            messages.error(request, 'You do not have permission to assign this quota.')
+            messages.error(request, "You do not have permission to assign this quota.")
             return redirect(REDIRECT)
 
         try:
@@ -63,7 +63,7 @@ class ManageAllotmentView(LoginRequiredMixin, View):
 
         messages.success(
             request,
-            f'{action} {amount} {quota.units} for allocation {allocation_id}.',
+            f"{action} {amount} {quota.units} for allocation {allocation_id}.",
         )
         return redirect(REDIRECT)
 
@@ -74,19 +74,19 @@ class AutoAssignAllotmentsView(LoginRequiredMixin, View):
     def post(self, request):
         post = request.POST
 
-        if not (quota_id := post.get('quota_id')):
-            messages.error(request, 'Invalid request: missing quota.')
+        if not (quota_id := post.get("quota_id")):
+            messages.error(request, "Invalid request: missing quota.")
             return redirect(REDIRECT)
 
-        assign_url = f'{reverse("assign_no_cost_quota")}?selected_quota={quota_id}'
+        assign_url = f"{reverse('assign_no_cost_quota')}?selected_quota={quota_id}"
 
         quota = get_object_or_404(NoCostQuota, pk=quota_id)
         if not request.user.is_superuser and quota.user_id != request.user.id:
-            messages.error(request, 'You do not have permission to assign this quota.')
+            messages.error(request, "You do not have permission to assign this quota.")
             return redirect(REDIRECT)
 
-        allocation_ids = post.getlist('allocation_id')
-        amount_strs = post.getlist('amount')
+        allocation_ids = post.getlist("allocation_id")
+        amount_strs = post.getlist("amount")
 
         try:
             assignments: list[AllocationAssignment] = parse_allocations(allocation_ids, amount_strs)
@@ -94,7 +94,7 @@ class AutoAssignAllotmentsView(LoginRequiredMixin, View):
             messages.error(request, str(e))
             return redirect(assign_url)
 
-        total_amount = Decimal('0.0')
+        total_amount = Decimal("0.0")
 
         for assignment in assignments:
             try:
@@ -107,6 +107,6 @@ class AutoAssignAllotmentsView(LoginRequiredMixin, View):
 
         messages.success(
             request,
-            f'{total_amount} {quota.units} of quota was distributed.',
+            f"{total_amount} {quota.units} of quota was distributed.",
         )
         return redirect(REDIRECT)

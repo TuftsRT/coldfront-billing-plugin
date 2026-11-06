@@ -23,8 +23,8 @@ from coldfront_billing.views.mixins import NoCostQuotaAssignViewMixin
 
 
 class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, ListView):
-    template_name = 'no_cost_quota/assign.html'
-    context_object_name = 'allocation_list'
+    template_name = "no_cost_quota/assign.html"
+    context_object_name = "allocation_list"
     model = Allocation
 
     @property
@@ -32,14 +32,14 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         search_form = AllocationSearchForm(self.request.GET)
         allocations = self.get_queryset()
         if search_form.is_valid():
-            if project := search_form.cleaned_data.get('project'):
-                allocations = [a for a in allocations if project.lower() in (a.project.title or '').lower()]
+            if project := search_form.cleaned_data.get("project"):
+                allocations = [a for a in allocations if project.lower() in (a.project.title or "").lower()]
 
-            status = search_form.cleaned_data.get('status')
+            status = search_form.cleaned_data.get("status")
             match status:
-                case 'active':
+                case "active":
                     allocations = [a for a in allocations if a.status.name == AllocationStatus.ACTIVE]
-                case 'inactive':
+                case "inactive":
                     allocations = [a for a in allocations if a.status.name != AllocationStatus.ACTIVE]
                 case _:
                     pass
@@ -47,16 +47,16 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
         return allocations
 
     def get(self, request, *args, **kwargs):
-        if not (selected_quota := request.GET.get('selected_quota')):
-            messages.error(request, 'Please select a No Cost Quota first.')
-            return redirect('manage_no_cost_quota')
+        if not (selected_quota := request.GET.get("selected_quota")):
+            messages.error(request, "Please select a No Cost Quota first.")
+            return redirect("manage_no_cost_quota")
         self.quota = get_object_or_404(
             quota_with_remaining,
             pk=selected_quota,
         )
         if not request.user.is_superuser and self.quota.user_id != request.user.id:
-            messages.error(request, 'You do not have permission to assign this quota.')
-            return redirect('manage_no_cost_quota')
+            messages.error(request, "You do not have permission to assign this quota.")
+            return redirect("manage_no_cost_quota")
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Allocation]:
@@ -64,7 +64,7 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        quota_remaining = Decimal(self.quota.remaining).quantize(Decimal('0.01'), rounding=ROUND_FLOOR)
+        quota_remaining = Decimal(self.quota.remaining).quantize(Decimal("0.01"), rounding=ROUND_FLOOR)
         quota_units = self.quota.units
 
         auto_assign_allocations = self.get_queryset().filter(
@@ -104,34 +104,34 @@ class AssignNoCostQuotasView(LoginRequiredMixin, NoCostQuotaAssignViewMixin, Lis
 
             allocations.append(
                 {
-                    'allocation': allocation,
-                    'resource_name': first_resource.name if first_resource else '-',
-                    'quota_amount': ncq_allocation.allocation_amount or '-',
-                    'other_applications': f'{other_total_quota:g} TB',
-                    'user_applications': f'{ncq_allocation.user_allotment_amount:g} TB',
-                    'existing_amount': f'{user_amount:g}' if user_amount else '',
-                    'max_possible': max_possible,
-                    'increment_tb': self.quota.increment_gb / 1000,
-                    'allotment_id': user_allotment_pk or '',
-                    'inactive': allocation.status.name != AllocationStatus.ACTIVE,
-                    'auto_assign_amount': auto_assign_amount,
+                    "allocation": allocation,
+                    "resource_name": first_resource.name if first_resource else "-",
+                    "quota_amount": ncq_allocation.allocation_amount or "-",
+                    "other_applications": f"{other_total_quota:g} TB",
+                    "user_applications": f"{ncq_allocation.user_allotment_amount:g} TB",
+                    "existing_amount": f"{user_amount:g}" if user_amount else "",
+                    "max_possible": max_possible,
+                    "increment_tb": self.quota.increment_gb / 1000,
+                    "allotment_id": user_allotment_pk or "",
+                    "inactive": allocation.status.name != AllocationStatus.ACTIVE,
+                    "auto_assign_amount": auto_assign_amount,
                 }
             )
 
         key_func, reverse = self.get_object_ordering()
         allocations = sorted(allocations, key=key_func, reverse=reverse)
-        auto_assign_preview = [row for row in allocations if row['auto_assign_amount'] > 0]
+        auto_assign_preview = [row for row in allocations if row["auto_assign_amount"] > 0]
         self.quota.increment_tb = self.quota.increment_gb / 1000
         return (
             context
             | {
-                'quota': self.quota,
-                'quota_remaining': quota_remaining,
-                'search_form': AllocationSearchForm(self.request.GET),
-                'auto_assign_preview': auto_assign_preview,
-                'assignments': assignments,
-                'back': self.request.GET.get('back', ''),
-                'show_auto_assign': len(auto_assign_allocations) > 0 or self.request.user.is_superuser,
+                "quota": self.quota,
+                "quota_remaining": quota_remaining,
+                "search_form": AllocationSearchForm(self.request.GET),
+                "auto_assign_preview": auto_assign_preview,
+                "assignments": assignments,
+                "back": self.request.GET.get("back", ""),
+                "show_auto_assign": len(auto_assign_allocations) > 0 or self.request.user.is_superuser,
             }
             | self.get_extended_pagination_params(allocations)
         )

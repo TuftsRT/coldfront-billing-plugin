@@ -13,7 +13,7 @@ class ExportBillingReportView(UserPassesTestMixin, View):
         return self.request.user.is_superuser
 
     def handle_no_permission(self):
-        return HttpResponseForbidden('You are not allowed to access this resource.')
+        return HttpResponseForbidden("You are not allowed to access this resource.")
 
     def get(self, request, *args, **kwargs):
         billing_settings = BillingScheduleSettings.objects.first()
@@ -22,11 +22,11 @@ class ExportBillingReportView(UserPassesTestMixin, View):
         try:
             filename, csv_content = create_csv_report()
         except NoStorageException:
-            return HttpResponseNotFound('No storage resource found')
+            return HttpResponseNotFound("No storage resource found")
 
         response = HttpResponse(
             csv_content,
-            content_type='text/csv',
-            headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+            content_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
         return response

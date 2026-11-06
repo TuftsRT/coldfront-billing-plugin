@@ -41,14 +41,14 @@ class TestQuotaWithRemaining:
             quota_type_value=no_cost_quota.quota_type,
         )
         NoCostQuotaAllotment.objects.create(
-            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal('0.1')
+            no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal("0.1")
         )
 
         quota = quota_with_remaining.get(pk=no_cost_quota.pk)
 
-        assert quota.used == Decimal('0.1')
-        assert quota.remaining == Decimal('99.9')
-        assert quota.remaining_normalized == Decimal('99.9')
+        assert quota.used == Decimal("0.1")
+        assert quota.remaining == Decimal("99.9")
+        assert quota.remaining_normalized == Decimal("99.9")
 
 
 @pytest.mark.django_db
@@ -72,11 +72,11 @@ class TestNoCostQuotaAllotmentClean:
             quota_attribute_type,
             no_cost_quota_type_attribute_type,
             quota_type_value=no_cost_quota.quota_type,
-            quota_value='0.115',
+            quota_value="0.115",
         )
-        allotment = NoCostQuotaAllotment(no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal('0.12'))
+        allotment = NoCostQuotaAllotment(no_cost_quota=no_cost_quota, allocation=allocation, amount_tb=Decimal("0.12"))
 
-        with pytest.raises(ValidationError, match='bigger than allocation size'):
+        with pytest.raises(ValidationError, match="bigger than allocation size"):
             allotment.full_clean()
 
 
@@ -84,18 +84,18 @@ class TestNoCostQuotaAllotmentClean:
 class TestNoCostQuotaAllotmentFailureResolve:
     def test_records_who_and_why(self, user, no_cost_quota, project_with_billing_user):
         allocation = project_with_billing_user.allocation_set.first()
-        failure = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message='nope')
+        failure = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message="nope")
 
-        assert failure.resolve(user, 'applied by hand') is True
+        assert failure.resolve(user, "applied by hand") is True
 
         failure.refresh_from_db()
         assert failure.resolved_at is not None
         assert failure.resolved_by == user
-        assert failure.resolution_note == 'applied by hand'
+        assert failure.resolution_note == "applied by hand"
 
     def test_resolving_twice_keeps_the_first(self, user, superuser, project_with_billing_user):
         allocation = project_with_billing_user.allocation_set.first()
-        failure = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message='nope')
+        failure = NoCostQuotaAllotmentFailure.objects.create(allocation=allocation, message="nope")
         failure.resolve(user)
 
         assert failure.resolve(superuser) is False

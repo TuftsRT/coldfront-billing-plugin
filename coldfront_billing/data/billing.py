@@ -1,5 +1,5 @@
-from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List
 
 from coldfront.core.allocation.models import Allocation
@@ -38,8 +38,10 @@ class BillingAllocation:
         return self.calculate_cost(billable_quota), applied_quota
 
     def calculate_cost(self, quota_tb: Decimal) -> Decimal:
-        calculation = quota_tb.quantize(Decimal('0.1'), rounding='ROUND_CEILING') * self.cost_per_tb.quantize(Decimal('0.01'), rounding='ROUND_CEILING')
-        return calculation.quantize(Decimal('0.01'))  # Round to 2 decimal places
+        calculation = quota_tb.quantize(Decimal("0.1"), rounding="ROUND_CEILING") * self.cost_per_tb.quantize(
+            Decimal("0.01"), rounding="ROUND_CEILING"
+        )
+        return calculation.quantize(Decimal("0.01"))  # Round to 2 decimal places
 
     @classmethod
     def parse(
@@ -48,7 +50,7 @@ class BillingAllocation:
         default_quota: Decimal,
         default_cost: Decimal,
         new_quota: Decimal | None = None,
-    ) -> 'BillingAllocation':
+    ) -> "BillingAllocation":
         if quota_attrs := getattr(allocation, QUOTA_ATTRIBUTE_NAME, None):
             quota_raw = quota_attrs[0].value
             try:
@@ -63,21 +65,21 @@ class BillingAllocation:
             quota_tb += new_quota
 
         cost_per_tb = get_cost_per_tb(allocation, default_cost)
-        if (project := getattr(allocation, 'project', None)) is not None:
-            project_title = getattr(project, 'title', '-')
-            pi = getattr(project, 'pi', None)
+        if (project := getattr(allocation, "project", None)) is not None:
+            project_title = getattr(project, "title", "-")
+            pi = getattr(project, "pi", None)
             project_extra = {
-                'project_title': project_title or '-',
-                'pi_name': pi.username if pi else '-',
+                "project_title": project_title or "-",
+                "pi_name": pi.username if pi else "-",
             }
         else:
             project_extra = {
-                'project_title': '-',
-                'pi_name': '-',
+                "project_title": "-",
+                "pi_name": "-",
             }
 
         storage_resources = getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, [])
-        resource_name = storage_resources[0].name if storage_resources else '-'
+        resource_name = storage_resources[0].name if storage_resources else "-"
 
         allotments = getattr(allocation, ALLOTMENTS_ATTRIBUTE_NAME, [])
         no_cost_quotas = [
@@ -91,9 +93,9 @@ class BillingAllocation:
             cost_per_tb=cost_per_tb,
             extra=project_extra
             | {
-                'resource_name': resource_name,
-                'status': allocation.status.name,
-                'end_date': getattr(allocation, 'end_date', None) or '-',
+                "resource_name": resource_name,
+                "status": allocation.status.name,
+                "end_date": getattr(allocation, "end_date", None) or "-",
             },
             no_cost_quotas=no_cost_quotas,
         )

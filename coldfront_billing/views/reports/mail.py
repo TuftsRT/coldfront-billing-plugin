@@ -13,8 +13,8 @@ class SendReportView(UserPassesTestMixin, View):
     def handle_no_permission(self):
         return JsonResponse(
             {
-                'success': False,
-                'message': 'You are not allowed to access this resource.',
+                "success": False,
+                "message": "You are not allowed to access this resource.",
             },
             status=403,
         )
@@ -24,4 +24,4 @@ class SendReportView(UserPassesTestMixin, View):
         if billing_settings.autoassign_no_cost_quota:
             auto_assign_quota()
         result = send_billing_report_email(billing_settings)
-        return JsonResponse(result, status=200 if result['success'] else 400)
+        return JsonResponse(result, status=200 if result["success"] else 400)

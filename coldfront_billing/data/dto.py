@@ -9,11 +9,11 @@ class ApiErrorResponseDTO:
     errors: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        result = {'success': self.success}
+        result = {"success": self.success}
         if self.error:
-            result['error'] = self.error
+            result["error"] = self.error
         if self.errors:
-            result['errors'] = self.errors
+            result["errors"] = self.errors
         return result
 
 
@@ -24,9 +24,9 @@ class ApiSuccessResponseDTO:
     assignments: Optional[List[Dict[str, Any]]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        result = {'success': self.success}
+        result = {"success": self.success}
         if self.message:
-            result['message'] = self.message
+            result["message"] = self.message
         if self.assignments is not None:
-            result['assignments'] = self.assignments
+            result["assignments"] = self.assignments
         return result

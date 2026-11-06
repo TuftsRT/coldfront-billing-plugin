@@ -1,10 +1,11 @@
 import logging
 
-from coldfront.core.project.models import Project
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
+
+from coldfront.core.project.models import Project
 
 from coldfront_billing.constants import BILLING_ROLE_NAME, MANAGER_ROLE_NAME
 from coldfront_billing.data import ApiErrorResponseDTO, ApiSuccessResponseDTO
@@ -12,7 +13,7 @@ from coldfront_billing.enums import ProjectStatus
 from coldfront_billing.forms import CostCenterAssignmentForm
 from coldfront_billing.models import CostCenter, CostCenterAssignment
 
-logger = logging.getLogger('CostCenterView')
+logger = logging.getLogger("CostCenterView")
 
 
 class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
@@ -35,19 +36,19 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             error_response = ApiErrorResponseDTO(errors=form.errors)
             return JsonResponse(error_response.to_dict(), status=400)
 
-        project_id = form.cleaned_data['project_id']
-        assignments_data = form.cleaned_data['assignments']
+        project_id = form.cleaned_data["project_id"]
+        assignments_data = form.cleaned_data["assignments"]
 
         try:
             project = get_object_or_404(Project, id=project_id)
 
             if not self.check_permission(project):
-                error_response = ApiErrorResponseDTO(error='You do not have permission to modify this project.')
+                error_response = ApiErrorResponseDTO(error="You do not have permission to modify this project.")
                 return JsonResponse(error_response.to_dict(), status=403)
 
             cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
                 project=project,
-                defaults={'assignments': []},
+                defaults={"assignments": []},
             )
 
             cost_center_assignment.assignments = assignments_data
@@ -55,13 +56,13 @@ class CostCenterAssignmentUpdateView(LoginRequiredMixin, View):
             cost_center_assignment.save()
 
             success_response = ApiSuccessResponseDTO(
-                message='Cost center assignment updated successfully.', assignments=cost_center_assignment.assignments
+                message="Cost center assignment updated successfully.", assignments=cost_center_assignment.assignments
             )
             return JsonResponse(success_response.to_dict())
 
         except Exception as cause:
-            logger.error(f'Error updating cost center assignment: {str(cause)}')
-            error_response = ApiErrorResponseDTO(error='An error occurred while updating the cost center assignment.')
+            logger.error(f"Error updating cost center assignment: {str(cause)}")
+            error_response = ApiErrorResponseDTO(error="An error occurred while updating the cost center assignment.")
             return JsonResponse(error_response.to_dict(), status=400)
 
 
@@ -80,38 +81,38 @@ class CostCenterAssignmentDeleteView(LoginRequiredMixin, View):
 
     def post(self, request: HttpRequest) -> JsonResponse:
         try:
-            project_id = request.POST.get('project_id')
+            project_id = request.POST.get("project_id")
             project = get_object_or_404(Project, id=project_id)
 
             if not self.check_permission(project):
-                error_response = ApiErrorResponseDTO(error='You do not have permission to modify this project.')
+                error_response = ApiErrorResponseDTO(error="You do not have permission to modify this project.")
                 return JsonResponse(error_response.to_dict(), status=403)
 
             cost_center_assignment = get_object_or_404(CostCenterAssignment, project=project)
             cost_center_assignment.delete()
 
-            success_response = ApiSuccessResponseDTO(message='Cost center assignment deleted successfully.')
+            success_response = ApiSuccessResponseDTO(message="Cost center assignment deleted successfully.")
             return JsonResponse(success_response.to_dict())
 
         except Exception as cause:
-            logger.error(f'Error deleting cost center assignment: {str(cause)}')
-            error_response = ApiErrorResponseDTO(error='An error occurred while deleting the cost center assignment.')
+            logger.error(f"Error deleting cost center assignment: {str(cause)}")
+            error_response = ApiErrorResponseDTO(error="An error occurred while deleting the cost center assignment.")
             return JsonResponse(error_response.to_dict(), status=400)
 
 
 class CostCenterAutocompleteView(LoginRequiredMixin, View):
     def get(self, request):
-        query = request.GET.get('q', '').strip()
-        cc_type = request.GET.get('type', 'department')
+        query = request.GET.get("q", "").strip()
+        cc_type = request.GET.get("type", "department")
 
         if len(query) < 3:
-            return JsonResponse({'results': []})
+            return JsonResponse({"results": []})
 
         results = list(
             CostCenter.objects.filter(name__istartswith=query, cost_center_type=cc_type)
-            .values_list('name', flat=True)
+            .values_list("name", flat=True)
             .distinct()
-            .order_by('name')[:10]
+            .order_by("name")[:10]
         )
 
-        return JsonResponse({'results': results})
+        return JsonResponse({"results": results})

@@ -16,7 +16,7 @@ class TestPricedAllocation:
     def test_create_sets_cost_per_tb_from_storage_resource(self):
         """cost_per_tb comes from the first prefetched storage resource cost attribute."""
         allocation = mock_allocation_for_priced(
-            storage_resources=[storage_resource_with_cost('127.5')],
+            storage_resources=[storage_resource_with_cost("127.5")],
         )
         priced = PricedAllocation.create(1, allocation)
         assert priced.cost_per_tb == 127.5
@@ -45,27 +45,27 @@ class TestPricedAllocation:
     def test_create_cost_per_tb_defaults_on_invalid_cost_value(self):
         """Non-numeric cost value falls back to default 0."""
         allocation = mock_allocation_for_priced(
-            storage_resources=[storage_resource_with_cost('not-a-number')],
+            storage_resources=[storage_resource_with_cost("not-a-number")],
         )
         assert PricedAllocation.create(1, allocation).cost_per_tb == 0.0
 
     def test_create_cost_per_tb_defaults_when_negative(self):
         """Negative parsed cost falls back to default 0."""
         allocation = mock_allocation_for_priced(
-            storage_resources=[storage_resource_with_cost('-50')],
+            storage_resources=[storage_resource_with_cost("-50")],
         )
         assert PricedAllocation.create(1, allocation).cost_per_tb == 0.0
 
     def test_create_preserves_no_cost_quota_base_fields(self):
         """PricedAllocation still builds user allotment and other_allotments like the base class."""
         allotments = [
-            create_ncq_allotment(2.0, 'TB', user_id=1),
-            create_ncq_allotment(1.0, 'TB', user_id=2),
+            create_ncq_allotment(2.0, "TB", user_id=1),
+            create_ncq_allotment(1.0, "TB", user_id=2),
         ]
         allocation = mock_allocation_for_priced(
             all_allotments=allotments,
-            quota_attrs=[Mock(value='8')],
-            storage_resources=[storage_resource_with_cost('100')],
+            quota_attrs=[Mock(value="8")],
+            storage_resources=[storage_resource_with_cost("100")],
         )
         priced = PricedAllocation.create(1, allocation)
         assert priced.cost_per_tb == 100.0

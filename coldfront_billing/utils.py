@@ -17,7 +17,7 @@ def parse_float(value, default):
 
 
 def get_month_abbr():
-    return datetime.now().strftime('%b').upper()
+    return datetime.now().strftime("%b").upper()
 
 
 def validate_emails(emails_str: str) -> tuple[list[str], list[str]]:
@@ -25,7 +25,7 @@ def validate_emails(emails_str: str) -> tuple[list[str], list[str]]:
     Split a string of addresses (semicolon or comma separated), validate each,
     and return (normalized_unique_in_order, invalid_original_parts).
     """
-    email_to = re.split(r'[;,]', emails_str)
+    email_to = re.split(r"[;,]", emails_str)
 
     valid_recipients: list[str] = []
     seen: set[str] = set()
@@ -69,27 +69,27 @@ def calculate_next_run(
         )
     if minutes is not None:
         return calculate_next_run_date_n_minutes(minutes=minutes)
-    raise ValueError('Either hour or minutes must be provided')
+    raise ValueError("Either hour or minutes must be provided")
 
 
 class NoStorageException(Exception):
     pass
 
 
-def elide_middle(text: str, max_length: int = 20, marker: str = '...') -> str:
+def elide_middle(text: str, max_length: int = 20, marker: str = "...") -> str:
     if len(text) <= max_length:
         return text
     if max_length < len(marker) + 2:
-        raise ValueError('max_length must be at least len(marker) + 2')
+        raise ValueError("max_length must be at least len(marker) + 2")
 
     marker_len = len(marker)
     chars_left = (max_length - marker_len + 1) // 2
     chars_right = (max_length - marker_len) // 2
 
     start = text[:chars_left]
-    end = text[-chars_right:] if chars_right > 0 else ''
+    end = text[-chars_right:] if chars_right > 0 else ""
 
-    return f'{start}{marker}{end}'
+    return f"{start}{marker}{end}"
 
 
 def sanitize_csv_value(value: str) -> str:
@@ -99,10 +99,10 @@ def sanitize_csv_value(value: str) -> str:
     if not isinstance(value, str):
         value = str(value)
     value = value.strip()
-    for i in ['=', '+', '-', '@', '|']:
+    for i in ["=", "+", "-", "@", "|"]:
         if value.startswith(i):
             value = f"'{value}"
-    if '"' in value or ',' in value:
+    if '"' in value or "," in value:
         value = value.replace('"', '""')
         return f'"{value}"'
     return value

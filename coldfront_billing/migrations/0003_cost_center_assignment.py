@@ -3,44 +3,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [('coldfront_billing', '0002_cost_and_quota_attributes')]
+    dependencies = [("coldfront_billing", "0002_cost_and_quota_attributes")]
 
     operations = [
         migrations.CreateModel(
-            name='CostCenter',
+            name="CostCenter",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 (
-                    'dept_id',
-                    models.CharField(help_text='Unique identifier for the cost center', max_length=60, unique=True),
+                    "dept_id",
+                    models.CharField(help_text="Unique identifier for the cost center", max_length=60, unique=True),
                 ),
             ],
         ),
         migrations.CreateModel(
-            name='CostCenterAssignment',
+            name="CostCenterAssignment",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 (
-                    'assignments',
+                    "assignments",
                     models.JSONField(
-                        blank=True, help_text='JSON field storing cost center assignments with percentages'
+                        blank=True, help_text="JSON field storing cost center assignments with percentages"
                     ),
                 ),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('modified', models.DateTimeField(auto_now=True)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("modified", models.DateTimeField(auto_now=True)),
                 (
-                    'project',
+                    "project",
                     models.OneToOneField(
-                        help_text='Project associated with this cost center assignment',
+                        help_text="Project associated with this cost center assignment",
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='cost_center_assignment',
-                        to='project.project',
+                        related_name="cost_center_assignment",
+                        to="project.project",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'Cost Center Assignment',
-                'verbose_name_plural': 'Cost Center Assignments',
+                "verbose_name": "Cost Center Assignment",
+                "verbose_name_plural": "Cost Center Assignments",
             },
         ),
     ]
