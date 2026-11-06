@@ -12,7 +12,6 @@ from coldfront.core.allocation.models import Allocation
 from coldfront.core.project.models import Project, ProjectUser
 from coldfront.core.resource.models import Resource, ResourceType
 
-from coldfront_billing.enums import ProjectStatus
 from coldfront_billing.models import NoCostQuota
 from coldfront_billing.prefetch import (
     get_billing_visible_projects_query,

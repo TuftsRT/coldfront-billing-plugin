@@ -31,9 +31,6 @@ class BillingQuota:
     def create(amount: Decimal, unit: str, *_, **__) -> "BillingQuota":
         return BillingQuota(amount, StorageUnit.parse(unit))
 
-    def create(amount: Decimal, unit: str, *_, **__) -> "BillingQuota":
-        return BillingQuota(amount, StorageUnit.parse(unit))
-
 
 @dataclass
 class NoCostQuotaAllocation:
