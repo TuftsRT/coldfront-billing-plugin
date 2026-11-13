@@ -65,7 +65,7 @@ The plugin reads quota and cost values from ColdFront's allocation/resource attr
 
 | Attribute | Type | Description |
 |---|---|---|
-| `quota_in_terabyte` | `AllocationAttributeType` | Storage quota for an allocation, in TB |
+| `quota_in_terabyte` | `AllocationAttributeType` | Storage quota for an allocation, in TB. With the storage plugin installed, the attribute it keeps the quota in (see below) |
 | `cost_per_terabyte` | `ResourceAttributeType` | Monthly cost per TB for a storage resource |
 | `no_cost_quota_type` | `ResourceAttributeType` | Identifies which no-cost quota type applies to a resource |
 | `allocation_no_cost_quota` | `AllocationAttributeType` | Tracks applied no-cost quota on an allocation (optional) |
@@ -120,7 +120,7 @@ This new quota will incur a monthly cost of {cost}.
 
 | Variable | Default | Description |
 |---|---|---|
-| `COLDFRONT_BILLING_QUOTA_ATTRIBUTE_NAME` | `quota_in_terabyte` | Name of the AllocationAttributeType for quota |
+| `COLDFRONT_BILLING_QUOTA_ATTRIBUTE_NAME` | the storage plugin's quota attribute when it's installed (its `QUOTA_ATTRIBUTE_NAME`, default `Storage Quota (TB)`), else `quota_in_terabyte` | Name of the AllocationAttributeType for quota |
 | `COLDFRONT_BILLING_COST_ATTRIBUTE_NAME` | `cost_per_terabyte` | Name of the ResourceAttributeType for cost |
 | `COLDFRONT_BILLING_NO_COST_QUOTA_TYPE_ATTR_NAME` | `no_cost_quota_type` | Name of the ResourceAttributeType for no-cost quota type |
 
