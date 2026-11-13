@@ -284,6 +284,7 @@ version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "coldfront" },
+    { name = "coldfront-utils" },
     { name = "email-validator" },
     { name = "pydantic" },
 ]
@@ -301,7 +302,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "coldfront", specifier = ">=1.1.7,<2" },
+    { name = "coldfront", specifier = ">=1.1.8,<2" },
+    { name = "coldfront-utils", git = "https://github.com/Tufts-Technology-Services/coldfront-utils.git?rev=v0.3.1" },
     { name = "email-validator", specifier = ">=2.3.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3" },
 ]
@@ -314,6 +316,14 @@ dev = [
     { name = "pytest-django" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff" },
+]
+
+[[package]]
+name = "coldfront-utils"
+version = "0.3.1"
+source = { git = "https://github.com/Tufts-Technology-Services/coldfront-utils.git?rev=v0.3.1#3ec711dc3ed24174c503e7b6a5ea3a9e638876bf" }
+dependencies = [
+    { name = "coldfront" },
 ]
 
 [[package]]

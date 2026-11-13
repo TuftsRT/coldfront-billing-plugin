@@ -18,13 +18,20 @@ classifiers = [
     'Framework :: Django :: 5.2',
 ]
 dependencies = [
-    "coldfront>=1.1.7,<2",
+    "coldfront>=1.1.8,<2",
+    # the release with allocation_request; the fork's override-dependencies pins the same tag, since uv
+    # allows one URL per package across all the plugins
+    "coldfront_utils@git+https://github.com/Tufts-Technology-Services/coldfront-utils.git@v0.3.1",
     "email-validator>=2.3.0",
     "pydantic>=2.0.0,<3",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["coldfront_billing"]
+
+[tool.hatch.metadata]
+# coldfront_utils is only published as a git URL.
+allow-direct-references = true
 
 [tool.ruff]
 line-length = 120
