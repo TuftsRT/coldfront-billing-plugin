@@ -4,10 +4,15 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from coldfront.core.allocation.models import Allocation
+from coldfront.core.allocation.models import Allocation, AllocationAttribute, AllocationAttributeType
 
-from coldfront_billing.constants import QUOTA_ATTR_NAME
-from coldfront_billing.models import NoCostQuota, NoCostQuotaAllotment, NoCostQuotaAllotmentFailure
+from coldfront_billing.constants import ALLOCATION_QUOTA_ATTRIBUTE_NAME, NO_COST_QUOTA_TYPE_ATTR_NAME, QUOTA_ATTR_NAME
+from coldfront_billing.models import (
+    NoCostQuota,
+    NoCostQuotaAllotment,
+    NoCostQuotaAllotmentFailure,
+    quota_with_remaining,
+)
 
 
 def create_update_allotment(allocation: Allocation, amount: Decimal, quota: NoCostQuota, append: bool = False) -> str:
@@ -93,3 +98,28 @@ def reduce_allotments_evenly(allotments: list[NoCostQuotaAllotment]) -> list:
                 allotment.save()
 
     return list(zip(allotments, parts))
+
+
+def no_cost_quota_with_remaining(resource, project, user):
+    """The no-cost quota a request for `resource` by `user` would draw on, if it has something left, or None: the
+    user's quota of the resource's no-cost quota type, or the PI's when the user is a superuser. Doesn't check
+    that the user may apply it (prefetch.can_apply_no_cost_quota)."""
+    quota_type = resource.get_attribute(NO_COST_QUOTA_TYPE_ATTR_NAME, expand=False, typed=False)
+    if not quota_type:
+        return None
+    quota_user = project.pi if user.is_superuser else user
+    quota = quota_with_remaining.filter(user=quota_user, quota_type=quota_type).first()
+    return quota if quota is not None and quota.remaining_normalized > 0 else None
+
+
+def record_no_cost_quota_request(allocation: Allocation, quota_pk) -> bool:
+    """Record that `allocation` should have no-cost quota `quota_pk` applied when it's activated or its change is
+    approved (signals._apply_no_cost_quota_allotment_if_requested reads it). Returns False, recording nothing,
+    if the attribute type is missing (migration 0009 creates it)."""
+    attribute_type = AllocationAttributeType.objects.filter(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME).first()
+    if attribute_type is None:
+        return False
+    AllocationAttribute.objects.update_or_create(
+        allocation=allocation, allocation_attribute_type=attribute_type, defaults={"value": str(quota_pk)}
+    )
+    return True

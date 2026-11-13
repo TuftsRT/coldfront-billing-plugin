@@ -25,14 +25,9 @@ urlpatterns = [
         name="autocomplete_cost_center",
     ),
     path(
-        "allocation/<int:pk>/update-allocation-details/",
-        views.UpdateAllocationDetailsView.as_view(),
-        name="update_allocation_details",
-    ),
-    path(
-        "allocation/<int:pk>/delete-incomplete/",
-        views.DeleteIncompleteAllocationView.as_view(),
-        name="delete_incomplete_allocation",
+        "allocation-request/<int:project_pk>/cost-estimate/",
+        views.RequestCostEstimateView.as_view(),
+        name="request_cost_estimate",
     ),
     path(
         "allocation/<int:pk>/allocation-cost-preview/",

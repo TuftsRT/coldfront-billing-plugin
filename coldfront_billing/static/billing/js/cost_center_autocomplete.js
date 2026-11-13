@@ -210,7 +210,8 @@
     }
 
     function boot() {
-        if (typeof jQuery === 'undefined') {
+        // already set up: the request form's billing card loads this again each time it's swapped in
+        if (typeof jQuery === 'undefined' || window.initColdfrontCostCenterAutocomplete) {
             return;
         }
         register(jQuery);

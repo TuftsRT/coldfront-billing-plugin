@@ -1,0 +1,5 @@
+{% comment %}
+The intro text of the billing_cost card. Override this template to change the wording. Context: resource, project,
+section_form, show_estimate, and the site's context processors.
+{% endcomment %}
+<p class="mb-0">{{ resource.name }} is billed to the project.{% if section_form.cost_center %} Choose the cost center the cost goes to.{% endif %}</p>

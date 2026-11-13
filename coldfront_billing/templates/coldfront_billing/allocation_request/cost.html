@@ -1,0 +1,35 @@
+{% extends "allocation_request/card.html" %}
+{% load crispy_forms_tags static %}
+{% comment %}
+The billing_cost section's card on the allocation request form: the cost center and grant (when the project
+has none yet) and, for Storage, the requester's no-cost quota. The intro text is in its own template,
+coldfront_billing/allocation_request/cost_intro.html, so a site can change the wording by overriding just that.
+{% endcomment %}
+{% block heading %}Billing{% endblock %}
+{% block intro %}{% include "coldfront_billing/allocation_request/cost_intro.html" %}{% endblock %}
+{% block fields %}
+{% if section_form.non_field_errors %}<div class="alert alert-danger">{{ section_form.non_field_errors|join:" " }}</div>{% endif %}
+{% if section_form.cost_center %}
+{{ section_form.cost_center }}{{ section_form.grant }}
+<div class="billing-cost-center-autocomplete"
+     data-autocomplete-url="{% url 'autocomplete_cost_center' %}"
+     data-cost-center-id="{{ section_form.cost_center.auto_id }}"
+     data-grant-id="{{ section_form.grant.auto_id }}">
+{% include "coldfront_billing/allocation_request/cost_center_search.html" with field=section_form.cost_center kind="dept" %}
+{% include "coldfront_billing/allocation_request/cost_center_search.html" with field=section_form.grant kind="grant" %}
+</div>
+<script src="{% static 'billing/js/cost_center_autocomplete.js' %}"></script>
+<script src="{% static 'billing/js/request_cost_center.js' %}"></script>
+{% endif %}
+{% if section_form.apply_no_cost_quota %}{{ section_form.apply_no_cost_quota|as_crispy_field }}{% endif %}
+{% if show_estimate %}
+{% comment %}
+The estimate: the prompt until a quota is typed, then fetched again as the quota changes. The quota field is in another section's card (storage's,
+named by COLDFRONT_BILLING_QUOTA_FIELD_NAME), so htmx listens for it from here and sends its value along.
+{% endcomment %}
+<div class="billing-cost-estimate mb-3" aria-live="polite"
+     hx-get="{% url 'request_cost_estimate' project.pk %}?resource={{ resource.pk }}"
+     hx-trigger="input changed delay:300ms from:#{{ quota_field_id }}"
+     hx-include="#{{ quota_field_id }}">{% include "coldfront_billing/allocation_request/cost_estimate.html" with quota=None %}</div>
+{% endif %}
+{% endblock %}

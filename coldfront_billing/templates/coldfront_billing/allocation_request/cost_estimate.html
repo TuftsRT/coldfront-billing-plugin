@@ -1,0 +1,12 @@
+{% comment %}
+The billing_cost card's estimate, swapped in by htmx as the quota changes. Context: quota (None until one
+is entered), cost_per_tb, total_cost, and reduced_cost and applied_quota when a no-cost quota would apply.
+{% endcomment %}
+{% if quota is None %}
+<p class="text-muted mb-0">Enter a storage quota to see the estimated monthly cost.</p>
+{% else %}
+<p class="mb-0">Estimated monthly cost: <strong>${{ total_cost }}</strong> ({{ quota.normalize }} TB at ${{ cost_per_tb|floatformat:2 }} per TB).</p>
+{% if reduced_cost is not None %}
+<p class="mb-0">With {{ applied_quota }} TB of your no-cost quota: <strong>${{ reduced_cost }}</strong>.</p>
+{% endif %}
+{% endif %}

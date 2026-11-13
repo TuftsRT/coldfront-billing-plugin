@@ -1,208 +1,39 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlparse
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views import View
-from django.views.generic import FormView
 
 from coldfront.core.allocation.models import (
     Allocation,
-    AllocationAttribute,
-    AllocationAttributeType,
     AllocationPermission,
 )
+from coldfront.core.allocation.utils import get_user_resources
 from coldfront.core.allocation.views import AllocationChangeView as ColdfrontAllocationChangeView
-from coldfront.core.allocation.views import AllocationCreateView as ColdfrontAllocationCreateView
-from coldfront.core.project.models import Project
+from coldfront.core.project.models import Project, ProjectPermission
 from coldfront.core.resource.models import ResourceType
 
+from coldfront_billing.allotments import no_cost_quota_with_remaining, record_no_cost_quota_request
 from coldfront_billing.constants import (
-    ALLOCATION_QUOTA_ATTRIBUTE_NAME,
+    COST_ATTR_NAME,
     DEFAULT_BILLING_COST,
     DEFAULT_BILLING_QUOTA,
-    NO_COST_QUOTA_TYPE_ATTR_NAME,
-    QUOTA_ATTR_NAME,
     STORAGE_RESOURCE_ATTRIBUTE_NAME,
 )
-from coldfront_billing.data.billing import BillingAllocation
-from coldfront_billing.forms import AllocationDetailsForm
-from coldfront_billing.models import CostCenterAssignment, quota_with_remaining
+from coldfront_billing.data.billing import BillingAllocation, monthly_cost, predicted_monthly_cost
+from coldfront_billing.data.common import parse_cost_per_tb
 from coldfront_billing.prefetch import (
+    can_apply_no_cost_quota,
     get_no_cost_quota_allotments_prefetch,
     get_paid_storage_resources_prefetch,
     get_quota_attr_prefetch,
-    has_billing_perm_for_project,
-    is_paid_storage_allocation,
 )
+from coldfront_billing.request_section import QUOTA_FIELD_NAME, BillingCostSection
 from coldfront_billing.utils import first_or_none
-
-
-def project_has_cost_center_assignment(project: Project) -> bool:
-    """Return True if the project already has cost centers assigned."""
-    try:
-        assignments = project.cost_center_assignment.assignments
-        return bool(assignments)
-    except CostCenterAssignment.DoesNotExist:
-        return False
-
-
-class AllocationCreateView(ColdfrontAllocationCreateView):
-    """Allocation create view override that redirects to quota page for paid storage allocations."""
-
-    def form_valid(self, form):
-        redirect_response = super().form_valid(form)
-        allocation = Allocation.objects.filter(project_id=self.kwargs["project_pk"]).order_by("-pk").first()
-
-        # Redirect to update_allocation_details page for paid storage allocations
-        if allocation and is_paid_storage_allocation(allocation):
-            return redirect(
-                "update_allocation_details",
-                pk=allocation.pk,
-            )
-
-        return redirect_response
-
-
-class DeleteIncompleteAllocationView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """View to delete an incomplete allocation request."""
-
-    def test_func(self):
-        allocation = get_object_or_404(Allocation, pk=self.kwargs["pk"])
-        if self.request.user.has_perm("allocation.can_view_all_allocations"):
-            return True
-        return allocation.has_perm(self.request.user, AllocationPermission.MANAGER)
-
-    def post(self, request, *args, **kwargs):
-        allocation = get_object_or_404(Allocation, pk=kwargs["pk"])
-        project_id = allocation.project_id
-        if allocation.status.name == "New":
-            allocation.delete()
-            messages.success(request, "Incomplete allocation request has been cancelled.")
-        else:
-            messages.error(request, "Only incomplete allocation requests can be cancelled.")
-        return redirect(reverse("project-detail", kwargs={"pk": project_id}))
-
-
-class UpdateAllocationDetailsView(LoginRequiredMixin, UserPassesTestMixin, FormView):
-    """View for update storage quota to complete a storage allocation request."""
-
-    allocation: Allocation
-    has_cost_center: bool
-    form_class = AllocationDetailsForm
-    template_name = "allocation/update_details.html"
-
-    def test_func(self):
-        allocation = get_object_or_404(Allocation, pk=self.kwargs["pk"])
-        if self.request.user.has_perm("allocation.can_view_all_allocations"):
-            return True
-        return allocation.has_perm(self.request.user, AllocationPermission.MANAGER)
-
-    def dispatch(self, request, *args, **kwargs):
-        self.allocation = get_object_or_404(
-            Allocation.objects.select_related("project", "project__cost_center_assignment", "status").prefetch_related(
-                "resources__resource_type"
-            ),
-            pk=kwargs["pk"],
-        )
-        self.has_cost_center = project_has_cost_center_assignment(self.allocation.project)
-        if self.allocation.allocationattribute_set.filter(
-            allocation_attribute_type__name=QUOTA_ATTR_NAME,
-        ).exists():
-            messages.info(request, "Storage quota is already set for this allocation.")
-            return redirect(reverse("project-detail", kwargs={"pk": self.allocation.project_id}))
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        if self.has_cost_center:
-            del form.fields["cost_center"]
-            del form.fields["grant"]
-        return form
-
-    def get_context_data(self, **kwargs):
-        return super().get_context_data(**kwargs) | {
-            "allocation": self.allocation,
-            "resource": self.allocation.get_parent_resource,
-            "show_cost_center": not self.has_cost_center,
-        }
-
-    def form_valid(self, form):
-        quota = form.cleaned_data["quota_in_terabyte"]
-        cost_center = form.cleaned_data.get("cost_center")
-        grant = form.cleaned_data.get("grant")
-
-        try:
-            # storing requested storage quota size
-            attr_type = AllocationAttributeType.objects.get(name=QUOTA_ATTR_NAME)
-            self.allocation.allocationattribute_set.create(
-                allocation_attribute_type=attr_type,
-                value=str(quota),
-            )
-            # storing NoCostQuota id if the user has opted to apply
-            # this id is later picked up by a signal that applies the quota to the allocation
-            # in coldfront_billing.signals._apply_no_cost_quota_allotment_if_requested
-            # we can only safely store the NoCostQuota id here if we verify that the user has permissions to apply it
-            if apply_quota_value := self.request.POST.get("apply_allocation_quota", "").strip():
-                if not (
-                    self.request.user.has_perm("allocation.can_view_all_allocations")
-                    or has_billing_perm_for_project(self.request.user, self.allocation.project)
-                ):
-                    messages.warning(
-                        self.request,
-                        "You do not have permission to apply the NoCostQuota.",
-                    )
-                    return redirect(reverse("project-detail", kwargs={"pk": self.allocation.project_id}))
-                try:
-                    apply_attr_type = AllocationAttributeType.objects.get(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME)
-                except AllocationAttributeType.DoesNotExist:
-                    messages.warning(
-                        self.request,
-                        "Quota application preference could not be saved. Please contact support.",
-                    )
-                else:
-                    self.allocation.allocationattribute_set.create(
-                        allocation_attribute_type=apply_attr_type,
-                        value=apply_quota_value,
-                    )
-
-            if cost_center is not None:
-                cost_center_assignment, _ = CostCenterAssignment.objects.get_or_create(
-                    project=self.allocation.project,
-                    defaults={"assignments": []},
-                )
-
-                assignment = {
-                    "department": cost_center.name,
-                    "percentage": 100,
-                }
-
-                if grant:
-                    assignment.update({"grant": grant.name})
-
-                cost_center_assignment.assignments = [assignment]
-
-                cost_center_assignment.save()
-        except AllocationAttributeType.DoesNotExist:
-            messages.error(
-                self.request,
-                "Unable to save quota. Please contact support.",
-            )
-            return redirect("allocation-detail", pk=self.allocation.pk)
-        else:
-            if cost_center is not None:
-                partial = f".{grant}" if grant else ""
-                msg = (
-                    f"Storage quota of {quota} TB has been set with 100% cost assigned to "
-                    f"{cost_center.name}{partial}. Your allocation request is complete."
-                )
-            else:
-                msg = f"Storage quota of {quota} TB has been set. Your allocation request is complete."
-            messages.success(self.request, msg)
-            return redirect(reverse("project-detail", kwargs={"pk": self.allocation.project_id}))
 
 
 class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
@@ -238,19 +69,11 @@ class AllocationCostPreviewView(LoginRequiredMixin, UserPassesTestMixin, View):
         remaining_quota = 0
         quota_id = None
         storage_resource = first_or_none(getattr(allocation, STORAGE_RESOURCE_ATTRIBUTE_NAME, []))
-
-        if storage_resource:
-            no_cost_quota_att = storage_resource.resourceattribute_set.filter(
-                resource_attribute_type__name=NO_COST_QUOTA_TYPE_ATTR_NAME
-            ).first()
-            if no_cost_quota_att:
-                allocation_user = self.request.user
-                quota_user = allocation_user if not allocation_user.is_superuser else allocation.project.pi
-
-                no_cost_quota = quota_with_remaining.filter(user=quota_user, quota_type=no_cost_quota_att.value).first()
-                if no_cost_quota and no_cost_quota.remaining_normalized > 0:
-                    remaining_quota = no_cost_quota.remaining_normalized
-                    quota_id = no_cost_quota.id
+        if storage_resource and (
+            no_cost_quota := no_cost_quota_with_remaining(storage_resource, allocation.project, request.user)
+        ):
+            remaining_quota = no_cost_quota.remaining_normalized
+            quota_id = no_cost_quota.id
 
         billing = BillingAllocation.parse(allocation, DEFAULT_BILLING_QUOTA, DEFAULT_BILLING_COST, quota_tb)
 
@@ -285,29 +108,11 @@ class BillingAllocationChangeView(ColdfrontAllocationChangeView):
         pk = self.kwargs.get("pk")
         response = super().post(request, *args, **kwargs)
         if apply_quota_raw and pk is not None and self._is_successful_change_submission(response, pk):
-            try:
-                apply_attr_type = AllocationAttributeType.objects.get(name=ALLOCATION_QUOTA_ATTRIBUTE_NAME)
-            except AllocationAttributeType.DoesNotExist:
-                messages.warning(
-                    request,
-                    "Quota application preference could not be saved. Please contact support.",
-                )
-            else:
-                allocation = get_object_or_404(Allocation, pk=pk)
-                if not (
-                    self.request.user.has_perm("allocation.can_view_all_allocations")
-                    or has_billing_perm_for_project(request.user, allocation.project)
-                ):
-                    messages.warning(
-                        request,
-                        "You do not have permission to apply a quota to this allocation.",
-                    )
-                else:
-                    AllocationAttribute.objects.update_or_create(
-                        allocation=allocation,
-                        allocation_attribute_type=apply_attr_type,
-                        defaults={"value": apply_quota_raw},
-                    )
+            allocation = get_object_or_404(Allocation, pk=pk)
+            if not can_apply_no_cost_quota(request.user, allocation.project):
+                messages.warning(request, "You do not have permission to apply a quota to this allocation.")
+            elif not record_no_cost_quota_request(allocation, apply_quota_raw):
+                messages.warning(request, "Quota application preference could not be saved. Please contact support.")
         return response
 
     @staticmethod
@@ -318,3 +123,50 @@ class BillingAllocationChangeView(ColdfrontAllocationChangeView):
         location = response.url
         path = urlparse(location).path if location.startswith(("http://", "https://")) else location
         return path.rstrip("/") == expected.rstrip("/")
+
+
+class RequestCostEstimateView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """The billing_cost card's estimate on the allocation request form, for the quota typed into the quota
+    field: an HTML fragment htmx swaps into the card. Admits whoever may use the project's request page."""
+
+    def test_func(self):
+        self.project = get_object_or_404(Project, pk=self.kwargs["project_pk"])
+        return self.project.has_perm(self.request.user, ProjectPermission.UPDATE)
+
+    def get(self, request, *args, **kwargs):
+        resource_pk = request.GET.get("resource", "")
+        if not resource_pk.isdigit():
+            raise Http404("No such resource")
+        resource = get_object_or_404(get_user_resources(request.user).select_related("resource_type"), pk=resource_pk)
+        section = BillingCostSection(resource=resource, project=self.project, user=request.user, request=request)
+        # only where the card shows an estimate: a paid resource whose request asks for a quota
+        if not (section.applies() and section.asks_for_quota):
+            raise Http404("No estimate for this resource")
+
+        template = "coldfront_billing/allocation_request/cost_estimate.html"
+        quota = requested_quota(request.GET.get(QUOTA_FIELD_NAME, ""))
+        if quota is None:
+            return render(request, template, {"quota": None})
+        cost_per_tb = parse_cost_per_tb(
+            resource.get_attribute(COST_ATTR_NAME, expand=False, typed=False), DEFAULT_BILLING_COST
+        )
+        try:
+            context = {"quota": quota, "cost_per_tb": cost_per_tb, "total_cost": monthly_cost(quota, cost_per_tb)}
+            if section.no_cost_quota is not None:
+                reduced_cost, applied = predicted_monthly_cost(
+                    quota, cost_per_tb, section.no_cost_quota.remaining_normalized
+                )
+                if applied > 0:
+                    context.update(reduced_cost=reduced_cost, applied_quota=applied.normalize())
+        except InvalidOperation:
+            context = {"quota": None}  # too large to price (1e30, say): the quota field refuses it anyway
+        return render(request, template, context)
+
+
+def requested_quota(value: str):
+    """The quota typed into the request form, in TB, or None unless it's a finite number above zero."""
+    try:
+        quota = Decimal(value.strip())
+    except InvalidOperation:
+        return None
+    return quota if quota.is_finite() and quota > 0 else None

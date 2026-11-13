@@ -8,7 +8,30 @@ env = environ.Env()
 BILLING_ROLE_NAME = "Billing"
 MANAGER_ROLE_NAME = "Manager"
 
-QUOTA_ATTR_NAME = env.str("COLDFRONT_BILLING_QUOTA_ATTRIBUTE_NAME", "quota_in_terabyte")
+
+# The storage plugin's default for its quota attribute (its QUOTA_ATTRIBUTE_NAME). Repeated here, since
+# plugins don't import each other: if storage's default changes, change this too.
+STORAGE_PLUGIN_DEFAULT_QUOTA_ATTRIBUTE_NAME = "Storage Quota (TB)"
+
+
+def default_quota_attribute_name(installed_apps=None) -> str:
+    """The allocation attribute billing reads the quota from.
+
+    COLDFRONT_BILLING_QUOTA_ATTRIBUTE_NAME if it's set. Otherwise, with the storage plugin installed, the
+    attribute it keeps the quota in, so the two agree without being told: its QUOTA_ATTRIBUTE_NAME, or
+    its default. Without it, "quota_in_terabyte". `installed_apps` defaults to settings.INSTALLED_APPS.
+    """
+    if installed_apps is None:
+        installed_apps = settings.INSTALLED_APPS
+    # the app, or its AppConfig ("storage.apps.StorageConfig"); not an app whose name only starts with it
+    if any(app == "storage" or app.startswith("storage.") for app in installed_apps):
+        fallback = env.str("QUOTA_ATTRIBUTE_NAME", STORAGE_PLUGIN_DEFAULT_QUOTA_ATTRIBUTE_NAME)
+    else:
+        fallback = "quota_in_terabyte"
+    return env.str("COLDFRONT_BILLING_QUOTA_ATTRIBUTE_NAME", fallback)
+
+
+QUOTA_ATTR_NAME = default_quota_attribute_name()
 COST_ATTR_NAME = env.str("COLDFRONT_BILLING_COST_ATTRIBUTE_NAME", "cost_per_terabyte")
 NO_COST_QUOTA_TYPE_ATTR_NAME = env.str("COLDFRONT_BILLING_NO_COST_QUOTA_TYPE_ATTR_NAME", "no_cost_quota_type")
 

@@ -16,6 +16,26 @@ from .common import get_cost_per_tb
 from .quota import BillingQuota
 
 
+def monthly_cost(quota_tb: Decimal, cost_per_tb: Decimal) -> Decimal:
+    """The monthly cost of `quota_tb` at `cost_per_tb`: the quota rounded up to 0.1 TB and the price up to the cent.
+    Raises InvalidOperation for a quota too large to round (1e30, say)."""
+    calculation = quota_tb.quantize(Decimal("0.1"), rounding="ROUND_CEILING") * cost_per_tb.quantize(
+        Decimal("0.01"), rounding="ROUND_CEILING"
+    )
+    return calculation.quantize(Decimal("0.01"))  # Round to 2 decimal places
+
+
+def predicted_monthly_cost(
+    quota_tb: Decimal, cost_per_tb: Decimal, user_remaining_quota_tb: Decimal, no_cost_tb: Decimal = Decimal(0)
+) -> tuple[Decimal, Decimal]:
+    """The monthly cost of `quota_tb`, less `no_cost_tb` already allotted and as much of the user's remaining
+    no-cost quota as covers the rest, and the amount of that remaining quota applied."""
+    unpaid_quota = max(quota_tb - no_cost_tb, Decimal(0))
+    applied_quota = Decimal(0) if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
+    billable_quota = max(unpaid_quota - applied_quota, Decimal(0))
+    return monthly_cost(billable_quota, cost_per_tb), applied_quota
+
+
 @dataclass
 class BillingAllocation:
     allocation_id: int
@@ -31,17 +51,11 @@ class BillingAllocation:
         return total_cost
 
     def get_predicted_cost(self, user_remaining_quota_tb: Decimal) -> tuple[Decimal, Decimal]:
-        total_no_cost_quota = sum(ncq.amount_tb for ncq in self.no_cost_quotas)
-        unpaid_quota = max(self.quota_tb - total_no_cost_quota, Decimal(0))
-        applied_quota = Decimal(0) if user_remaining_quota_tb <= 0 else min(user_remaining_quota_tb, unpaid_quota)
-        billable_quota = max(unpaid_quota - applied_quota, Decimal(0))
-        return self.calculate_cost(billable_quota), applied_quota
+        total_no_cost_quota = sum((ncq.amount_tb for ncq in self.no_cost_quotas), Decimal(0))
+        return predicted_monthly_cost(self.quota_tb, self.cost_per_tb, user_remaining_quota_tb, total_no_cost_quota)
 
     def calculate_cost(self, quota_tb: Decimal) -> Decimal:
-        calculation = quota_tb.quantize(Decimal("0.1"), rounding="ROUND_CEILING") * self.cost_per_tb.quantize(
-            Decimal("0.01"), rounding="ROUND_CEILING"
-        )
-        return calculation.quantize(Decimal("0.01"))  # Round to 2 decimal places
+        return monthly_cost(quota_tb, self.cost_per_tb)
 
     @classmethod
     def parse(
