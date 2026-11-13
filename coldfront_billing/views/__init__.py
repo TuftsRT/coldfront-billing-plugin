@@ -1,8 +1,7 @@
 from .allocation import (
     AllocationCostPreviewView,
     BillingAllocationChangeView,
-    DeleteIncompleteAllocationView,
-    UpdateAllocationDetailsView,
+    RequestCostEstimateView,
 )
 from .billing import BillingDetailsView, BillingView
 from .cost import (
@@ -30,6 +29,7 @@ from .reports import (
 )
 
 __all__ = [
+    "RequestCostEstimateView",
     "AssignNoCostQuotasView",
     "AutoAssignAllotmentsView",
     "BillingScheduleHistoryListView",
@@ -45,8 +45,6 @@ __all__ = [
     "SendReportView",
     "AllocationCostPreviewView",
     "BillingAllocationChangeView",
-    "UpdateAllocationDetailsView",
-    "DeleteIncompleteAllocationView",
     "billing_code_report",
     "charge_report",
     "no_cost_quotas_report_view",

@@ -1,0 +1,15 @@
+{% comment %}
+One search box of the billing_cost card's cost center autocomplete. Context: field (the section form's hidden
+cost_center or grant field), kind ("dept" or "grant", which cost_center_autocomplete.js keys on), section_form.
+{% endcomment %}
+<div class="mb-3">
+  <label class="form-label" for="{{ section_form.prefix }}-{{ kind }}-search">{{ field.label }}</label>
+  <div class="autocomplete-wrapper position-relative">
+    <input type="text" id="{{ section_form.prefix }}-{{ kind }}-search" class="form-control {{ kind }}-autocomplete-input"
+           placeholder="Type at least 3 letters" autocomplete="off" aria-describedby="{{ section_form.prefix }}-{{ kind }}-help">
+    <ul class="{{ kind }}-autocomplete-results list-group position-absolute w-100 d-none shadow-sm"
+        style="z-index: 1060; max-height: 220px; overflow-y: auto; top: 100%; margin-top: 2px;" role="listbox"></ul>
+  </div>
+  <small id="{{ section_form.prefix }}-{{ kind }}-help" class="form-text text-muted">{{ field.help_text }}</small>
+  {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+</div>

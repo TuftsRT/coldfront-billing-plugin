@@ -18,10 +18,18 @@ class ColdfrontBillingConfig(AppConfig):
         if context_processor not in processors:
             processors.append(context_processor)
 
-        # Override ColdFront allocation views.
+        # A paid request's cost center and no-cost quota are asked for on ColdFront's own request form, as a
+        # section of coldfront_utils.allocation_request, which must be installed too (check E001)
+        from coldfront_utils.allocation_request import register_request_section
+
+        from coldfront_billing import checks  # noqa: F401 -- registers them
+        from coldfront_billing.request_section import BillingCostSection
+
+        register_request_section(BillingCostSection)
+
+        # Change requests: ColdFront's view, plus applying a no-cost quota
         import coldfront.core.allocation.views as allocation_views
 
-        from coldfront_billing.views.allocation import AllocationCreateView, BillingAllocationChangeView
+        from coldfront_billing.views.allocation import BillingAllocationChangeView
 
-        allocation_views.AllocationCreateView = AllocationCreateView
         allocation_views.AllocationChangeView = BillingAllocationChangeView

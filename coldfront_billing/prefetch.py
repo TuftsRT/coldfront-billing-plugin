@@ -181,6 +181,12 @@ def has_billing_perm_for_project(user, project: Project) -> bool:
     ).exists()
 
 
+def can_apply_no_cost_quota(user, project: Project) -> bool:
+    """Whether the user may apply a no-cost quota to an allocation on the project: billing staff, or the PI or a
+    Billing or Manager member of the project."""
+    return user.has_perm("allocation.can_view_all_allocations") or has_billing_perm_for_project(user, project)
+
+
 def has_no_cost_quota_permission(user, no_cost_quota) -> bool:
     """
     Check if the user has permission to use a specific no-cost quota.
