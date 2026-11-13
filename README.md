@@ -10,12 +10,13 @@ A [ColdFront](https://github.com/coldfront/coldfront) plugin that adds storage b
 - **Billing reports** — generates and emails a monthly CSV report with per-department cost breakdowns
 - **Automated scheduling** — runs monthly billing report generation via [django-q2](https://django-q2.readthedocs.io/), with optional no-cost quota auto-assignment
 - **Billing dashboard** — list and detail views for PIs and billing staff showing allocation costs and quota usage
-- **Allocation workflow integration** — intercepts ColdFront's allocation create/change views to collect quota and cost center information upfront
+- **Allocation workflow integration** — a card on ColdFront's own allocation request form (the `billing_cost` section of coldfront-utils' `allocation_request`) collects the cost center and the no-cost quota to apply, with a live cost estimate; change requests go through a billing-aware change view
 
 ## Requirements
 
 - Python ≥ 3.10
 - ColdFront ≥ 1.1.9, < 2 (Bootstrap 5)
+- [coldfront-utils](https://github.com/Tufts-Technology-Services/coldfront-utils) ≥ 0.3.1, for the allocation request form
 - Django 5.2+
 - [django-q2](https://django-q2.readthedocs.io/) (optional, required for scheduled reports)
 
@@ -41,10 +42,24 @@ pip install coldfront-billing
 INSTALLED_APPS = [
     # ... existing ColdFront apps ...
     "coldfront_billing",
+    "coldfront_utils.allocation_request",
 ]
 ```
 
-The plugin automatically registers its signal handlers and overrides ColdFront's `AllocationCreateView` and `AllocationChangeView` with billing-aware versions.
+The plugin registers its signal handlers, replaces ColdFront's `AllocationChangeView` with a billing-aware version, and registers the `billing_cost` section of the allocation request form.
+
+`coldfront_utils.allocation_request` (from coldfront-utils, a dependency) is that form. Without it the plugin refuses to start (check `coldfront_billing.E001`), so add it in the same deploy as this version, or before. It in turn refuses to start while another plugin replaces `AllocationCreateView`.
+
+#### The request form's billing card
+
+For a resource that requires payment, ColdFront's request form shows a **Billing** card:
+
+- **Cost center and grant**, when the project has no cost center assignment yet, with the autocomplete. Saved as the project's assignment, 100% to that cost center.
+- **For Storage resources whose requests ask for a quota**, that is, when the quota field named by `COLDFRONT_BILLING_QUOTA_FIELD_NAME` (the storage plugin's, by default) is on the form:
+  - **"Apply my no-cost quota (X TB left)"**, when the requester has no-cost quota left for the resource's type and may apply it (billing staff, or the PI or a Billing or Manager member of the project; a superuser requesting is offered the PI's). It's applied when the allocation becomes active, as before.
+  - **The estimated monthly cost**, with and without the no-cost quota, updated as the quota is typed.
+
+The quota itself is the storage plugin's to ask for. The card's wording is in `coldfront_billing/allocation_request/cost_intro.html`: override that template to change it.
 
 ### 2. Add URL patterns
 
@@ -109,6 +124,7 @@ Configure these in your `local_settings.py` or equivalent:
 | `COLDFRONT_BILLING_USE_TEST_SCHEDULING` | `False` | Use 5-minute schedule instead of monthly (for testing) |
 | `COLDFRONT_BILLING_DEFAULT_QUOTA` | `0` | Default quota (TB) when attribute is missing |
 | `COLDFRONT_BILLING_DEFAULT_COST` | `10` | Default cost ($/TB) when attribute is missing |
+| `COLDFRONT_BILLING_QUOTA_FIELD_NAME` | `'storage_quota-quota'` | Name of the quota field on the allocation request form, which the billing card's estimate reads: the storage plugin's `storage_quota` section's. Its element id is Django's default for the name (`id_` + name) |
 
 Default email body template:
 ```
@@ -158,6 +174,7 @@ To send a report immediately without waiting for the schedule, use the **Send Re
 | `/billing/reports/export` | `reports_export` | Download CSV billing report |
 | `/billing/reports/send` | `reports_send` | Manually trigger report email |
 | `/billing/reports/history` | `reports_billing_history` | Billing schedule execution history |
+| `/allocation-request/<project_id>/cost-estimate/` | `request_cost_estimate` | The request form's billing card's cost estimate (an HTML fragment for htmx) |
 | `/no-cost-quota/manage/` | `manage_no_cost_quota` | Manage user no-cost quotas |
 | `/no-cost-quota/assign/` | `assign_no_cost_quota` | Assign no-cost quota allotments to allocations |
 
